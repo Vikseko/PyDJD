@@ -2,4 +2,5 @@
 Python implementation of disjunctive diagrams
 
 
-imstall ordered-set
+install ordered-set
+install sortedcollections
