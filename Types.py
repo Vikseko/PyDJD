@@ -4,7 +4,8 @@ from enum import Enum
 from ordered_set import OrderedSet
 from sortedcontainers import SortedSet
 
-#Тип узла диаграммы
+
+# Тип узла диаграммы
 class DiagramNodeType(Enum):
     Undefined = 1
     RootNode = 2
@@ -13,13 +14,15 @@ class DiagramNodeType(Enum):
     QuestionNode = 5
     TrueNode = 6
 
-#Тип исходной формулы
+
+# Тип исходной формулы
 class ProblemType(Enum):
     Conflict = 1
     Cnf = 2
     Dnf = 3
 
-#Узел диаграммы
+
+# Узел диаграммы
 class DiagramNode:
     constructors_ = 0
     destructors_ = 0
@@ -40,7 +43,7 @@ class DiagramNode:
         self.HashKey()
         DiagramNode.constructors_ += 1
 
-    #Вычисляет хэш узла (выполняется при создании узла)
+    # Вычисляет хэш узла (выполняется при создании узла)
     def HashKey(self):
         hashtuple_ = tuple([self.Value()]+[node.hash_key for node in self.high_childs]+[node.hash_key for node in self.low_childs])
         print('hk',self.var_id,hashtuple_)
@@ -49,7 +52,7 @@ class DiagramNode:
     def __hash__(self):
         return self.hash_key
 
-    #Сравнение узлов на основе их Value() и хэшей их потомков (не рекурсивно)
+    # Сравнение узлов на основе их Value() и хэшей их потомков (не рекурсивно)
     def __eq__(self, other):
         if not isinstance(other, type(self)):
             return False
@@ -66,7 +69,7 @@ class DiagramNode:
                 return False
         return True
 
-    #Сравнение узлов на основе их потомков (рекурсивно)
+    # Сравнение узлов на основе их потомков (рекурсивно)
     def Equals(self, other):
         if not isinstance(other, type(self)):
             return False
@@ -83,11 +86,11 @@ class DiagramNode:
                 return False
         return True
 
-    #Возвращает размер узла в байтах
+    # Возвращает размер узла в байтах
     def Size(self):
         return sys.getsizeof(self.Value()) + (8 * (len(self.high_childs) + len(self.low_childs)))
 
-    #Возвращает номер переменный для внутренних и корневых узлов, либо строковые значения для терминальных
+    # Возвращает номер переменный для внутренних и корневых узлов, либо строковые значения для терминальных
     def Value(self):
         if self.node_type == DiagramNodeType.InternalNode:
             return self.var_id
@@ -98,24 +101,25 @@ class DiagramNode:
         elif self.node_type == DiagramNodeType.TrueNode:
             return 'true'
 
-    #Проверяет является ли узел терминальным
+    # Проверяет является ли узел терминальным
     def IsLeaf(self):
         return True if (self.node_type == DiagramNodeType.TrueNode or
                         self.node_type == DiagramNodeType.QuestionNode or
                         self.node_type == DiagramNodeType.FalseNode) else False
 
-    #Проверяет является ли узел корневым
+    # Проверяет является ли узел корневым
     def IsRoot(self):
         return True if (self.node_type == DiagramNodeType.RootNode) else False
 
-    #Првоеряет является ли узел внутренним
+    # Првоеряет является ли узел внутренним
     def IsInternal(self):
         return True if (self.node_type == DiagramNodeType.InternalNode) else False
 
     def __del__(self):
         DiagramNode.destructors_ += 1
 
-#Таблица с узлами диаграммы
+
+# Таблица с узлами диаграммы
 class DisjunctiveDiagram:
     true_leaf = DiagramNode(DiagramNodeType.TrueNode)
     false_leaf = DiagramNode(DiagramNodeType.FalseNode)
@@ -139,63 +143,63 @@ class DisjunctiveDiagram:
         self.table_.add(DisjunctiveDiagram.false_leaf)
         self.table_.add(DisjunctiveDiagram.question_leaf)
 
-    #Возвращает таблицу
+    # Возвращает таблицу
     def GetTable(self):
         return self.table_
 
-    #Возвращает множество корней
+    # Возвращает множество корней
     def GetRoots(self):
         return self.roots_
 
-    #Возращает тип исходной формулы: кнф, днф, конфликтная база
+    # Возращает тип исходной формулы: кнф, днф, конфликтная база
     def GetProblemType(self):
         return self.problem_type_
 
-    #Возвращает число переменных
+    # Возвращает число переменных
     def VariableCount(self):
         return len(self.var_set_)
 
-    #Возвращает переменную с наименьшим номером
+    # Возвращает переменную с наименьшим номером
     def MinVarId(self):
         return self.var_set_[0] if len(self.var_set_) > 0 else 0
 
-    #Возвращает переменную с наибольшим номером
+    # Возвращает переменную с наибольшим номером
     def MaxVarId(self):
         return self.var_set_[-1] if len(self.var_set_) > 0 else 0
 
-    #Возвращает число вершин в диаграмме
+    # Возвращает число вершин в диаграмме
     def VertexCount(self):
         return len(self.table_)
 
-    #Возвращает число путей в 1
+    # Возвращает число путей в 1
     def TruePathCount(self):
         return self.true_path_count_
 
-    #Возвращает число путей в ?
+    # Возвращает число путей в ?
     def QuestionPathCount(self):
         return self.question_path_count_
 
-    #Возвращает число путей в 0
+    # Возвращает число путей в 0
     def FalsePathCount(self):
         return self.false_path_count_
 
-    #Возвращает максимальную длину пути
+    # Возвращает максимальную длину пути
     def MaxPathDepth(self):
         return self.max_path_depth_
 
-    #Возвращает терминальный узел ?
+    # Возвращает терминальный узел ?
     def GetQuestionLeaf(self):
         return DisjunctiveDiagram.question_leaf
 
-    #Возвращает терминальный узел 1
+    # Возвращает терминальный узел 1
     def GetTrueLeaf(self):
         return DisjunctiveDiagram.true_leaf
 
-    #Возвращает терминальный узел 0
+    # Возвращает терминальный узел 0
     def GetFalseLeaf(self):
         return DisjunctiveDiagram.false_leaf
 
-    #Возвращается число удаленных узлов изза дупликации потомков (когда потомки совпадают по ребрам разной полярности)
+    # Возвращается число удаленных узлов изза дупликации потомков (когда потомки совпадают по ребрам разной полярности)
     def DuplicateReducedCount(self):
         return self.duplicate_reduced_
 
@@ -205,7 +209,7 @@ class DisjunctiveDiagram:
     def RootJoinCount(self):
         return self.root_join_cnt_
 
-    #Возвращает размер диаграммы в байтах
+    # Возвращает размер диаграммы в байтах
     def DiagramSize(self):
         size = 0
         for node in self.table_:
@@ -216,11 +220,13 @@ class DisjunctiveDiagram:
         for node in self.table_:
             del node
 
-#Функция по элементу ищет в множестве такой же и возвращает его (проверять наличие нужно отдельно)
+
+# Функция по элементу ищет в множестве такой же и возвращает его (проверять наличие нужно отдельно)
 def get_equivalent(container, item):
     for element in container:
         if element == item:
             return element
+
 
 class Options:
     def __init__(self):
