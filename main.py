@@ -3,6 +3,7 @@ from Types import DiagramNodeType
 from Types import get_equivalent
 from Types import DisjunctiveDiagram
 import sys
+import argparse
 # Press Shift+F10 to execute it.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
