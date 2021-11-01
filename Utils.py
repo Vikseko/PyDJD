@@ -1,4 +1,37 @@
 from Types import *
+from DimacsParser import *
+
+def ReadProblem(options):
+    lines = open(options.filename,'r')
+    problem, order, lit_count, min_var_num, max_var_num = DimacsParser(lines)
+    if options.order_type == 'activity':
+        if order == None:
+            raise RuntimeError('No activity order in DIMACS file')
+        else:
+            return problem, order
+    elif options.order_type == 'frequency':
+        order = FrequencyOrder(problem,min_var_num,max_var_num)
+    elif options.order_type == 'direct':
+        if max_var_num != 0:
+            order = [x for x in range(1,max_var_num+1)]
+        else:
+            raise RuntimeError('No maximum variable found, check DIMACS file.')
+    return problem, order
+
+
+def FrequencyOrder(problem,min_var_num, max_var_num):
+    if min_var_num != 0 and max_var_num != 0:
+        counter = [0 for x in range(max_var_num+1)]
+        for clause in problem:
+            for lit in clause:
+                counter[abs(lit)] += 1
+        counter = list(enumerate(counter))
+        counter.sort(key=lambda x:x[1])
+        counter.reverse()
+        order = [x[0] for x in counter if type(x)==tuple]
+        return order
+    else:
+        raise RuntimeError('No minimum and maximum variables found, check DIMACS file.')
 
 def ExtractVarSet(problem, var_set):
     pass
@@ -11,16 +44,20 @@ def GetMinMaxVars(problem, min_var_id, max_var_id):
     pass
 
 #азделить путь к папке и имя файла
-def SplitFilename(path, dir, filename):
-    pass
+def SplitFilename(path):
+    dir = ''.join(path.split('/')[:-1])
+    filename = ''.join(path.split('/')[-1])
+    return dir,filename
 
 #Разделить имя файла на имя и суффикс
-def SplitFileSuffix(filename, name, suffix):
-    pass
+def SplitFileSuffix(filename):
+    name = ''.join(filename.split('.')[:-1])
+    suffix = ''.join(filename.split('.')[-1])
+    return name,suffix
 
 #Проверяем существование файла
-def FileExists(filename):
-    pass
+def FileExists(options):
+    return os.path.isfile(options.path)
 
 # Число литералов в формуле
 def GetLiteralCount(problem):
@@ -38,17 +75,41 @@ def FillVarOrder(problem, order, order_type):
     pass
 
 def GetProblemType(str_type):
-    pass
+    if str_type == 'cnf':
+        type = ProblemType.Cnf
+    elif str_type == 'dnf':
+        type = ProblemType.Dnf
+    elif str_type == 'conflict':
+        type = ProblemType.Conflict
+    else:
+        raise RuntimeError('Unknown type of problem')
 
 # Отрицание формулы. Применяется для перехода от КНФ конфликтных баз к ДНФ.
 def NegateProblem(problem):
-    pass
+    for i in range(len(problem)):
+        for j in range(len(problem[i])):
+            problem[i][j] *= -1
 
-def ParseOptions(argc, argv, options):
-    pass
+def ParseOptions(params):
+    options = Options()
+    options.path = params.file
+    options.dir, options.filename = SplitFilename(options.path)
+    options.name, options.suffix = SplitFileSuffix(options.filename)
+    options.source = params.source
+    options.order_type = params.order
+    options.analyze_log = params.analyze_log
+    options.analyze_var_limit = params.analyze_var_limit
+    options.analyze_var_fraction = params.analyze_var_fraction
+    options.dir = params.dir
+    options.run_tests = params.run_tests
+    options.show_statistic = params.show_statistic
+    options.show_version = params.show_version
+    options.show_options = params.show_options
+    options.bdd_convert = params.bdd_convert
+    options.redir_paths = params.redir_paths
+    options.lock_vars = params.lock_vars
+    return options
 
-def PrintOptions(out, options):
-    pass
+def PrintOptions(options):
+    print('Printed options')
 
-def PrintHelp(out):
-    pass

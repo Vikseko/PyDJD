@@ -1,8 +1,4 @@
-import copy
-import sys
-from enum import Enum
-from ordered_set import OrderedSet
-from sortedcontainers import SortedSet
+from Imports import *
 
 
 # Тип узла диаграммы
@@ -230,14 +226,20 @@ def get_equivalent(container, item):
 
 class Options:
     def __init__(self):
+        self.path = 'Tests/test1.cnf'
+        self.filename = 'test1.cnf'
+        self.suffix = 'cnf'
+        self.name = 'test1'
+        self.dir = "./Tests"
         self.analyze_log = "result.txt"
         self.analyze_var_limit = 20
         self.analyze_var_fraction = 0.5
-        self.dir = "./"
         self.source = "conflicts"
-        self.order = "header"
+        self.order_type = "header"
         self.run_tests = False
         self.show_statistic = False
         self.show_version = False
         self.show_options = False
-        self.show_help = False
+        self.bdd_convert = False
+        self.redir_paths = False
+        self.lock_vars = False

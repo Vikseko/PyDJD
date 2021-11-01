@@ -1,4 +1,4 @@
-from Types import *
+from Utils import *
 
 
 class DisjunctiveDiagramsBuilder:
@@ -78,7 +78,7 @@ class DisjunctiveDiagramsBuilder:
             if len(high_range) == 0:
                 low_nodes.add(diagram_.GetQuestionLeaf())
             # Создаем узел диаграммы
-            node = DiagramNode(DiagramNodeType.InternalNode, var_id, high_nodes, low_nodes)
+            node = DiagramNode(DiagramNodeType.InternalNode, var_id, list(high_nodes), list(low_nodes))
             node = DisjunctiveDiagramsBuilder.AddDiagramNode(node,diagram_)
             nodes.add(node)
             diagram_.var_set_.add(var_id)
@@ -110,8 +110,6 @@ class DisjunctiveDiagramsBuilder:
 
     def ClauseLessSort(self,):
         pass
-
-
 
     def __del__(self):
         del self

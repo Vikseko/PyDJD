@@ -1,7 +1,10 @@
-def DimacsParser(lines,problem,order):
+# Парсер DIMACS-файла
+def DimacsParser(lines):
     min_var_num = 0
     max_var_num = 0
     lit_count = 0
+    order = None
+    problem = []
     if len(lines) == 0:
         print('DimacsParser: Empty file')
         return 0
@@ -23,3 +26,14 @@ def DimacsParser(lines,problem,order):
         else:
             clause = list(map(int,line.split()[:-1]))
             problem.append(clause)
+        if min_var_num == 0:
+            for clause in problem:
+                for lit in clause:
+                    if abs(lit) < min_var_num or abs(lit) == 1:
+                        min_var_num = abs(lit)
+        if max_var_num == 0:
+            for clause in problem:
+                for lit in clause:
+                    if abs(lit) > max_var_num:
+                        max_var_num = abs(lit)
+        return problem, order, lit_count, min_var_num, max_var_num
