@@ -2,16 +2,21 @@ from Types import *
 from DimacsParser import *
 
 def ReadProblem(options):
-    lines = open(options.filename,'r')
+    lines = open(options.path,'r').readlines()
+    print(lines)
     problem, order, lit_count, min_var_num, max_var_num = DimacsParser(lines)
+    print(problem)
     if options.order_type == 'activity':
+        print('activity')
         if order == None:
             raise RuntimeError('No activity order in DIMACS file')
         else:
             return problem, order
     elif options.order_type == 'frequency':
+        print('frequency')
         order = FrequencyOrder(problem,min_var_num,max_var_num)
     elif options.order_type == 'direct':
+        print('direct')
         if max_var_num != 0:
             order = [x for x in range(1,max_var_num+1)]
         else:
@@ -29,7 +34,7 @@ def FrequencyOrder(problem,min_var_num, max_var_num):
         counter.sort(key=lambda x:x[1])
         counter.reverse()
         order = [x[0] for x in counter if type(x)==tuple]
-        return order
+        return order[:-1]
     else:
         raise RuntimeError('No minimum and maximum variables found, check DIMACS file.')
 
@@ -83,6 +88,7 @@ def GetProblemType(str_type):
         type = ProblemType.Conflict
     else:
         raise RuntimeError('Unknown type of problem')
+    return type
 
 # Отрицание формулы. Применяется для перехода от КНФ конфликтных баз к ДНФ.
 def NegateProblem(problem):
@@ -95,19 +101,18 @@ def ParseOptions(params):
     options.path = params.file
     options.dir, options.filename = SplitFilename(options.path)
     options.name, options.suffix = SplitFileSuffix(options.filename)
-    options.source = params.source
+    options.source_type = params.source
     options.order_type = params.order
     options.analyze_log = params.analyze_log
     options.analyze_var_limit = params.analyze_var_limit
     options.analyze_var_fraction = params.analyze_var_fraction
-    options.dir = params.dir
-    options.run_tests = params.run_tests
-    options.show_statistic = params.show_statistic
-    options.show_version = params.show_version
+    options.run_tests = params.runtests
+    options.show_statistic = params.show_stats
+    options.show_version = params.show_ver
     options.show_options = params.show_options
     options.bdd_convert = params.bdd_convert
-    options.redir_paths = params.redir_paths
-    options.lock_vars = params.lock_vars
+    options.redir_paths = params.redirpaths
+    options.lock_vars = params.lockvars
     return options
 
 def PrintOptions(options):

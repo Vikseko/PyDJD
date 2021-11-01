@@ -9,11 +9,14 @@ def DimacsParser(lines):
         print('DimacsParser: Empty file')
         return 0
     for line in lines:
-        if len(line) == 0:
-                continue
-        elif 'p cnf' or 'p dnf' in line:
+        print('line',line)
+        if len(line) < 3:
+            continue
+        elif 'p cnf' in line or 'p dnf' in line:
             vars = int(line.split()[2])
+            #print(vars)
             clauses = int(line.split()[3])
+            #print(clauses)
         elif 'c' in line:
             if 'literals_count' in line:
                 lit_count = int(line.split()[2])
@@ -25,15 +28,16 @@ def DimacsParser(lines):
                 order = list(map(int,line.split()[2:]))
         else:
             clause = list(map(int,line.split()[:-1]))
+            print('clause', clause)
             problem.append(clause)
-        if min_var_num == 0:
-            for clause in problem:
-                for lit in clause:
-                    if abs(lit) < min_var_num or abs(lit) == 1:
-                        min_var_num = abs(lit)
-        if max_var_num == 0:
-            for clause in problem:
-                for lit in clause:
-                    if abs(lit) > max_var_num:
-                        max_var_num = abs(lit)
-        return problem, order, lit_count, min_var_num, max_var_num
+    if min_var_num == 0:
+        for clause in problem:
+            for lit in clause:
+                if abs(lit) < min_var_num or abs(lit) == 1:
+                    min_var_num = abs(lit)
+    if max_var_num == 0:
+        for clause in problem:
+            for lit in clause:
+                if abs(lit) > max_var_num:
+                    max_var_num = abs(lit)
+    return problem, order, lit_count, min_var_num, max_var_num

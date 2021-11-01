@@ -9,15 +9,16 @@ import time
 def createParser ():
     parser = argparse.ArgumentParser()
     parser.add_argument ('-f', '--file', nargs='?', type=str, default='Tests/test1.cnf')
-    parser.add_argument ('-o', '--order', nargs='?', type=str, default='cnf')
-    parser.add_argument ('-s', '--source', nargs='?', type=str, default='direct')
+    parser.add_argument ('-o', '--order', nargs='?', type=str, default='frequency')
+    parser.add_argument ('-s', '--source', nargs='?', type=str, default='cnf')
     parser.add_argument('-rt', '--runtests', nargs='?', type=bool, default=False)
     parser.add_argument('-ss', '--show_stats', nargs='?', type=bool, default=False)
     parser.add_argument('-sv', '--show_ver', nargs='?', type=bool, default=False)
     parser.add_argument ('-so', '--show_options', nargs='?', type=bool, default=False)
+    parser.add_argument('-bdd', '--bdd_convert', nargs='?', type=bool, default=False)
     parser.add_argument ('-rp', '--redirpaths', nargs='?', type=bool, default=False)
     parser.add_argument('-lv', '--lockvars', nargs='?', type=bool, default=False)
-    parser.add_argument('-al', '--analuze_log', nargs='?', type=str, default='')
+    parser.add_argument('-al', '--analyze_log', nargs='?', type=str, default='')
     parser.add_argument('-avl', '--analyze_var_limit', nargs='?', type=int, default=20)
     parser.add_argument('-avf', '--analyze_var_fraction', nargs='?', type=float, default=0.5)
     return parser
@@ -25,17 +26,18 @@ def createParser ():
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
+    print('Start')
 
     start_time = time.time()
     parser = createParser()
     options = ParseOptions(parser.parse_args(sys.argv[1:]))
 
     if options.show_version:
-        print('Version 0.9, October 2021')
+        print('PyDJD Version 1.0, October 2021')
     if options.show_options:
         PrintOptions(options)
 
-    if (not FileExists(options.path)):
+    if (not FileExists(options)):
         raise RuntimeError('File', options.filename, 'doesn\'t exist in directory', options.dir)
     problem, order = ReadProblem(options)
     if len(order) == 0:
@@ -51,3 +53,7 @@ if __name__ == '__main__':
     builder = DisjunctiveDiagramsBuilder(problem, order, GetProblemType(options.source_type))
     diagram = builder.BuildDiagram()
     build_time = time.time() - start_build_time
+    print('End')
+    print(len(diagram.table_))
+    for node in diagram.table_:
+        print(node.var_id)

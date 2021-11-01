@@ -16,10 +16,11 @@ class DisjunctiveDiagramsBuilder:
         diagram_.problem_type_ = self.problem_type_
         ranges = []
         for idx in range(len(self.problem_)):
+            print('problem_[', idx,']',self.problem_[idx])
             self.problem_[idx] = DisjunctiveDiagramsBuilder.LitLessSort(order=self.order_,lits=self.problem_[idx])
             it_begin = iter(self.problem_[idx])
             it_end = self.problem_[idx][-1]
-            ranges.append((self.problem_[idx][0],it_begin,it_end))
+            ranges.append([self.problem_[idx][0],it_begin,it_end])
         root_set = DisjunctiveDiagramsBuilder.BuildDiagramNodes(ranges,diagram_)
         diagram_.roots_.update(root_set)
         for node in diagram_.roots_:
@@ -51,7 +52,7 @@ class DisjunctiveDiagramsBuilder:
                             high_range.clear()
                             continue
                         range[0] = next(range[1])
-                        high_range.append((range[0],range[1],range[2]))
+                        high_range.append([range[0],range[1],range[2]])
                     else:
                         if has_low_terminal:
                             continue
@@ -60,7 +61,7 @@ class DisjunctiveDiagramsBuilder:
                             low_range.clear()
                             continue
                         range[0] = next(range[1])
-                        low_range.append((range[0],range[1],range[2]))
+                        low_range.append([range[0],range[1],range[2]])
             # Строим high-потомков
             high_nodes = set()
             if has_high_terminal:

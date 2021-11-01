@@ -32,8 +32,8 @@ class DiagramNode:
         self.markup_varid = 0
         self.vertex_id = 0
         self.hash_key = 0
-        self.high_childs = [] if HighChilds == None else sorted(copy.copy(HighChilds))
-        self.low_childs = [] if LowChilds == None else sorted(copy.copy(LowChilds))
+        self.high_childs = [] if HighChilds == None else sorted(copy.copy(HighChilds),key= lambda x:x.var_id)
+        self.low_childs = [] if LowChilds == None else sorted(copy.copy(LowChilds),key= lambda x:x.var_id)
         self.high_parents = []
         self.low_parents = []
         self.HashKey()
@@ -42,7 +42,7 @@ class DiagramNode:
     # Вычисляет хэш узла (выполняется при создании узла)
     def HashKey(self):
         hashtuple_ = tuple([self.Value()]+[node.hash_key for node in self.high_childs]+[node.hash_key for node in self.low_childs])
-        print('hk',self.var_id,hashtuple_)
+        #print('hk',self.var_id,hashtuple_)
         self.hash_key = hash(hashtuple_)
 
     def __hash__(self):
@@ -234,7 +234,7 @@ class Options:
         self.analyze_log = "result.txt"
         self.analyze_var_limit = 20
         self.analyze_var_fraction = 0.5
-        self.source = "conflicts"
+        self.source_type = "conflicts"
         self.order_type = "header"
         self.run_tests = False
         self.show_statistic = False
