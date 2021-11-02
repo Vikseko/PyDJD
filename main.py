@@ -26,7 +26,7 @@ def createParser ():
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print('Start')
+    #print('Start')
 
     start_time = time.time()
     parser = createParser()
@@ -45,6 +45,7 @@ if __name__ == '__main__':
     # Журнализируем текущий порядок переменных
     with open('Logs/order.log','w') as orderf:
         print(*order,file=orderf)
+    #print('Order', *order)
     # Строим отрицание считанной формулы(КНФ= > ДНФ)
     if (options.source_type == "conflicts" or options.source_type == "cnf"):
         NegateProblem(problem)
@@ -56,4 +57,4 @@ if __name__ == '__main__':
     print('End')
     print(len(diagram.table_))
     for node in diagram.table_:
-        print(node.var_id)
+        print('Node',node.Value(), node.var_id, [x.Value() for x in node.high_childs], [x.Value() for x in node.low_childs])

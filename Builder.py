@@ -16,8 +16,8 @@ class DisjunctiveDiagramsBuilder:
         diagram_.problem_type_ = self.problem_type_
         ranges = []
         for idx in range(len(self.problem_)):
-            print('problem_[', idx,']',self.problem_[idx])
             self.problem_[idx] = DisjunctiveDiagramsBuilder.LitLessSort(order=self.order_,lits=self.problem_[idx])
+            print('problem_[', idx, ']', self.problem_[idx])
             it_begin = iter(self.problem_[idx])
             it_end = self.problem_[idx][-1]
             ranges.append([self.problem_[idx][0],it_begin,it_end])

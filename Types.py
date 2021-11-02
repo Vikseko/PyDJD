@@ -37,6 +37,7 @@ class DiagramNode:
         self.high_parents = []
         self.low_parents = []
         self.HashKey()
+        print('Node',self.Value(), [x.Value() for x in self.high_childs], [x.Value() for x in self.low_childs])
         DiagramNode.constructors_ += 1
 
     # Вычисляет хэш узла (выполняется при создании узла)
@@ -88,14 +89,14 @@ class DiagramNode:
 
     # Возвращает номер переменный для внутренних и корневых узлов, либо строковые значения для терминальных
     def Value(self):
-        if self.node_type == DiagramNodeType.InternalNode:
-            return self.var_id
-        elif self.node_type == DiagramNodeType.FalseNode:
+        if self.node_type == DiagramNodeType.FalseNode:
             return 'false'
         elif self.node_type == DiagramNodeType.QuestionNode:
             return '?'
         elif self.node_type == DiagramNodeType.TrueNode:
             return 'true'
+        else:
+            return self.var_id
 
     # Проверяет является ли узел терминальным
     def IsLeaf(self):

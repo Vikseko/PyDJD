@@ -6,17 +6,13 @@ def DimacsParser(lines):
     order = None
     problem = []
     if len(lines) == 0:
-        print('DimacsParser: Empty file')
-        return 0
+        raise RuntimeError('DimacsParser: Empty file')
     for line in lines:
-        print('line',line)
         if len(line) < 3:
             continue
         elif 'p cnf' in line or 'p dnf' in line:
             vars = int(line.split()[2])
-            #print(vars)
             clauses = int(line.split()[3])
-            #print(clauses)
         elif 'c' in line:
             if 'literals_count' in line:
                 lit_count = int(line.split()[2])
@@ -28,7 +24,6 @@ def DimacsParser(lines):
                 order = list(map(int,line.split()[2:]))
         else:
             clause = list(map(int,line.split()[:-1]))
-            print('clause', clause)
             problem.append(clause)
     if min_var_num == 0:
         for clause in problem:
