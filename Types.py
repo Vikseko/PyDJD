@@ -37,7 +37,7 @@ class DiagramNode:
         self.high_parents = []
         self.low_parents = []
         self.HashKey()
-        print('Node',self.Value(), [x.Value() for x in self.high_childs], [x.Value() for x in self.low_childs])
+        #print('Node',self.Value(), [x.Value() for x in self.high_childs], [x.Value() for x in self.low_childs])
         DiagramNode.constructors_ += 1
 
     # Вычисляет хэш узла (выполняется при создании узла)
@@ -119,7 +119,7 @@ class DiagramNode:
 # Таблица с узлами диаграммы
 class DisjunctiveDiagram:
     true_leaf = DiagramNode(DiagramNodeType.TrueNode)
-    false_leaf = DiagramNode(DiagramNodeType.FalseNode)
+    #false_leaf = DiagramNode(DiagramNodeType.FalseNode)
     question_leaf = DiagramNode(DiagramNodeType.QuestionNode)
     def __init__(self):
         self.variable_count_ = 0
@@ -137,7 +137,7 @@ class DisjunctiveDiagram:
         self.roots_ = set()
         self.var_set_ = SortedSet()
         self.table_.add(DisjunctiveDiagram.true_leaf)
-        self.table_.add(DisjunctiveDiagram.false_leaf)
+        #self.table_.add(DisjunctiveDiagram.false_leaf)
         self.table_.add(DisjunctiveDiagram.question_leaf)
 
     # Возвращает таблицу

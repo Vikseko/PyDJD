@@ -3,6 +3,7 @@ def DimacsParser(lines):
     min_var_num = 0
     max_var_num = 0
     lit_count = 0
+    lit_count_flag = False
     order = None
     problem = []
     if len(lines) == 0:
@@ -23,8 +24,12 @@ def DimacsParser(lines):
             if 'activity_order' in line:
                 order = list(map(int,line.split()[2:]))
         else:
+            if lit_count == 0 and lit_count_flag == False:
+                lit_count_flag = True
             clause = list(map(int,line.split()[:-1]))
             problem.append(clause)
+            if lit_count_flag == True:
+                lit_count += len(clause)
     if min_var_num == 0:
         for clause in problem:
             for lit in clause:

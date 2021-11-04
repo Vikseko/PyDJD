@@ -17,22 +17,21 @@ class DisjunctiveDiagramsBuilder:
         ranges = []
         for idx in range(len(self.problem_)):
             self.problem_[idx] = DisjunctiveDiagramsBuilder.LitLessSort(order=self.order_,lits=self.problem_[idx])
-            print('problem_[', idx, ']', self.problem_[idx])
-            it_begin = iter(self.problem_[idx])
-            it_end = self.problem_[idx][-1]
-            ranges.append([self.problem_[idx][0],it_begin,it_end])
-        root_set = DisjunctiveDiagramsBuilder.BuildDiagramNodes(ranges,diagram_)
+            ranges.append([idx,0,len(self.problem_[idx])])
+        root_set = DisjunctiveDiagramsBuilder.BuildDiagramNodes(self,ranges,diagram_)
         diagram_.roots_.update(root_set)
         for node in diagram_.roots_:
             node.node_type = DiagramNodeType.RootNode
+        DisjunctiveDiagramsBuilder.FillParents(diagram_)
+        DisjunctiveDiagramsBuilder.FixRoots(diagram_)
         DisjunctiveDiagramsBuilder.EnumerateDiagramNodes(diagram_)
         return diagram_
 
-    def BuildDiagramNodes(ranges:list,diagram_):
+    def BuildDiagramNodes(self,ranges:list,diagram_):
         # Определим множество уникальных переменных в текущем фрагменте
         var_set = SortedSet()
         for range in ranges:
-            var_set.add(abs(range[0]))
+            var_set.add(abs(self.problem_[range[0]][range[1]]))
         nodes = set()
         for var_id in var_set:
             high_range = []
@@ -41,42 +40,42 @@ class DisjunctiveDiagramsBuilder:
             has_low_terminal = False
             # Заполняем high_range и low_range
             for range in ranges:
-                lit = next(range[1])
+                lit = self.problem_[range[0]][range[1]]
                 if var_id == abs(lit):
                     phase = True if lit > 0 else False
                     if phase:
                         if has_high_terminal:
                             continue
-                        if next(range[1]) == range[2]:
+                        if range[1]+1 == range[2]:
                             has_high_terminal = True
                             high_range.clear()
                             continue
-                        range[0] = next(range[1])
-                        high_range.append([range[0],range[1],range[2]])
+                        #range[1] += 1
+                        high_range.append([range[0],range[1] + 1,range[2]])
                     else:
                         if has_low_terminal:
                             continue
-                        if next(range[1]) == range[2]:
+                        if range[1]+1 == range[2]:
                             has_low_terminal = True
                             low_range.clear()
                             continue
-                        range[0] = next(range[1])
-                        low_range.append([range[0],range[1],range[2]])
+                        #range[1] += 1
+                        low_range.append([range[0],range[1] + 1,range[2]])
             # Строим high-потомков
             high_nodes = set()
             if has_high_terminal:
                 high_nodes.add(diagram_.GetTrueLeaf())
             elif len(high_range)>0:
-                high_nodes = DisjunctiveDiagramsBuilder.BuildDiagramNodes(high_range,diagram_)
-            if len(high_range) == 0:
+                high_nodes = DisjunctiveDiagramsBuilder.BuildDiagramNodes(self,high_range,diagram_)
+            if len(high_nodes) == 0:
                 high_nodes.add(diagram_.GetQuestionLeaf())
             # Строим low-потомков
             low_nodes = set()
             if has_low_terminal:
                 low_nodes.add(diagram_.GetTrueLeaf())
-            elif len(high_range)>0:
-                low_nodes = DisjunctiveDiagramsBuilder.BuildDiagramNodes(low_range,diagram_)
-            if len(high_range) == 0:
+            elif len(low_range)>0:
+                low_nodes = DisjunctiveDiagramsBuilder.BuildDiagramNodes(self,low_range,diagram_)
+            if len(low_nodes) == 0:
                 low_nodes.add(diagram_.GetQuestionLeaf())
             # Создаем узел диаграммы
             node = DiagramNode(DiagramNodeType.InternalNode, var_id, list(high_nodes), list(low_nodes))
@@ -84,6 +83,20 @@ class DisjunctiveDiagramsBuilder:
             nodes.add(node)
             diagram_.var_set_.add(var_id)
         return nodes
+
+    def FillParents(diagram:DisjunctiveDiagram):
+        for node in diagram.table_:
+            for c_node in node.high_childs:
+                c_node.high_parents.append(node)
+            for c_node in node.low_childs:
+                c_node.low_parents.append(node)
+
+    def FixRoots(diagram:DisjunctiveDiagram):
+        for node in diagram.table_:
+            if len(node.low_parents) != 0 or len(node.high_parents) != 0:
+                if node.node_type == DiagramNodeType.RootNode:
+                    #print('ERROR INTERNAL ROOT')
+                    node.node_type = DiagramNodeType.InternalNode
 
     def AddDiagramNode(node:DiagramNode,diagram_):
         if node in diagram_.table_:
@@ -105,6 +118,7 @@ class DisjunctiveDiagramsBuilder:
     def LitLessSort(order:list, lits:list):
         abslits = [abs(x) for x in lits]
         litsorder = [x for x in order if x in abslits]
+        litsorder.reverse()
         for i in range(len(litsorder)):
             litsorder[i] = (-1) * litsorder[i] if ((-1) * litsorder[i]) in lits else litsorder[i]
         return litsorder

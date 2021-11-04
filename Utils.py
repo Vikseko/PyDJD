@@ -3,20 +3,20 @@ from DimacsParser import *
 
 def ReadProblem(options):
     lines = open(options.path,'r').readlines()
-    print(lines)
     problem, order, lit_count, min_var_num, max_var_num = DimacsParser(lines)
-    print(problem)
+    print('Lit count:', lit_count)
+    print('Variables:', max_var_num)
     if options.order_type == 'activity':
-        print('activity')
+        print('Order: activity')
         if order == None:
             raise RuntimeError('No activity order in DIMACS file')
         else:
             return problem, order
     elif options.order_type == 'frequency':
-        print('frequency')
+        print('Order: frequency')
         order = FrequencyOrder(problem,min_var_num,max_var_num)
     elif options.order_type == 'direct':
-        print('direct')
+        print('Order: direct')
         if max_var_num != 0:
             order = [x for x in range(1,max_var_num+1)]
         else:
