@@ -55,6 +55,8 @@ class DiagramNode:
             return False
         if self.Value() != other.Value():
             return False
+        if self.node_type != other.node_type:
+            return False
         if (len(self.high_childs) != len(other.high_childs) or
                 len(self.low_childs) != len(other.low_childs)):
             return False

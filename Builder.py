@@ -23,7 +23,7 @@ class DisjunctiveDiagramsBuilder:
         for node in diagram_.roots_:
             node.node_type = DiagramNodeType.RootNode
         DisjunctiveDiagramsBuilder.FillParents(diagram_)
-        DisjunctiveDiagramsBuilder.FixRoots(diagram_)
+        #DisjunctiveDiagramsBuilder.FixRoots(diagram_)
         DisjunctiveDiagramsBuilder.EnumerateDiagramNodes(diagram_)
         return diagram_
 
@@ -38,7 +38,7 @@ class DisjunctiveDiagramsBuilder:
             low_range = []
             has_high_terminal = False
             has_low_terminal = False
-            # Заполняем high_range и low_range
+            # Заполняем high_range и low_range индексами из списка
             for range in ranges:
                 lit = self.problem_[range[0]][range[1]]
                 if var_id == abs(lit):
@@ -50,7 +50,6 @@ class DisjunctiveDiagramsBuilder:
                             has_high_terminal = True
                             high_range.clear()
                             continue
-                        #range[1] += 1
                         high_range.append([range[0],range[1] + 1,range[2]])
                     else:
                         if has_low_terminal:
@@ -59,7 +58,6 @@ class DisjunctiveDiagramsBuilder:
                             has_low_terminal = True
                             low_range.clear()
                             continue
-                        #range[1] += 1
                         low_range.append([range[0],range[1] + 1,range[2]])
             # Строим high-потомков
             high_nodes = set()
@@ -107,6 +105,7 @@ class DisjunctiveDiagramsBuilder:
             node.HashKey()
             diagram_.table_.add(node)
             return node
+        # Fixme: нужно исправить ситуацию, когда корень склеивается с внутренней вершиной
 
     def EnumerateDiagramNodes(diagram:DisjunctiveDiagram):
         vertex_id = 0
