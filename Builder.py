@@ -23,7 +23,7 @@ class DisjunctiveDiagramsBuilder:
         for node in diagram_.roots_:
             node.node_type = DiagramNodeType.RootNode
         DisjunctiveDiagramsBuilder.FillParents(diagram_)
-        #DisjunctiveDiagramsBuilder.FixRoots(diagram_)
+        DisjunctiveDiagramsBuilder.FixRoots(diagram_)
         DisjunctiveDiagramsBuilder.EnumerateDiagramNodes(diagram_)
         return diagram_
 
@@ -90,11 +90,28 @@ class DisjunctiveDiagramsBuilder:
                 c_node.low_parents.append(node)
 
     def FixRoots(diagram:DisjunctiveDiagram):
-        for node in diagram.table_:
+        for node in diagram.roots_:
             if len(node.low_parents) != 0 or len(node.high_parents) != 0:
-                if node.node_type == DiagramNodeType.RootNode:
-                    #print('ERROR INTERNAL ROOT')
-                    node.node_type = DiagramNodeType.InternalNode
+                nodes_for_check = OrderedSet()
+                nodes_for_check.update(node.high_parents)
+                nodes_for_check.update(node.low_parents)
+                node.high_parents.clear()
+                node.low_parents.clear()
+                DisjunctiveDiagramsBuilder.CheckNodesForDelRootGluing(nodes_for_check, node)
+
+    def CheckNodesForDelRootGluing(nodes_for_check:OrderedSet, current_node):
+        for node in nodes_for_check:
+            if current_node in node.low_childs:
+                node.low_childs.remove(current_node)
+            if current_node in node.high_childs:
+                node.high_childs.remove(current_node)
+            if len(node.low_childs) == 0 and len(node.high_childs) == 0:
+                new_nodes_for_check = OrderedSet()
+                new_nodes_for_check.update(node.high_parents)
+                new_nodes_for_check.update(node.low_parents)
+                DisjunctiveDiagramsBuilder.CheckNodesForDelRootGluing(new_nodes_for_check, node)
+                del node
+
 
     def AddDiagramNode(node:DiagramNode,diagram_):
         if node in diagram_.table_:
