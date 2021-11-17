@@ -29,9 +29,10 @@ class DisjunctiveDiagramsBuilder:
 
     def BuildDiagramNodes(self,ranges:list,diagram_):
         # Определим множество уникальных переменных в текущем фрагменте
-        var_set = SortedSet()
+        var_set = set()
         for range in ranges:
             var_set.add(abs(self.problem_[range[0]][range[1]]))
+        var_set = SortedSet(var_set)
         nodes = set()
         for var_id in var_set:
             high_range = []
@@ -115,14 +116,29 @@ class DisjunctiveDiagramsBuilder:
 
     def AddDiagramNode(node:DiagramNode,diagram_):
         if node in diagram_.table_:
-            it_node = get_equivalent(diagram_.table_,node)
+            it_node:DiagramNode = get_equivalent(diagram_.table_,node)
+            if node.Value() == it_node.Value():
+                for node_ in node.low_childs:
+                    if node_ not in it_node.low_childs:
+                        raise RuntimeError('node_ not in it_node.low_childs')
+                for node_ in node.high_childs:
+                    if node_ not in it_node.high_childs:
+                        raise RuntimeError('node_ not in it_node.high_childs')
+                for node_ in it_node.low_childs:
+                    if node_ not in node.low_childs:
+                        raise RuntimeError('node_ not in node.low_childs')
+                for node_ in it_node.high_childs:
+                    if node_ not in node.high_childs:
+                        raise RuntimeError('node_ not in node.high_childs')
+            else:
+                raise RuntimeError('node.Value() != it_node.Value()')
             del node
             return it_node
         else:
             node.HashKey()
             diagram_.table_.add(node)
             return node
-        # Fixme: нужно исправить ситуацию, когда корень склеивается с внутренней вершиной
+
 
     def EnumerateDiagramNodes(diagram:DisjunctiveDiagram):
         vertex_id = 0

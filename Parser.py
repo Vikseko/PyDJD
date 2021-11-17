@@ -1,3 +1,12 @@
+"""
+Test CNFs:
+test1.cnf
+test2.cnf
+test3.cnf
+GeffeLearntsClauses_1.cnf
+md4_48_lambda_1_simplified_up_0.cnf
+"""
+
 import argparse
 #Parser
 def createParser ():
@@ -16,3 +25,4 @@ def createParser ():
     parser.add_argument('-avl', '--analyze_var_limit', nargs='?', type=int, default=20)
     parser.add_argument('-avf', '--analyze_var_fraction', nargs='?', type=float, default=0.5)
     return parser
+

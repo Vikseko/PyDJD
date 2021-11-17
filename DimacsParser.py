@@ -6,6 +6,7 @@ def DimacsParser(lines):
     lit_count_flag = False
     order = None
     problem = []
+    varset = set()
     if len(lines) == 0:
         raise RuntimeError('DimacsParser: Empty file')
     for line in lines:
@@ -27,6 +28,8 @@ def DimacsParser(lines):
             if lit_count == 0 and lit_count_flag == False:
                 lit_count_flag = True
             clause = list(map(int,line.split()[:-1]))
+            for lit in clause:
+                varset.add(abs(lit))
             problem.append(clause)
             if lit_count_flag == True:
                 lit_count += len(clause)
@@ -40,4 +43,5 @@ def DimacsParser(lines):
             for lit in clause:
                 if abs(lit) > max_var_num:
                     max_var_num = abs(lit)
-    return problem, order, lit_count, min_var_num, max_var_num
+    var_count = len(varset)
+    return problem, order, var_count, lit_count, min_var_num, max_var_num

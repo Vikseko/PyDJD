@@ -3,20 +3,22 @@ from DimacsParser import *
 
 def ReadProblem(options):
     lines = open(options.path,'r').readlines()
-    problem, order, lit_count, min_var_num, max_var_num = DimacsParser(lines)
-    print('Lit count:', lit_count)
-    print('Variables:', max_var_num)
+    problem, order, var_count, lit_count, min_var_num, max_var_num = DimacsParser(lines)
+    print('Lit count:'.ljust(30,' '), lit_count)
+    print('Variables:'.ljust(30,' '), var_count)
+    print('Lowest variable number:'.ljust(30,' '), min_var_num)
+    print('Highest variable number:'.ljust(30,' '), max_var_num)
     if options.order_type == 'activity':
-        print('Order: activity')
+        print('Order:'.ljust(30,' '), 'activity')
         if order == None:
             raise RuntimeError('No activity order in DIMACS file')
         else:
             return problem, order
     elif options.order_type == 'frequency':
-        print('Order: frequency')
+        print('Order:'.ljust(30,' '), 'frequency')
         order = FrequencyOrder(problem,min_var_num,max_var_num)
     elif options.order_type == 'direct':
-        print('Order: direct')
+        print('Order:'.ljust(30,' '), 'direct')
         if max_var_num != 0:
             order = [x for x in range(1,max_var_num+1)]
         else:
@@ -33,8 +35,8 @@ def FrequencyOrder(problem,min_var_num, max_var_num):
         counter = list(enumerate(counter))
         counter.sort(key=lambda x:x[1])
         counter.reverse()
-        order = [x[0] for x in counter if type(x)==tuple]
-        return order[:-1]
+        order = [x[0] for x in counter if x[1]>0]
+        return order
     else:
         raise RuntimeError('No minimum and maximum variables found, check DIMACS file.')
 

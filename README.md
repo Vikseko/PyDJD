@@ -5,9 +5,12 @@ Python implementation of disjunctive diagrams.
 
 install ordered-set
 
+If you are using PyPy (prefer):
+install SortedSet
+
+If you are using CPython:
 install sorted-set
 
-The directory with main.py should contain the folder named 'Log'.
 
 # Usage
 

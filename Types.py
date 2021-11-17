@@ -137,7 +137,7 @@ class DisjunctiveDiagram:
         self.problem_type_ = None
         self.table_ = set()
         self.roots_ = set()
-        self.var_set_ = SortedSet()
+        self.var_set_ = set()
         self.table_.add(DisjunctiveDiagram.true_leaf)
         #self.table_.add(DisjunctiveDiagram.false_leaf)
         self.table_.add(DisjunctiveDiagram.question_leaf)
