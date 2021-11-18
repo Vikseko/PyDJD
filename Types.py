@@ -51,11 +51,11 @@ class DiagramNode:
 
     # Сравнение узлов на основе их Value() и хэшей их потомков (не рекурсивно)
     def __eq__(self, other):
-        if not isinstance(other, type(self)):
+        #if self.Value() != other.Value():
+            #return False
+        if self.hash_key != other.hash_key:
             return False
-        if self.Value() != other.Value():
-            return False
-        if self.node_type != other.node_type:
+        """if self.node_type != other.node_type:
             return False
         if (len(self.high_childs) != len(other.high_childs) or
                 len(self.low_childs) != len(other.low_childs)):
@@ -65,7 +65,7 @@ class DiagramNode:
                 return False
         for selfright, noderight in zip(self.low_childs,other.low_childs):
             if selfright.hash_key != noderight.hash_key:
-                return False
+                return False"""
         return True
 
     # Сравнение узлов на основе их потомков (рекурсивно)
@@ -91,14 +91,15 @@ class DiagramNode:
 
     # Возвращает номер переменный для внутренних и корневых узлов, либо строковые значения для терминальных
     def Value(self):
-        if self.node_type == DiagramNodeType.FalseNode:
-            return 'false'
+        if self.node_type == DiagramNodeType.InternalNode or self.node_type == DiagramNodeType.RootNode:
+            return self.var_id
         elif self.node_type == DiagramNodeType.QuestionNode:
             return '?'
         elif self.node_type == DiagramNodeType.TrueNode:
             return 'true'
         else:
-            return self.var_id
+            return 'false'
+
 
     # Проверяет является ли узел терминальным
     def IsLeaf(self):
@@ -135,12 +136,12 @@ class DisjunctiveDiagram:
         self.max_var_num_ = 0
         self.root_join_cnt_ = 0
         self.problem_type_ = None
-        self.table_ = set()
+        self.table_ = {}
         self.roots_ = set()
         self.var_set_ = set()
-        self.table_.add(DisjunctiveDiagram.true_leaf)
-        #self.table_.add(DisjunctiveDiagram.false_leaf)
-        self.table_.add(DisjunctiveDiagram.question_leaf)
+        self.table_[DisjunctiveDiagram.true_leaf.hash_key] = DisjunctiveDiagram.true_leaf
+        self.table_[DisjunctiveDiagram.question_leaf.hash_key] = DisjunctiveDiagram.question_leaf
+
 
     # Возвращает таблицу
     def GetTable(self):
@@ -222,9 +223,7 @@ class DisjunctiveDiagram:
 
 # Функция по элементу ищет в множестве такой же и возвращает его (проверять наличие нужно отдельно)
 def get_equivalent(container, item):
-    for element in container:
-        if element == item:
-            return element
+    return container[item.hash_key]
 
 
 class Options:

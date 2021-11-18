@@ -3,14 +3,14 @@ Python implementation of disjunctive diagrams.
 
 # Installation
 
-install ordered-set
-
-If you are using PyPy (prefer):
-install SortedSet
+"pip3 install ordered-set"
 
 If you are using CPython:
-install sorted-set
+"pip3 install sortedcontainers"
 
+If you are using PyPy:
+"pip3 install SortedSet"
+and change Imports.py.
 
 # Usage
 

@@ -84,7 +84,7 @@ class DisjunctiveDiagramsBuilder:
         return nodes
 
     def FillParents(diagram:DisjunctiveDiagram):
-        for node in diagram.table_:
+        for node in diagram.table_.values():
             for c_node in node.high_childs:
                 c_node.high_parents.append(node)
             for c_node in node.low_childs:
@@ -115,34 +115,19 @@ class DisjunctiveDiagramsBuilder:
 
 
     def AddDiagramNode(node:DiagramNode,diagram_):
-        if node in diagram_.table_:
-            it_node:DiagramNode = get_equivalent(diagram_.table_,node)
-            if node.Value() == it_node.Value():
-                for node_ in node.low_childs:
-                    if node_ not in it_node.low_childs:
-                        raise RuntimeError('node_ not in it_node.low_childs')
-                for node_ in node.high_childs:
-                    if node_ not in it_node.high_childs:
-                        raise RuntimeError('node_ not in it_node.high_childs')
-                for node_ in it_node.low_childs:
-                    if node_ not in node.low_childs:
-                        raise RuntimeError('node_ not in node.low_childs')
-                for node_ in it_node.high_childs:
-                    if node_ not in node.high_childs:
-                        raise RuntimeError('node_ not in node.high_childs')
-            else:
-                raise RuntimeError('node.Value() != it_node.Value()')
+        if node.hash_key in diagram_.table_:
+            it_node:DiagramNode = diagram_.table_[node.hash_key]
             del node
             return it_node
         else:
             node.HashKey()
-            diagram_.table_.add(node)
+            diagram_.table_[node.hash_key] = node
             return node
 
 
     def EnumerateDiagramNodes(diagram:DisjunctiveDiagram):
         vertex_id = 0
-        for node in diagram.table_:
+        for node in diagram.table_.values():
             vertex_id += 1
             node.vertex_id = vertex_id
 
