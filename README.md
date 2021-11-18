@@ -15,3 +15,4 @@ and change Imports.py.
 # Usage
 
 The program builds a disjunctive diagram according to the given formula. Input data formats: CNF, DNF or conflicting clauses in DIMACS format. 
+
