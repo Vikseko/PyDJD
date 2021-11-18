@@ -51,21 +51,8 @@ class DiagramNode:
 
     # Сравнение узлов на основе их Value() и хэшей их потомков (не рекурсивно)
     def __eq__(self, other):
-        #if self.Value() != other.Value():
-            #return False
         if self.hash_key != other.hash_key:
             return False
-        """if self.node_type != other.node_type:
-            return False
-        if (len(self.high_childs) != len(other.high_childs) or
-                len(self.low_childs) != len(other.low_childs)):
-            return False
-        for selfleft, nodeleft in zip(self.high_childs,other.high_childs):
-            if selfleft.hash_key != nodeleft.hash_key:
-                return False
-        for selfright, noderight in zip(self.low_childs,other.low_childs):
-            if selfright.hash_key != noderight.hash_key:
-                return False"""
         return True
 
     # Сравнение узлов на основе их потомков (рекурсивно)
@@ -219,11 +206,6 @@ class DisjunctiveDiagram:
     def __del__(self):
         for node in self.table_:
             del node
-
-
-# Функция по элементу ищет в множестве такой же и возвращает его (проверять наличие нужно отдельно)
-def get_equivalent(container, item):
-    return container[item.hash_key]
 
 
 class Options:
