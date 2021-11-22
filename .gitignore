@@ -1,1 +1,4 @@
-/Logs/order.log
+/Logs/*
+run_on_tests.sh
+/Tests_tmp
+redir_lits.cnf

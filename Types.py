@@ -43,7 +43,8 @@ class DiagramNode:
     # Вычисляет хэш узла (выполняется при создании узла)
     def HashKey(self):
         hashtuple_ = tuple([self.Value()]+[node.hash_key for node in self.high_childs]+[node.hash_key for node in self.low_childs])
-        #print('hk',self.var_id,hashtuple_)
+        #print('hk',hashtuple_)
+        #print(hash(hashtuple_))
         self.hash_key = hash(hashtuple_)
 
     def __hash__(self):
@@ -136,6 +137,7 @@ class DisjunctiveDiagram:
         self.max_var_num_ = 0
         self.root_join_cnt_ = 0
         self.problem_type_ = None
+        self.order_ = None
         self.table_ = {}
         self.roots_ = set()
         self.var_set_ = set()

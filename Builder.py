@@ -14,6 +14,7 @@ class DisjunctiveDiagramsBuilder:
     def BuildDiagram(self):
         diagram_ = DisjunctiveDiagram()
         diagram_.problem_type_ = self.problem_type_
+        diagram_.order_ = self.order_
         ranges = []
         for idx in range(len(self.problem_)):
             self.problem_[idx] = DisjunctiveDiagramsBuilder.LitLessSort(order=self.order_,lits=self.problem_[idx])
@@ -139,6 +140,13 @@ class DisjunctiveDiagramsBuilder:
         for i in range(len(litsorder)):
             litsorder[i] = (-1) * litsorder[i] if ((-1) * litsorder[i]) in lits else litsorder[i]
         return litsorder
+
+    # Сортировка множества узлов w.r.t. order
+    def LitLessSortNodes(order:list,nodes:set):
+        nodes = list(nodes)
+        sorted_nodes = [node for x in order for node in nodes if node.Value() == x]
+        return sorted_nodes
+
 
     def ClauseLessSort(self,):
         pass
