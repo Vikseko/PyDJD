@@ -36,7 +36,7 @@ if __name__ == '__main__':
     print('Build time:'.ljust(30,' '), build_time)
     before_cnf, tmp_ = GetCNFFromDiagram(diagram)
     before_cnf = CNF(from_clauses=before_cnf)
-    before_cnf.to_file('Logs/beforeprep_' + options.name + '.cnf')
+    before_cnf.to_file('Logs/beforeprep_v1_' + options.name + '.cnf')
     """var1 = 143
     var2 = 142
     for node in diagram.GetTrueLeaf().high_parents:
@@ -58,8 +58,12 @@ if __name__ == '__main__':
     if options.redir_paths == True:
         start_redir_time = time.time()
         print('Start redirection procedure:')
-        #PathsRedirection(diagram,problem)
-        RedirectQuestionPathsFromDiagram(diagram)
+        # v1, нужно закомментить from Redirection import * в Pathfinder.py
+        # в этой версии сперва собираются все пути, затем скопом обрабатываются
+        PathsRedirection(diagram,problem)
+        # v2, нужно раскомментить from Redirection import * в Pathfinder.py
+        # в этой версии каждый путь находит отдельно и обрабатывается сразу
+        #RedirectQuestionPathsFromDiagram(diagram)
         print('Number of vertices:'.ljust(30, ' '), len(diagram.table_))
         print('DiagramNode constructors:'.ljust(30,' '), DiagramNode.constructors_)
         print('DiagramNode destructors:'.ljust(30, ' '), DiagramNode.destructors_)
@@ -69,7 +73,7 @@ if __name__ == '__main__':
         print('Total runtime'.ljust(30,' '), time.time() - start_time)
         after_cnf, tmp_ = GetCNFFromDiagram(diagram)
         after_cnf = CNF(from_clauses=after_cnf)
-        after_cnf.to_file('Logs/djdprep_' + options.name + '.cnf')
+        after_cnf.to_file('Logs/djdprep_v1_' + options.name + '.cnf')
 
 """     solver = MapleChrono(bootstrap_with=after_cnf)
         timer = Timer(30, interrupt, [solver])

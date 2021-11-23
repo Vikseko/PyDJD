@@ -18,7 +18,7 @@ def PathsRedirection(diagram, problem):
     print('Number of question paths:'.ljust(30, ' '), len(node_paths))
     redir_pairs = []
     for lit_path, node_path in zip(lit_paths, node_paths):
-        s, model = PathCheck(lit_path,g, list_hard_assumptions)
+        s, model = PathCheck_v1(lit_path,g, list_hard_assumptions)
         if s == False:
             redir_pairs.append([lit_path,node_path])
         if s == None:
@@ -38,7 +38,7 @@ def PathsRedirection(diagram, problem):
     for pair in redir_pairs:
         lit_path = pair[0]
         node_path = pair[1]
-        flag_copy_path = RedirectPath(lit_path, node_path, diagram, node_paths)
+        flag_copy_path = RedirectPath_v1(lit_path, node_path, diagram, node_paths)
         if flag_copy_path == True:
             nof_redir_copy_paths += 1
         else:
@@ -300,3 +300,110 @@ def FixRootTypeRecursive(node):
             FixRootTypeRecursive(parent)
         for parent in node.low_parents:
             FixRootTypeRecursive(parent)
+
+
+def PathCheck_v1(lit_path, solver, list_hard_assumptions):
+    timer = Timer(0.01, interrupt, [solver])
+    timer.start()
+    s = solver.solve_limited(assumptions=lit_path, expect_interrupt=True)
+    solver.clear_interrupt()
+    if s == None:
+        list_hard_assumptions.append(lit_path)
+        return s, None
+    elif s == False:
+        return s, None
+    elif s == True:
+        model = solver.get_model()
+        return s, model
+
+
+def RedirectPath_v1(lit_path,node_path,diagram, node_paths):
+    # Проверяем, чтобы первый узел был корнем
+    if node_path[0].node_type != DiagramNodeType.RootNode:
+        raise RuntimeError('First node in node_path isnt RootNode')
+    # Находим первый узел, у которого больше 1 родителя
+    copy_index = None
+    for i in range(len(node_path)):
+        node = node_path[i]
+        nof_parents = len(node.high_parents) + len(node.low_parents)
+        if nof_parents > 1:
+            copy_index = i
+            break
+    # Перенаправляем путь
+    if copy_index != None:
+        # Путь нужно скопировать для перенаправления
+        RedirCopyPath_v1(copy_index, lit_path, node_path, diagram,node_paths)
+        return True
+    else:
+        # Копирование не требуется
+        RedirOriginalPath_v1(lit_path[-1],node_path[-1],diagram, node_paths)
+        return False
+
+
+
+def RedirCopyPath_v1(copy_index, lit_path, node_path, diagram,node_paths):
+    old_nodes = node_path[copy_index:]
+    old_lits = lit_path[copy_index:]
+    redir_node = node_path[copy_index-1]
+    redir_lit = lit_path[copy_index-1]
+    copylink_pair = (node_path[copy_index-1], node_path[copy_index])
+    #print('copylink pair', [(x.Value(),x) for x in copylink_pair])
+    # Рекурсивно удаляем из таблицы узлы от последнего в пути наверх
+    deleted_nodes = set()
+    DeletingNodesFromTable(redir_node, diagram, deleted_nodes)
+    # Копируем узлы и перенаправляем путь
+    new_nodes = CopyNodes(redir_node, redir_lit, old_nodes, old_lits, diagram)
+    # Работаем с copylink_pair в node_paths
+    ReplaceCopyNodesInNodePaths(node_paths, new_nodes, old_nodes, copylink_pair)
+    # Добавляем узлы в таблицу, проверяя склейку
+    deleted_nodes.update(new_nodes)
+    GluingNodes(deleted_nodes, diagram)
+
+
+
+def RedirOriginalPath_v1(last_lit, last_node, diagram, node_paths):
+    # Рекурсивно удаляем из таблицы узлы от последнего в пути наверх
+    deleted_nodes = set()
+    DeletingNodesFromTable(last_node,diagram, deleted_nodes)
+    quest_leaf = diagram.GetQuestionLeaf()
+    # Перенаправляем путь
+    if last_lit < 0:
+        for i in range(len(last_node.low_childs)):
+            if last_node.low_childs[i] == diagram.GetQuestionLeaf():
+                last_node.low_childs[i] = diagram.GetTrueLeaf()
+                break
+        quest_leaf.low_parents = [x for x in quest_leaf.low_parents if x is not last_node]
+        diagram.GetTrueLeaf().low_parents.append(last_node)
+    else:
+        for i in range(len(last_node.high_childs)):
+            if last_node.high_childs[i] == diagram.GetQuestionLeaf():
+                last_node.high_childs[i] = diagram.GetTrueLeaf()
+                break
+        quest_leaf.high_parents = [x for x in quest_leaf.high_parents if x is not last_node]
+        diagram.GetTrueLeaf().high_parents.append(last_node)
+    # Проверяем ранее удаленные из таблицы узлы на склейку
+    GluingNodes(deleted_nodes, diagram)
+
+
+def GluingNodes_v1(deleted_nodes, diagram, node_paths):
+    deleted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, deleted_nodes)
+    for node in deleted_nodes:
+        node.HashKey()
+        if node.hash_key in diagram.table_ and diagram.table_[node.hash_key] is not node:
+            it_node = diagram.table_[node.hash_key]
+            if node is it_node:
+                print('ERROR')
+            #print('Glued node',(node.Value(), node),'with node',(it_node.Value(),it_node))
+            GluingNode_v1(node,it_node, node_paths)
+            del node
+        else:
+            diagram.table_[node.hash_key] = node
+
+
+def GluingNode_v1(node,it_node, node_paths):
+    # заменяем ссылки в родителях
+    ReplaceParentsLinksToNode(node,it_node)
+    # Удаляем ссылки потомков узла на него
+    DeleteChildsLinksToNode(node)
+    # Заменяем узел в node_paths
+    ReplaceNodeInNodePaths(node,it_node,node_paths)

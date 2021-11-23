@@ -1,6 +1,6 @@
 from Utils import *
 from Builder import DisjunctiveDiagramsBuilder
-from Redirection import *
+#from Redirection import *
 
 # Получаем КНФ из диаграммы (все пути из корней в терминальную 'true')
 def GetCNFFromDiagram(diagram:DisjunctiveDiagram):
