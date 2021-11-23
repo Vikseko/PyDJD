@@ -94,6 +94,7 @@ def RedirectQuestionPathsFromDiagram(diagram:DisjunctiveDiagram):
     cnf, tmp_ = GetCNFFromDiagram(diagram)
     cnf = CNF(from_clauses=cnf)
     g = MapleChrono(bootstrap_with=cnf)
+    #g.conf_budget(1000)
     question_leaf = diagram.GetQuestionLeaf()
     while not question_leaf.IsVisited():
         #print('\nSearch in progress')

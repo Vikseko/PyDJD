@@ -3,6 +3,8 @@ import pysat
 from pysat.solvers import MapleChrono
 from pysat.formula import CNF
 
+from Types import DiagramNode
+
 
 def PathsRedirection(diagram, problem):
     nof_redir_copy_paths = 0
@@ -92,7 +94,8 @@ def RedirCopyPath(copy_index, lit_path, node_path, diagram):
     old_lits = lit_path[copy_index:]
     redir_node = node_path[copy_index-1]
     redir_lit = lit_path[copy_index-1]
-    #copylink_pair = (node_path[copy_index-1], node_path[copy_index])
+    copylink_pair = (node_path[copy_index-1], node_path[copy_index])
+    #print('copylink pair', [(x.Value(),x) for x in copylink_pair])
     # Рекурсивно удаляем из таблицы узлы от последнего в пути наверх
     deleted_nodes = set()
     DeletingNodesFromTable(redir_node, diagram, deleted_nodes)
@@ -120,11 +123,15 @@ def CopyNodes(redir_node, redir_lit, old_nodes, old_lits, diagram):
     if redir_lit < 0:
         redir_node.low_childs = [node for node in redir_node.low_childs if node is not old_nodes[0]]
         old_nodes[0].low_parents = [node for node in old_nodes[0].low_parents if node is not redir_node]
+        #if redir_node.Value() == 142:
+            #print('redir',(redir_node.Value(), redir_node),'from low ',(old_nodes[0].Value(),old_nodes[0]),'to',(new_nodes[0].Value(),new_nodes[0]))
         redir_node.low_childs.append(new_nodes[0])
         new_nodes[0].low_parents.append(redir_node)
     else:
         redir_node.high_childs = [node for node in redir_node.high_childs if node is not old_nodes[0]]
         old_nodes[0].high_parents = [node for node in old_nodes[0].high_parents if node is not redir_node]
+        #if redir_node.Value() == 142:
+            #print('redir',(redir_node.Value(), redir_node),'from high ',(old_nodes[0].Value(),old_nodes[0]),'to',(new_nodes[0].Value(),new_nodes[0]))
         redir_node.high_childs.append(new_nodes[0])
         new_nodes[0].high_parents.append(redir_node)
     return new_nodes
@@ -145,10 +152,12 @@ def RedirLinksFromOldToCopy(new_nodes, old_nodes, old_lits, i, diagram):
             # Меняем ссылку на терминальную вершину в low_childs
             new_nodes[i].low_childs = [node for node in new_nodes[i].low_childs if node is not diagram.GetQuestionLeaf()]
             new_nodes[i].low_childs.append(diagram.GetTrueLeaf())
+            #diagram.GetTrueLeaf().low_parents.append(new_nodes[i])
         else:
             # Меняем ссылку на терминальную вершину в high_childs
             new_nodes[i].high_childs = [node for node in new_nodes[i].high_childs if node is not diagram.GetQuestionLeaf()]
             new_nodes[i].high_childs.append(diagram.GetTrueLeaf())
+            #diagram.GetTrueLeaf().high_parents.append(new_nodes[i])
     new_nodes[i].HashKey()
 
 
@@ -223,6 +232,7 @@ def GluingNodes(deleted_nodes, diagram):
             it_node = diagram.table_[node.hash_key]
             if node is it_node:
                 print('ERROR')
+            #print('Glued node',(node.Value(), node),'with node',(it_node.Value(),it_node))
             GluingNode(node,it_node)
             del node
         else:
@@ -242,9 +252,22 @@ def ReplaceParentsLinksToNode(node,it_node):
     for parent in node.high_parents:
         parent.high_childs = [x for x in parent.high_childs if x is not node and x is not it_node]
         parent.high_childs.append(it_node)
+        for tmpnode in it_node.high_parents:
+            if tmpnode is parent:
+                break
+        else:
+            #print('add as highparent ', (parent.Value(), parent), 'to node', (it_node.Value(), it_node))
+            it_node.high_parents.append(parent)
     for parent in node.low_parents:
         parent.low_childs = [x for x in parent.low_childs if x is not node and x is not it_node]
         parent.low_childs.append(it_node)
+        for tmpnode in it_node.low_parents:
+            if tmpnode is parent:
+                break
+        else:
+            it_node.low_parents.append(parent)
+            #print('add as lowparent ', (parent.Value(), parent), 'to node', (it_node.Value(), it_node))
+
 
 
 def DeleteChildsLinksToNode(node):
