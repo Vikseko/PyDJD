@@ -83,39 +83,59 @@ def WritePaths(problem,node_paths,node_path,clause):
 
 # Получаем false paths из диаграммы (все пути из корней в терминальную '?')
 def RedirectQuestionPathsFromDiagram(diagram:DisjunctiveDiagram):
-    question_paths = []
     cnf, tmp_ = GetCNFFromDiagram(diagram)
     cnf = CNF(from_clauses=cnf)
     g = MapleChrono(bootstrap_with=cnf)
     question_leaf = diagram.GetQuestionLeaf()
-    for node in question_leaf.high_parents:
-        clause = []
-        clause.append(node.var_id)
-        node_path = []
-        node_path.append(node)
-        RedirPaths(question_paths,node_path,clause, g, diagram)
-    for node in question_leaf.low_parents:
-        clause = []
-        clause.append(-node.var_id)
-        node_path = []
-        node_path.append(node)
-        RedirPaths(question_paths,node_path,clause, g, diagram)
-    return question_paths
+    while not question_leaf.IsVisited():
+        #print('\nSearch in progress')
+        stop_flag = True
+        finded_flag = False
+        for node in question_leaf.high_parents:
+            if not node.IsVisited() and not finded_flag:
+                stop_flag = False
+                clause = []
+                clause.append(node.var_id)
+                node_path = []
+                node_path.append(node)
+                finded_flag = RedirPaths(node_path,clause, g, diagram, finded_flag)
+                if finded_flag:
+                    continue
+        for node in question_leaf.low_parents:
+            if not node.IsVisited() and not finded_flag:
+                stop_flag = False
+                clause = []
+                clause.append(-node.var_id)
+                node_path = []
+                node_path.append(node)
+                finded_flag = RedirPaths(node_path,clause, g, diagram, finded_flag)
+                if finded_flag:
+                    continue
+        if stop_flag == True:
+            question_leaf.Visit()
+    print('Number of question paths:'.ljust(30, ' '), diagram.question_path_count_)
+    print('Number of not solved paths'.ljust(30, ' '),  diagram.question_path_count_ - (diagram.copy_redir + diagram.uniq_redir))
+    print('Number of copy redirected'.ljust(30, ' '), diagram.copy_redir)
+    print('Number of uniq redirected'.ljust(30, ' '), diagram.uniq_redir)
 
-def RedirPaths(problem,node_path,clause, g, diagram):
+
+def RedirPaths(node_path,clause, g, diagram, finded_flag):
     current_node:DiagramNode = node_path[-1]
     if current_node.IsRoot():
         clause.reverse()
         node_path.reverse()
+        diagram.question_path_count_ += 1
         #problem.append(clause)
         #node_paths.append(node_path)
+        #print(clause)
         s, model = PathCheck(clause, g)
         if s == False:
+            pass
             flag_copy_path = RedirectPath(clause, node_path, diagram)
             if flag_copy_path == True:
-                nof_redir_copy_paths += 1
+                diagram.copy_redir += 1
             else:
-                nof_redir_uniq_paths += 1
+                diagram.uniq_redir += 1
         if s == None:
             pass
         if s == True:
@@ -123,16 +143,33 @@ def RedirPaths(problem,node_path,clause, g, diagram):
             # print('Model:', model)
             # break
             pass
+        current_node.Visit()
+        return True
     else:
-        for node in current_node.high_parents:
-            hclause = copy.copy(clause)
-            hnode_path = copy.copy(node_path)
-            hclause.append(node.var_id)
-            hnode_path.append(node)
-            WritePaths(problem, node_paths, hnode_path, hclause)
-        for node in current_node.low_parents:
-            lclause = copy.copy(clause)
-            lnode_path = copy.copy(node_path)
-            lclause.append(-node.var_id)
-            lnode_path.append(node)
-            WritePaths(problem, node_paths, lnode_path, lclause)
+        visited_flag = True
+        for node in itertools.chain(current_node.high_parents, current_node.low_parents):
+            if not node.IsVisited():
+                visited_flag = False
+        if visited_flag == True:
+            current_node.Visit()
+            for node in itertools.chain(current_node.high_parents, current_node.low_parents):
+                node.UnVisit()
+        if not current_node.Visit():
+            for node in current_node.high_parents:
+                if not node.IsVisited() and not finded_flag:
+                    hclause = copy.copy(clause)
+                    hnode_path = copy.copy(node_path)
+                    hclause.append(node.var_id)
+                    hnode_path.append(node)
+                    finded_flag = RedirPaths(hnode_path, hclause, g, diagram, finded_flag)
+                    if finded_flag:
+                        return True
+            for node in current_node.low_parents:
+                if not node.IsVisited() and not finded_flag:
+                    lclause = copy.copy(clause)
+                    lnode_path = copy.copy(node_path)
+                    lclause.append(-node.var_id)
+                    lnode_path.append(node)
+                    finded_flag = RedirPaths(lnode_path, lclause, g, diagram, finded_flag)
+                    if finded_flag:
+                        return True

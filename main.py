@@ -34,14 +34,15 @@ if __name__ == '__main__':
     print('DiagramNode destructors:'.ljust(30,' '), DiagramNode.destructors_)
     build_time = time.time() - start_build_time
     print('Build time:'.ljust(30,' '), build_time)
-    #new_cnf, tmp_ = GetCNFFromDiagram(diagram)
-    #new_cnf = CNF(from_clauses=new_cnf)
-    #new_cnf.to_file('Logs/beforeprep_' + options.name + '.cnf')
+    new_cnf, tmp_ = GetCNFFromDiagram(diagram)
+    new_cnf = CNF(from_clauses=new_cnf)
+    new_cnf.to_file('Logs/beforeprep_' + options.name + '.cnf')
     print()
     if options.redir_paths == True:
         start_redir_time = time.time()
         print('Start redirection procedure:')
-        PathsRedirection(diagram,problem)
+        #PathsRedirection(diagram,problem)
+        RedirectQuestionPathsFromDiagram(diagram)
         print('Number of vertices:'.ljust(30, ' '), len(diagram.table_))
         print('DiagramNode constructors:'.ljust(30,' '), DiagramNode.constructors_)
         print('DiagramNode destructors:'.ljust(30, ' '), DiagramNode.destructors_)
@@ -51,8 +52,8 @@ if __name__ == '__main__':
         print('Total runtime'.ljust(30,' '), time.time() - start_time)
         new_cnf, tmp_ = GetCNFFromDiagram(diagram)
         new_cnf = CNF(from_clauses=new_cnf)
-        solver = MapleChrono(bootstrap_with=new_cnf)
-        s = solver.solve()
-        if s == True:
-            print('still broken')
-        #new_cnf.to_file('Logs/djdprep_'+options.name+'.cnf')
+        #solver = MapleChrono(bootstrap_with=new_cnf)
+        #s = solver.solve()
+        #if s == True:
+            #print('still broken')
+        new_cnf.to_file('Logs/djdprep_'+options.name+'.cnf')

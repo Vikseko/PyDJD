@@ -5,18 +5,14 @@ test2.cnf
 test3.cnf
 GeffeLearntsClauses_1.cnf
 md4_48_lambda_1_simplified_up_0.cnf
-PancakeVsSelectionSort_6_6.cnf
-PancakeVsSelectionSort_6_7.cnf
-PancakeVsSelectionSort_7_4.cnf
-PancakeVsSelectionSort_7_5.cnf
-PancakeVsSelectionSort_7_6.cnf
+BubbleVsPancakeSort_6_4.cnf
 """
 
 import argparse
 #Parser
 def createParser ():
     parser = argparse.ArgumentParser()
-    parser.add_argument ('-f', '--file', nargs='?', type=str, default='Tests_tmp/PancakeVsSelectionSort_6_6.cnf')
+    parser.add_argument ('-f', '--file', nargs='?', type=str, default='Tests/BubbleVsPancakeSort_6_4.cnf')
     parser.add_argument ('-o', '--order', nargs='?', type=str, default='frequency')
     parser.add_argument ('-s', '--source', nargs='?', type=str, default='cnf')
     parser.add_argument('-rt', '--runtests', nargs='?', type=bool, default=False)

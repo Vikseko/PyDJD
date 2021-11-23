@@ -32,6 +32,7 @@ class DiagramNode:
         self.markup_varid = 0
         self.vertex_id = 0
         self.hash_key = 0
+        self.visited = False
         self.high_childs = [] if HighChilds == None else sorted(copy.copy(HighChilds),key= lambda x:x.var_id)
         self.low_childs = [] if LowChilds == None else sorted(copy.copy(LowChilds),key= lambda x:x.var_id)
         self.high_parents = []
@@ -69,6 +70,15 @@ class DiagramNode:
                 return False"""
         return True
 
+    def Visit(self):
+        self.visited = True
+
+    def UnVisit(self):
+        self.visited = False
+
+    def IsVisited(self):
+        return  self.visited
+
     # Сравнение узлов на основе их потомков (рекурсивно)
     def Equals(self, other):
         if not isinstance(other, type(self)):
@@ -100,7 +110,6 @@ class DiagramNode:
             return 'true'
         else:
             return 'false'
-
 
     # Проверяет является ли узел терминальным
     def IsLeaf(self):
@@ -143,6 +152,8 @@ class DisjunctiveDiagram:
         self.var_set_ = set()
         self.table_[DisjunctiveDiagram.true_leaf.hash_key] = DisjunctiveDiagram.true_leaf
         self.table_[DisjunctiveDiagram.question_leaf.hash_key] = DisjunctiveDiagram.question_leaf
+        self.copy_redir = 0
+        self.uniq_redir = 0
 
 
     # Возвращает таблицу

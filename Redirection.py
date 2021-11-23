@@ -46,13 +46,12 @@ def PathsRedirection(diagram, problem):
     print('Number of uniq redirected'.ljust(30, ' '), nof_redir_uniq_paths)
 
 
-def PathCheck(lit_path, solver, list_hard_assumptions):
+def PathCheck(lit_path, solver):
     timer = Timer(0.01, interrupt, [solver])
     timer.start()
     s = solver.solve_limited(assumptions=lit_path, expect_interrupt=True)
     solver.clear_interrupt()
     if s == None:
-        list_hard_assumptions.append(lit_path)
         return s, None
     elif s == False:
         return s, None
@@ -65,7 +64,7 @@ def interrupt(s):
     s.interrupt()
 
 
-def RedirectPath(lit_path,node_path,diagram, node_paths):
+def RedirectPath(lit_path,node_path,diagram):
     # Проверяем, чтобы первый узел был корнем
     if node_path[0].node_type != DiagramNodeType.RootNode:
         raise RuntimeError('First node in node_path isnt RootNode')
@@ -80,34 +79,33 @@ def RedirectPath(lit_path,node_path,diagram, node_paths):
     # Перенаправляем путь
     if copy_index != None:
         # Путь нужно скопировать для перенаправления
-        RedirCopyPath(copy_index, lit_path, node_path, diagram, node_paths)
+        RedirCopyPath(copy_index, lit_path, node_path, diagram)
         return True
     else:
         # Копирование не требуется
-        RedirOriginalPath(lit_path[-1],node_path[-1],diagram, node_paths)
+        RedirOriginalPath(lit_path[-1],node_path[-1],diagram)
         return False
 
 
-def RedirCopyPath(copy_index, lit_path, node_path, diagram, node_paths):
+def RedirCopyPath(copy_index, lit_path, node_path, diagram):
     old_nodes = node_path[copy_index:]
     old_lits = lit_path[copy_index:]
     redir_node = node_path[copy_index-1]
     redir_lit = lit_path[copy_index-1]
-    copylink_pair = (node_path[copy_index-1], node_path[copy_index])
+    #copylink_pair = (node_path[copy_index-1], node_path[copy_index])
     # Рекурсивно удаляем из таблицы узлы от последнего в пути наверх
     deleted_nodes = set()
-    #DeletingNodesFromTable(redir_node, diagram, deleted_nodes)
+    DeletingNodesFromTable(redir_node, diagram, deleted_nodes)
     # Копируем узлы и перенаправляем путь
-    new_nodes = CopyNodes(redir_node, redir_lit, old_nodes, old_lits, deleted_nodes, diagram)
+    new_nodes = CopyNodes(redir_node, redir_lit, old_nodes, old_lits, diagram)
     # Работаем с copylink_pair в node_paths
-    ReplaceCopyNodesInNodePaths(node_paths, new_nodes, old_nodes, copylink_pair)
     # Добавляем узлы в таблицу, проверяя склейку
-    #deleted_nodes.update(new_nodes)
-    #GluingNodes(deleted_nodes, diagram, node_paths)
+    deleted_nodes.update(new_nodes)
+    GluingNodes(deleted_nodes, diagram)
 
 
 
-def CopyNodes(redir_node, redir_lit, old_nodes, old_lits, deleted_nodes, diagram):
+def CopyNodes(redir_node, redir_lit, old_nodes, old_lits, diagram):
     # Копируем узлы
     new_nodes = []
     for node in old_nodes:
@@ -183,7 +181,7 @@ def ReplaceCopyNodesInNodePaths(node_paths, new_nodes, old_nodes, copylink_pair)
                     break
 
 
-def RedirOriginalPath(last_lit, last_node, diagram, node_paths):
+def RedirOriginalPath(last_lit, last_node, diagram):
     # Рекурсивно удаляем из таблицы узлы от последнего в пути наверх
     deleted_nodes = set()
     DeletingNodesFromTable(last_node,diagram, deleted_nodes)
@@ -204,7 +202,7 @@ def RedirOriginalPath(last_lit, last_node, diagram, node_paths):
         quest_leaf.high_parents = [x for x in quest_leaf.high_parents if x is not last_node]
         diagram.GetTrueLeaf().high_parents.append(last_node)
     # Проверяем ранее удаленные из таблицы узлы на склейку
-    GluingNodes(deleted_nodes, diagram, node_paths)
+    GluingNodes(deleted_nodes, diagram)
 
 
 # Рекурсивное удаление узлов из таблицы от node наверх
@@ -217,27 +215,27 @@ def DeletingNodesFromTable(node, diagram, deleted_nodes):
         DeletingNodesFromTable(parent, diagram, deleted_nodes)
 
 
-def GluingNodes(deleted_nodes, diagram, node_paths):
+def GluingNodes(deleted_nodes, diagram):
     deleted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, deleted_nodes)
     for node in deleted_nodes:
         node.HashKey()
-        if node.hash_key in diagram.table_:
+        if node.hash_key in diagram.table_ and diagram.table_[node.hash_key] is not node:
             it_node = diagram.table_[node.hash_key]
             if node is it_node:
                 print('ERROR')
-            GluingNode(node,it_node,node_paths)
+            GluingNode(node,it_node)
             del node
         else:
             diagram.table_[node.hash_key] = node
 
 
-def GluingNode(node,it_node,node_paths):
+def GluingNode(node,it_node):
     # заменяем ссылки в родителях
     ReplaceParentsLinksToNode(node,it_node)
     # Удаляем ссылки потомков узла на него
     DeleteChildsLinksToNode(node)
     # Заменяем узел в node_paths
-    ReplaceNodeInNodePaths(node,it_node,node_paths)
+    #ReplaceNodeInNodePaths(node,it_node,node_paths)
 
 
 def ReplaceParentsLinksToNode(node,it_node):
