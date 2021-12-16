@@ -145,11 +145,11 @@ def BDD_convert(diagram):
     
     """
 
-
-
 def connect_roots(main_root, root):
     if root not in main_root.high_childs:
         main_root.high_childs.append(root)
+        root.high_parents.append(main_root)
     if root not in main_root.low_childs:
         main_root.low_childs.append(root)
+        root.low_parents.append(main_root)
     root.node_type = DiagramNodeType.InternalNode
