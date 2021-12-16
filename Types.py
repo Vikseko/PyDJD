@@ -43,7 +43,7 @@ class DiagramNode:
 
     # Вычисляет хэш узла (выполняется при создании узла)
     def HashKey(self):
-        hashtuple_ = tuple([self.Value()]+[node.hash_key for node in self.high_childs]+[node.hash_key for node in self.low_childs])
+        hashtuple_ = tuple([self.Value()]+sorted([node.hash_key for node in self.high_childs])+sorted([node.hash_key for node in self.low_childs]))
         #print('hk',hashtuple_)
         #print(hash(hashtuple_))
         self.hash_key = hash(hashtuple_)
