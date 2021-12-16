@@ -122,6 +122,27 @@ def BDD_convert(diagram):
     проверять на склейку и на повторы детей по разным полярностям: если из узла А дети +Б1(х1) и -Б1(х1) с детьми
     , то узел А надо удалить, а +Б1 и -Б1 перенаправить родителям А.
     4. повторяем это пока небинарности больше не будет найдено.
+    
+    
+    Алгоритм (лучше):
+    1. идем от теримнальной наверх, проверяем каждый node
+    if len(node.high_childs) > 1:
+        deleted_nodes = set()
+        delete_nodes_from_table(node,deleted_nodes)
+        upper_node, lower_node = find_upper_and_lower_childs(node.high_childs, order)
+        delete_link_from_node(lower_node,node)
+        create_link_from_lower_to_upper(lower_node,upper_node)
+        sort_deleted_nodes_wrt_order(deleted_nodes,order)
+        gluing_nodes(deleted_nodes)
+    elif len(node.low_childs) > 1:
+        deleted_nodes = set()
+        delete_nodes_from_table(node,deleted_nodes)
+        upper_node, lower_node = find_upper_and_lower_childs(node.high_childs, order)
+        delete_link_from_node(lower_node,node)
+        create_link_from_lower_to_upper(lower_node,upper_node)
+        sort_deleted_nodes_wrt_order(deleted_nodes,order)
+        gluing_nodes(deleted_nodes)
+    
     """
 
 
