@@ -108,22 +108,20 @@ def BDD_convert(diagram):
     main_root = roots_[-1]
     for root in roots_[:-1]:
         connect_roots(main_root, root)
+    main_root.HashKey()
     diagram.main_root_ = main_root
     # Теперь вся диаграмма выходит из одного корня.
 
     # начинаем рекурсивно уводить связи вниз.
-    """ алгоритм:
-    1. идем от терминальной вершины наверх, ищем узел А, у которого небинарность
-    2. при нахождении берём небинарные ветки (которые лишние), к примеру из узла А идут три связи по минусу, 
-    одна по плюсу. Удаляем связи лишних ветвей с узлом А. Добавляем эти связи первому по order ребенку А по минусу (в
-     данном примере). Причем добавляем их сразу и по плюсу и по минусу этому ребенку.
-    3. Рекурсивно проверяем вниз, заодно постоянно проверяя на склейку.
-    условно рано или поздно будет момент, когда все свзяи из узла будут идти в терминальные вершины. тогда начинаем
-    проверять на склейку и на повторы детей по разным полярностям: если из узла А дети +Б1(х1) и -Б1(х1) с детьми
-    , то узел А надо удалить, а +Б1 и -Б1 перенаправить родителям А.
-    4. повторяем это пока небинарности больше не будет найдено.
-    
-    
+    stop_flag = True
+    question_leaf = diagram.GetQuestionLeaf()
+    true_leaf = diagram.GetTrueLeaf()
+    while stop_flag == True:
+        stop_flag = FindNonbinaryNodes(diagram, question_leaf)
+    stop_flag = True
+    while stop_flag == True:
+        stop_flag = FindNonbinaryNodes(diagram, question_leaf)
+    """
     Алгоритм (лучше):
     1. идем от теримнальной наверх, проверяем каждый node
     if len(node.high_childs) > 1:
@@ -142,7 +140,6 @@ def BDD_convert(diagram):
         create_link_from_lower_to_upper(lower_node,upper_node)
         sort_deleted_nodes_wrt_order(deleted_nodes,order)
         gluing_nodes(deleted_nodes)
-    
     """
 
 def connect_roots(main_root, root):
@@ -153,3 +150,41 @@ def connect_roots(main_root, root):
         main_root.low_childs.append(root)
         root.low_parents.append(main_root)
     root.node_type = DiagramNodeType.InternalNode
+
+# Рекурсивное удаление узлов из таблицы от node наверх
+def DeletingNodesFromTable(node, diagram, deleted_nodes):
+    deleted_nodes.add(node)
+    del diagram.table_[node.hash_key]
+    for parent in node.high_parents:
+        DeletingNodesFromTable(parent, diagram, deleted_nodes)
+    for parent in node.low_parents:
+        DeletingNodesFromTable(parent, diagram, deleted_nodes)
+
+# Получаем false paths из диаграммы (все пути из корней в терминальную '?')
+def FindNonbinaryNodes(diagram:DisjunctiveDiagram, current_node):
+    for node in current_node.high_parents + current_node.low_parents:
+        if len(node.high_childs) > 1:
+            deleted_nodes = set()
+            DeletingNodesFromTable(node, diagram, deleted_nodes)
+            upper_node, lower_node = find_upper_and_lower_childs(node.high_childs, diagram.order_)
+            delete_link_from_node(lower_node, node)
+            create_link_from_lower_to_upper(lower_node, upper_node)
+            sort_deleted_nodes_wrt_order(deleted_nodes, diagram.order_)
+            gluing_nodes(deleted_nodes)
+            return True
+        elif len(node.low_childs) > 1:
+            deleted_nodes = set()
+            DeletingNodesFromTable(node, diagram, deleted_nodes)
+            upper_node, lower_node = find_upper_and_lower_childs(node.high_childs, diagram.order_)
+            delete_link_from_node(lower_node, node)
+            create_link_from_lower_to_upper(lower_node, upper_node)
+            sort_deleted_nodes_wrt_order(deleted_nodes, diagram.order_)
+            gluing_nodes(deleted_nodes)
+            return True
+        else:
+            stop_flag = FindNonbinaryNodes(diagram, node)
+            return stop_flag
+    return False
+
+
+
