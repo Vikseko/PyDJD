@@ -23,7 +23,7 @@ def DimacsParser(lines):
             if 'max_var_num' in line:
                 max_var_num = int(line.split()[2])
             if 'activity_order' in line:
-                order = list(map(int,line.split()[2:]))
+                order = reversed(list(map(int,line.split()[2:])))
         else:
             if lit_count == 0 and lit_count_flag == False:
                 lit_count_flag = True

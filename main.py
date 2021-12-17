@@ -2,6 +2,7 @@ from Builder import *
 from Parser import *
 from Pathfinder import *
 from Redirection import *
+from BDD_converter import *
 
 
 if __name__ == '__main__':
@@ -58,3 +59,10 @@ if __name__ == '__main__':
         after_cnf, tmp_ = GetCNFFromDiagram(diagram)
         after_cnf = CNF(from_clauses=after_cnf)
         after_cnf.to_file('Logs/djdprep_v1_' + options.name + '.cnf')
+    if options.bdd_convert == True:
+        start_bdd_time = time.time()
+        print('Start \"DJD_to_BDD\" procedure:')
+        bdd_diagram = BDDiagram(diagram)
+        print('Number of vertices:'.ljust(30, ' '), len(bdd_diagram.table_))
+        convert_time = time.time() - start_bdd_time
+        print('Conversion time:'.ljust(30, ' '), convert_time)

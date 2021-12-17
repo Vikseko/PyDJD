@@ -112,22 +112,23 @@ def BDD_convert(diagram):
     main_root = roots_[-1]
     for root in roots_[:-1]:
         connect_roots(main_root, root)
+    del diagram.table_[main_root.hash_key]
     main_root.HashKey()
+    diagram.table_[main_root.hash_key] = main_root
     diagram.main_root_ = main_root
     # Теперь вся диаграмма выходит из одного корня.
     # начинаем рекурсивно уводить связи вниз.
     stop_flag = True
     question_leaf = diagram.GetQuestionLeaf()
-    true_leaf = diagram.GetTrueLeaf()
+    BDDiagram.PrintCurrentTable(diagram)
     while stop_flag == True:
-        find_flag = False
-        stop_flag = FindNonbinaryNodes(diagram, question_leaf, find_flag)
+        stop_flag = FindNonbinaryNodes(diagram, question_leaf)
         print('')
         BDDiagram.PrintCurrentTable(diagram)
     stop_flag = True
+    true_leaf = diagram.GetTrueLeaf()
     while stop_flag == True:
-        find_flag = False
-        stop_flag = FindNonbinaryNodes(diagram, question_leaf, find_flag)
+        stop_flag = FindNonbinaryNodes(diagram, true_leaf)
         BDDiagram.PrintCurrentTable(diagram)
 
 def connect_roots(main_root, root):
@@ -139,22 +140,57 @@ def connect_roots(main_root, root):
         root.low_parents.append(main_root)
     root.node_type = DiagramNodeType.InternalNode
 
+def ConnectNodes(lower, upper, deleted_nodes):
+    lower_varid = lower.var_id
+    high_glu = False
+    for node in upper.high_childs:
+        if node.var_id == lower_varid:
+            high_glu = True
+            #вот тут надо передать всех детей ловера апперу в high_childs,
+            # причем рекурсивно проверять условия дублирования детей
+            break
+    else:
+        upper.high_childs.append(lower)
+    low_glu = False
+    for node in upper.low_childs:
+        if node.var_id == lower_varid:
+            low_glu = True
+            #вот тут надо передать всех детей ловера апперу в low_childs,
+            # причем рекурсивно проверять условия дублирования детей
+            break
+    else:
+        upper.high_childs.append(lower)
+    if high_glu == True and low_glu == True:
+        del lower
+
+
+
+
+
+
+
+
+
 # Получаем false paths из диаграммы (все пути из корней в терминальную '?')
-def FindNonbinaryNodes(diagram:DisjunctiveDiagram, current_node, find_flag):
-    if find_flag == True:
-        return True
+def FindNonbinaryNodes(diagram:DisjunctiveDiagram, current_node):
+    find_flag = False
     for node in current_node.high_parents + current_node.low_parents:
         if len(node.high_childs) > 1:
+            print('Find nonbinary node:', (node.vertex_id, node.Value()), 'hc')
             GettingRidOfNonbinary(diagram, node, 1)
             find_flag = True
-            return True
+            break
         elif len(node.low_childs) > 1:
+            print('Find nonbinary node:', (node.vertex_id, node.Value()), 'lc')
             GettingRidOfNonbinary(diagram, node, 0)
             find_flag = True
-            return True
+            break
         else:
-            stop_flag = FindNonbinaryNodes(diagram, node, find_flag)
-            #return stop_flag
+            find_flag = FindNonbinaryNodes(diagram, node)
+            if find_flag == True:
+                return True
+    if find_flag == True:
+        return True
     return False
 
 def GettingRidOfNonbinary(diagram:DisjunctiveDiagram, node, polarity):
@@ -164,6 +200,7 @@ def GettingRidOfNonbinary(diagram:DisjunctiveDiagram, node, polarity):
         childs = node.low_childs
     deleted_nodes = set()
     upper_node, lower_node = FindUpperAndLowerChilds(childs, diagram.order_)
+    print('Upper node:', (upper_node.vertex_id, upper_node.Value()),'Lower node:', (lower_node.vertex_id, lower_node.Value()))
     DeletingNodesFromTable(upper_node, diagram, deleted_nodes)
     DeleteLinkFromNode(lower_node, node, polarity)
     CreateLinkBetweenLowerToUpper(lower_node, upper_node)
@@ -174,10 +211,10 @@ def GettingRidOfNonbinary(diagram:DisjunctiveDiagram, node, polarity):
 def DeletingNodesFromTable(node, diagram, deleted_nodes):
     deleted_nodes.add(node)
     del diagram.table_[node.hash_key]
-    for parent in node.high_parents:
+    for parent in set(node.high_parents+node.low_parents):
         DeletingNodesFromTable(parent, diagram, deleted_nodes)
-    for parent in node.low_parents:
-        DeletingNodesFromTable(parent, diagram, deleted_nodes)
+    #for parent in node.low_parents:
+        #DeletingNodesFromTable(parent, diagram, deleted_nodes)
 
 #находим у небинарного узла верхнего и нижнего потомка по небинарной полярности
 def FindUpperAndLowerChilds(childs, order):

@@ -20,7 +20,7 @@ def ReadProblem(options):
     elif options.order_type == 'direct':
         print('Order:'.ljust(30,' '), 'direct')
         if max_var_num != 0:
-            order = [x for x in range(1,max_var_num+1)]
+            order = [x for x in reversed(range(1,max_var_num+1))]
         else:
             raise RuntimeError('No maximum variable found, check DIMACS file.')
     return problem, order
