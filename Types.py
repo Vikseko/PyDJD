@@ -229,6 +229,10 @@ class DisjunctiveDiagram:
             size += node.Size()
         return size
 
+    def PrintCurrentTable(self):
+        for node in self.table_.values():
+            print("Node", node.vertex_id, " var", node.var_id, "hc:",[(x.vertex_id,x.var_id) for x in node.high_childs], "lc:",[(x.vertex_id,x.var_id) for x in node.low_childs])
+
     def __del__(self):
         for node in self.table_:
             del node

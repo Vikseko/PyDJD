@@ -89,6 +89,10 @@ class BDDiagram:
     def RootJoinCount(self):
         return self.root_join_cnt_
 
+    def PrintCurrentTable(self):
+        for node in self.table_.values():
+            print("Node", node.vertex_id, " var", node.var_id, "hc:",[(x.vertex_id,x.var_id) for x in node.high_childs], "lc:",[(x.vertex_id,x.var_id) for x in node.low_childs])
+
     # Возвращает размер диаграммы в байтах
     def DiagramSize(self):
         size = 0
@@ -111,36 +115,17 @@ def BDD_convert(diagram):
     main_root.HashKey()
     diagram.main_root_ = main_root
     # Теперь вся диаграмма выходит из одного корня.
-
     # начинаем рекурсивно уводить связи вниз.
     stop_flag = True
     question_leaf = diagram.GetQuestionLeaf()
     true_leaf = diagram.GetTrueLeaf()
     while stop_flag == True:
-        stop_flag = FindNonbinaryNodes(diagram, question_leaf)
+        find_flag = False
+        stop_flag = FindNonbinaryNodes(diagram, question_leaf, find_flag)
     stop_flag = True
     while stop_flag == True:
-        stop_flag = FindNonbinaryNodes(diagram, question_leaf)
-    """
-    Алгоритм (лучше):
-    1. идем от теримнальной наверх, проверяем каждый node
-    if len(node.high_childs) > 1:
-        deleted_nodes = set()
-        delete_nodes_from_table(node,deleted_nodes)
-        upper_node, lower_node = find_upper_and_lower_childs(node.high_childs, order)
-        delete_link_from_node(lower_node,node)
-        create_link_from_lower_to_upper(lower_node,upper_node)
-        sort_deleted_nodes_wrt_order(deleted_nodes,order)
-        gluing_nodes(deleted_nodes)
-    elif len(node.low_childs) > 1:
-        deleted_nodes = set()
-        delete_nodes_from_table(node,deleted_nodes)
-        upper_node, lower_node = find_upper_and_lower_childs(node.high_childs, order)
-        delete_link_from_node(lower_node,node)
-        create_link_from_lower_to_upper(lower_node,upper_node)
-        sort_deleted_nodes_wrt_order(deleted_nodes,order)
-        gluing_nodes(deleted_nodes)
-    """
+        find_flag = False
+        stop_flag = FindNonbinaryNodes(diagram, question_leaf, find_flag)
 
 def connect_roots(main_root, root):
     if root not in main_root.high_childs:
@@ -151,6 +136,37 @@ def connect_roots(main_root, root):
         root.low_parents.append(main_root)
     root.node_type = DiagramNodeType.InternalNode
 
+# Получаем false paths из диаграммы (все пути из корней в терминальную '?')
+def FindNonbinaryNodes(diagram:DisjunctiveDiagram, current_node, find_flag):
+    if find_flag == True:
+        return True
+    for node in current_node.high_parents + current_node.low_parents:
+        if len(node.high_childs) > 1:
+            GettingRidOfNonbinary(diagram, node, 1)
+            find_flag = True
+            return True
+        elif len(node.low_childs) > 1:
+            GettingRidOfNonbinary(diagram, node, 0)
+            find_flag = True
+            return True
+        else:
+            stop_flag = FindNonbinaryNodes(diagram, node, find_flag)
+            #return stop_flag
+    return False
+
+def GettingRidOfNonbinary(diagram:DisjunctiveDiagram, node, polarity):
+    if polarity == 1:
+        childs = node.high_childs
+    else:
+        childs = node.low_childs
+    deleted_nodes = set()
+    upper_node, lower_node = FindUpperAndLowerChilds(childs, diagram.order_)
+    DeletingNodesFromTable(upper_node, diagram, deleted_nodes)
+    DeleteLinkFromNode(lower_node, node, polarity)
+    CreateLinkBetweenLowerToUpper(lower_node, upper_node)
+    deleted_nodes = LitLessSortNodes(deleted_nodes, diagram.order_)
+    GluingNodes(deleted_nodes, diagram)
+
 # Рекурсивное удаление узлов из таблицы от node наверх
 def DeletingNodesFromTable(node, diagram, deleted_nodes):
     deleted_nodes.add(node)
@@ -160,31 +176,83 @@ def DeletingNodesFromTable(node, diagram, deleted_nodes):
     for parent in node.low_parents:
         DeletingNodesFromTable(parent, diagram, deleted_nodes)
 
-# Получаем false paths из диаграммы (все пути из корней в терминальную '?')
-def FindNonbinaryNodes(diagram:DisjunctiveDiagram, current_node):
-    for node in current_node.high_parents + current_node.low_parents:
-        if len(node.high_childs) > 1:
-            deleted_nodes = set()
-            DeletingNodesFromTable(node, diagram, deleted_nodes)
-            upper_node, lower_node = find_upper_and_lower_childs(node.high_childs, diagram.order_)
-            delete_link_from_node(lower_node, node)
-            create_link_from_lower_to_upper(lower_node, upper_node)
-            sort_deleted_nodes_wrt_order(deleted_nodes, diagram.order_)
-            gluing_nodes(deleted_nodes)
-            return True
-        elif len(node.low_childs) > 1:
-            deleted_nodes = set()
-            DeletingNodesFromTable(node, diagram, deleted_nodes)
-            upper_node, lower_node = find_upper_and_lower_childs(node.high_childs, diagram.order_)
-            delete_link_from_node(lower_node, node)
-            create_link_from_lower_to_upper(lower_node, upper_node)
-            sort_deleted_nodes_wrt_order(deleted_nodes, diagram.order_)
-            gluing_nodes(deleted_nodes)
-            return True
+#находим у небинарного узла верхнего и нижнего потомка по небинарной полярности
+def FindUpperAndLowerChilds(childs, order):
+    sorted_childs = LitLessSortNodes(set(childs),order)
+    lower = sorted_childs[0]
+    upper = sorted_childs[-1]
+    return upper, lower
+
+#Сортировка множества узлов w.r.t. order
+def LitLessSortNodes(nodes:set,order:list):
+    nodes = list(nodes)
+    sorted_nodes = [node for x in order for node in nodes if node.Value() == x]
+    return sorted_nodes
+
+#удаляем связь между небинарным узлом и нижним потомком по небинарной полярности
+def DeleteLinkFromNode(lower_node, node, polarity):
+    if polarity == 1:
+        node.high_childs = [x for x in node.high_childs if x is not lower_node]
+        lower_node.high_parents = [x for x in lower_node.high_parents if x is not node]
+    else:
+        node.low_childs = [x for x in node.low_childs if x is not lower_node]
+        lower_node.low_parents = [x for x in lower_node.low_parents if x is not node]
+
+def CreateLinkBetweenLowerToUpper(lower_node, upper_node):
+    if upper_node not in lower_node.high_parents:
+        lower_node.high_parents.append(upper_node)
+    if upper_node not in lower_node.low_parents:
+        lower_node.low_parents.append(upper_node)
+    if lower_node not in upper_node.high_childs:
+        upper_node.high_childs.append(lower_node)
+    if lower_node not in upper_node.low_childs:
+        upper_node.low_childs.append(lower_node)
+
+def GluingNodes(deleted_nodes, diagram):
+    deleted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, deleted_nodes)
+    for node in deleted_nodes:
+        node.HashKey()
+        if node.hash_key in diagram.table_ and diagram.table_[node.hash_key] is not node:
+            it_node = diagram.table_[node.hash_key]
+            if node is it_node:
+                print('ERROR')
+            #print('Glued node',(node.Value(), node),'with node',(it_node.Value(),it_node))
+            GluingNode(node,it_node)
+            del node
         else:
-            stop_flag = FindNonbinaryNodes(diagram, node)
-            return stop_flag
-    return False
+            diagram.table_[node.hash_key] = node
 
+def GluingNode(node,it_node):
+    # заменяем ссылки в родителях
+    ReplaceParentsLinksToNode(node,it_node)
+    # Удаляем ссылки потомков узла на него
+    DeleteChildsLinksToNode(node)
+    # Заменяем узел в node_paths
+    #ReplaceNodeInNodePaths(node,it_node,node_paths)
 
+def ReplaceParentsLinksToNode(node,it_node):
+    for parent in node.high_parents:
+        parent.high_childs = [x for x in parent.high_childs if x is not node and x is not it_node]
+        parent.high_childs.append(it_node)
+        for tmpnode in it_node.high_parents:
+            if tmpnode is parent:
+                break
+        else:
+            #print('add as highparent ', (parent.Value(), parent), 'to node', (it_node.Value(), it_node))
+            it_node.high_parents.append(parent)
+    for parent in node.low_parents:
+        parent.low_childs = [x for x in parent.low_childs if x is not node and x is not it_node]
+        parent.low_childs.append(it_node)
+        for tmpnode in it_node.low_parents:
+            if tmpnode is parent:
+                break
+        else:
+            it_node.low_parents.append(parent)
+            #print('add as lowparent ', (parent.Value(), parent), 'to node', (it_node.Value(), it_node))
+
+def DeleteChildsLinksToNode(node):
+    for child in node.high_childs:
+        child.high_parents = [x for x in child.high_parents if x is not node]
+    for child in node.low_childs:
+        child.low_parents = [x for x in child.low_parents if x is not node]
 
