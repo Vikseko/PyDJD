@@ -37,8 +37,7 @@ if __name__ == '__main__':
     before_cnf, tmp_ = GetCNFFromDiagram(diagram)
     before_cnf = CNF(from_clauses=before_cnf)
     #before_cnf.to_file('Logs/beforeprep_v1_' + options.name + '.cnf')
-    for node in diagram.table_:
-        print("Node", node.vertex_id, " var", node.var_id, "hc:",[(x.vertex_id,x.var_id) for x in node.high_childs], "lc:",[(x.vertex_id,x.var_id) for x in node.low_childs])
+    DisjunctiveDiagram.PrintCurrentTable(diagram)
     print()
     if options.redir_paths == True:
         start_redir_time = time.time()

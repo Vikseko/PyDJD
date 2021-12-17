@@ -91,7 +91,7 @@ class BDDiagram:
 
     def PrintCurrentTable(self):
         for node in self.table_.values():
-            print("Node", node.vertex_id, " var", node.var_id, "hc:",[(x.vertex_id,x.var_id) for x in node.high_childs], "lc:",[(x.vertex_id,x.var_id) for x in node.low_childs])
+            print("Node", node.vertex_id, " var", node.Value(), "hc:",[(x.vertex_id,x.Value()) for x in node.high_childs], "lc:",[(x.vertex_id,x.Value()) for x in node.low_childs])
 
     # Возвращает размер диаграммы в байтах
     def DiagramSize(self):
@@ -122,10 +122,13 @@ def BDD_convert(diagram):
     while stop_flag == True:
         find_flag = False
         stop_flag = FindNonbinaryNodes(diagram, question_leaf, find_flag)
+        print('')
+        BDDiagram.PrintCurrentTable(diagram)
     stop_flag = True
     while stop_flag == True:
         find_flag = False
         stop_flag = FindNonbinaryNodes(diagram, question_leaf, find_flag)
+        BDDiagram.PrintCurrentTable(diagram)
 
 def connect_roots(main_root, root):
     if root not in main_root.high_childs:
