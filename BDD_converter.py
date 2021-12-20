@@ -205,8 +205,6 @@ def TransferChilds(from_node,to_node,deleted_nodes,candidates_to_deletion,diagra
         candidates_to_deletion.update(from_node.low_childs)
         # тут нужно какимто образом удалить потомков, если они больше не нужны нигде (нужна вот эта проверка на нужность)
 
-#fixme нужно удалять узлы, у которых нет родителей, и чьих детей мы передали другому, после удаления небинарной связи
-
 def RecursiveDeletionNodesFromDiagram(lower,diagram):
     if len(lower.high_parents) == 0 and len(lower.low_parents) == 0:
         for child in lower.high_childs:
@@ -216,8 +214,6 @@ def RecursiveDeletionNodesFromDiagram(lower,diagram):
             child.low_parents = [x for x in child.low_parents if x is not lower]
             RecursiveDeletionNodesFromDiagram(child,diagram)
         del lower
-
-
 
 
 # Получаем false paths из диаграммы (все пути из корней в терминальную '?')
@@ -252,7 +248,7 @@ def GettingRidOfNonbinary(diagram:DisjunctiveDiagram, node, polarity):
     print('Upper node:', (upper_node.vertex_id, upper_node.Value()),'Lower node:', (lower_node.vertex_id, lower_node.Value()))
     DeletingNodesFromTable(upper_node, diagram, deleted_nodes)
     DeleteLinkFromNode(lower_node, node, polarity)
-    CreateLinkBetweenLowerToUpper(lower_node, upper_node)
+    ConnectNodesDouble(lower_node, upper_node, deleted_nodes, diagram)
     deleted_nodes = LitLessSortNodes(deleted_nodes, diagram.order_)
     GluingNodes(deleted_nodes, diagram)
 
@@ -268,6 +264,8 @@ def DeletingNodesFromTable(node, diagram, deleted_nodes):
 
 #находим у небинарного узла верхнего и нижнего потомка по небинарной полярности
 def FindUpperAndLowerChilds(childs, order):
+    #fixme нужно чтобы проверялось сперва нет ли среди детей "1", если есть остальных можно убирать да и всё
+    # кроме этого ещё нужно добавить в сортировку возможность обработки узлов "?" и "1"
     sorted_childs = LitLessSortNodes(set(childs),order)
     lower = sorted_childs[0]
     upper = sorted_childs[-1]
