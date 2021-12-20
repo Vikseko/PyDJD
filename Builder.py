@@ -1,6 +1,7 @@
 from Utils import *
 
 
+
 class DisjunctiveDiagramsBuilder:
     def __init__(self, dnf, order, problem_type):
         self.problem_ = dnf
