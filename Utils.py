@@ -13,6 +13,8 @@ def ReadProblem(options):
         if order == None:
             raise RuntimeError('No activity order in DIMACS file')
         else:
+            order.insert(0, 'true')
+            order.insert(0, '?')
             return problem, order
     elif options.order_type == 'frequency':
         print('Order:'.ljust(30,' '), 'frequency')
@@ -23,6 +25,8 @@ def ReadProblem(options):
             order = [x for x in reversed(range(1,max_var_num+1))]
         else:
             raise RuntimeError('No maximum variable found, check DIMACS file.')
+    order.insert(0,'true')
+    order.insert(0, '?')
     return problem, order
 
 
