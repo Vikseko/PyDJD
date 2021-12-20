@@ -1,3 +1,4 @@
+
 # Парсер DIMACS-файла
 def DimacsParser(lines):
     min_var_num = 0

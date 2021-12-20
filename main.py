@@ -4,7 +4,6 @@ from Pathfinder import *
 from Redirection import *
 from BDD_converter import *
 
-
 if __name__ == '__main__':
     start_time = time.time()
     print('Start building procedure:')
