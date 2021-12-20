@@ -110,8 +110,8 @@ def BDD_convert(diagram):
     # затем добавляем ему ссылки на каждый другой корень причем и в high_childs и в low_childs
     roots_ = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, diagram.roots_)
     main_root = roots_[-1]
-    for root in roots_[:-1]:
-        connect_roots(main_root, root)
+    for i in range(len(roots_)-1):
+        ConnectRoots(roots_[i+1], roots_[i],diagram)
     del diagram.table_[main_root.hash_key]
     main_root.HashKey()
     diagram.table_[main_root.hash_key] = main_root
@@ -131,42 +131,91 @@ def BDD_convert(diagram):
         stop_flag = FindNonbinaryNodes(diagram, true_leaf)
         BDDiagram.PrintCurrentTable(diagram)
 
-def connect_roots(main_root, root):
-    if root not in main_root.high_childs:
-        main_root.high_childs.append(root)
-        root.high_parents.append(main_root)
-    if root not in main_root.low_childs:
-        main_root.low_childs.append(root)
-        root.low_parents.append(main_root)
-    root.node_type = DiagramNodeType.InternalNode
+def ConnectRoots(upper, lower,diagram):
+    deleted_nodes = set()
+    ConnectNodesDouble(lower,upper,deleted_nodes,diagram)
+    lower.node_type = DiagramNodeType.InternalNode
+    del diagram.table_[upper.hash_key]
+    upper.HashKey()
+    diagram.table_[upper.hash_key] = upper
 
-def ConnectNodes(lower, upper, deleted_nodes):
-    lower_varid = lower.var_id
+def ConnectNodesDouble(lower, upper, deleted_nodes, diagram):
     high_glu = False
-    for node in upper.high_childs:
-        if node.var_id == lower_varid:
-            high_glu = True
-            #вот тут надо передать всех детей ловера апперу в high_childs,
-            # причем рекурсивно проверять условия дублирования детей
-            break
+    candidates_to_deletion = set()
+    if diagram.GetTrueLeaf() not in upper.high_childs:
+        for node in upper.high_childs:
+            if node.Value() == lower.Value():
+                high_glu = True
+                #вот тут надо передать всех детей ловера апперу в high_childs,
+                # причем рекурсивно проверять условия дублирования детей
+                #нужно сперва проверить,
+                TransferChilds(lower,node,deleted_nodes,candidates_to_deletion,diagram)
+                break
+        else:
+            upper.high_childs.append(lower)
+            lower.high_parents.append(upper)
+            DeletingNodesFromTable(upper, diagram, deleted_nodes)
     else:
-        upper.high_childs.append(lower)
+        high_glu = True
     low_glu = False
-    for node in upper.low_childs:
-        if node.var_id == lower_varid:
-            low_glu = True
-            #вот тут надо передать всех детей ловера апперу в low_childs,
-            # причем рекурсивно проверять условия дублирования детей
-            break
+    if diagram.GetTrueLeaf() not in upper.low_childs:
+        for node in upper.low_childs:
+            if node.Value() == lower.Value():
+                low_glu = True
+                #вот тут надо передать всех детей ловера апперу в high_childs,
+                # причем рекурсивно проверять условия дублирования детей
+                TransferChilds(lower,node,deleted_nodes,candidates_to_deletion,diagram)
+                break
+        else:
+            upper.low_childs.append(lower)
+            lower.low_parents.append(upper)
+            DeletingNodesFromTable(upper, diagram, deleted_nodes)
     else:
-        upper.high_childs.append(lower)
+        low_glu = True
     if high_glu == True and low_glu == True:
+        # нужно удалить сам узел, сперва проверив, что у него нет родителей и удалив его из родителей его детей,
+        # затем рекурсивно првоерить детей на то, что если родителей больше нет, то удаляем и эти излы и тд
+        RecursiveDeletionNodesFromDiagram(lower,diagram)
+
+def TransferChilds(from_node,to_node,deleted_nodes,candidates_to_deletion,diagram):
+    if diagram.GetTrueLeaf() not in to_node.high_childs:
+        for from_child in from_node.high_childs:
+            for to_child in to_node.high_childs:
+                if from_child.Value() == to_child.Value():
+                    candidates_to_deletion.add(from_child)
+                    TransferChilds(from_child,to_child,deleted_nodes,candidates_to_deletion,diagram)
+                    break
+            else:
+                to_node.high_childs.append(from_child)
+                from_child.high_parents.append(to_node)
+    else:
+        candidates_to_deletion.update(from_node.high_childs)
+        # тут нужно какимто образом удалить потомков, если они больше не нужны нигде (нужна вот эта проверка на нужность)
+    if diagram.GetTrueLeaf() not in to_node.low_childs:
+        for from_child in from_node.low_childs:
+            for to_child in to_node.low_childs:
+                if from_child.Value() == to_child.Value():
+                    candidates_to_deletion.add(from_child)
+                    TransferChilds(from_child, to_child, deleted_nodes,candidates_to_deletion,diagram)
+                    break
+            else:
+                to_node.low_childs.append(from_child)
+                from_child.low_parents.append(to_node)
+    else:
+        candidates_to_deletion.update(from_node.low_childs)
+        # тут нужно какимто образом удалить потомков, если они больше не нужны нигде (нужна вот эта проверка на нужность)
+
+#fixme нужно удалять узлы, у которых нет родителей, и чьих детей мы передали другому, после удаления небинарной связи
+
+def RecursiveDeletionNodesFromDiagram(lower,diagram):
+    if len(lower.high_parents) == 0 and len(lower.low_parents) == 0:
+        for child in lower.high_childs:
+            child.high_parents = [x for x in child.high_parents if x is not lower]
+            RecursiveDeletionNodesFromDiagram(child,diagram)
+        for child in lower.low_childs:
+            child.low_parents = [x for x in child.low_parents if x is not lower]
+            RecursiveDeletionNodesFromDiagram(child,diagram)
         del lower
-
-
-
-
-
 
 
 
@@ -210,7 +259,8 @@ def GettingRidOfNonbinary(diagram:DisjunctiveDiagram, node, polarity):
 # Рекурсивное удаление узлов из таблицы от node наверх
 def DeletingNodesFromTable(node, diagram, deleted_nodes):
     deleted_nodes.add(node)
-    del diagram.table_[node.hash_key]
+    if node.hash_key in diagram.table_:
+        del diagram.table_[node.hash_key]
     for parent in set(node.high_parents+node.low_parents):
         DeletingNodesFromTable(parent, diagram, deleted_nodes)
     #for parent in node.low_parents:
