@@ -60,6 +60,7 @@ def GetQuestionPathsFromDiagram(diagram:DisjunctiveDiagram):
         WritePaths(question_paths,node_paths,node_path,clause)
     return question_paths,node_paths
 
+
 def WritePaths(problem,node_paths,node_path,clause):
     current_node:DiagramNode = node_path[-1]
     if current_node.IsRoot():

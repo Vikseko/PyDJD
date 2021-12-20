@@ -1,6 +1,7 @@
 from Types import *
 from DimacsParser import *
 
+
 def ReadProblem(options):
     lines = open(options.path,'r').readlines()
     problem, order, var_count, lit_count, min_var_num, max_var_num = DimacsParser(lines)
@@ -13,6 +14,8 @@ def ReadProblem(options):
         if order == None:
             raise RuntimeError('No activity order in DIMACS file')
         else:
+            order.insert(0, 'true')
+            order.insert(0, '?')
             return problem, order
     elif options.order_type == 'frequency':
         print('Order:'.ljust(30,' '), 'frequency')
@@ -23,6 +26,8 @@ def ReadProblem(options):
             order = [x for x in reversed(range(1,max_var_num+1))]
         else:
             raise RuntimeError('No maximum variable found, check DIMACS file.')
+    order.insert(0,'true')
+    order.insert(0, '?')
     return problem, order
 
 

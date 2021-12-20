@@ -63,6 +63,10 @@ if __name__ == '__main__':
         start_bdd_time = time.time()
         print('Start \"DJD_to_BDD\" procedure:')
         bdd_diagram = BDDiagram(diagram)
+        after_cnf, tmp_ = GetCNFFromDiagram(diagram)
+        after_cnf = CNF(from_clauses=after_cnf)
+        after_cnf.to_file('Logs/bdd_convertion_' + options.name + '.cnf')
         print('Number of vertices:'.ljust(30, ' '), len(bdd_diagram.table_))
         convert_time = time.time() - start_bdd_time
         print('Conversion time:'.ljust(30, ' '), convert_time)
+

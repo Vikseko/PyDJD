@@ -90,6 +90,7 @@ class BDDiagram:
         return self.root_join_cnt_
 
     def PrintCurrentTable(self):
+        print('')
         for node in self.table_.values():
             print("Node", node.vertex_id, " var", node.Value(), "hc:",[(x.vertex_id,x.Value()) for x in node.high_childs], "lc:",[(x.vertex_id,x.Value()) for x in node.low_childs])
 
@@ -248,14 +249,15 @@ def GettingRidOfNonbinary(diagram:DisjunctiveDiagram, node, polarity):
     print('Upper node:', (upper_node.vertex_id, upper_node.Value()),'Lower node:', (lower_node.vertex_id, lower_node.Value()))
     DeletingNodesFromTable(upper_node, diagram, deleted_nodes)
     DeleteLinkFromNode(lower_node, node, polarity)
-    ConnectNodesDouble(lower_node, upper_node, deleted_nodes, diagram)
+    if upper_node is not diagram.GetTrueLeaf() and upper_node is not diagram.GetQuestionLeaf():
+        ConnectNodesDouble(lower_node, upper_node, deleted_nodes, diagram)
     deleted_nodes = LitLessSortNodes(deleted_nodes, diagram.order_)
     GluingNodes(deleted_nodes, diagram)
 
 # Рекурсивное удаление узлов из таблицы от node наверх
 def DeletingNodesFromTable(node, diagram, deleted_nodes):
     deleted_nodes.add(node)
-    if node.hash_key in diagram.table_:
+    if node.hash_key in diagram.table_ and node is not diagram.GetTrueLeaf() and node is not diagram.GetQuestionLeaf():
         del diagram.table_[node.hash_key]
     for parent in set(node.high_parents+node.low_parents):
         DeletingNodesFromTable(parent, diagram, deleted_nodes)
@@ -264,17 +266,20 @@ def DeletingNodesFromTable(node, diagram, deleted_nodes):
 
 #находим у небинарного узла верхнего и нижнего потомка по небинарной полярности
 def FindUpperAndLowerChilds(childs, order):
-    #fixme нужно чтобы проверялось сперва нет ли среди детей "1", если есть остальных можно убирать да и всё
-    # кроме этого ещё нужно добавить в сортировку возможность обработки узлов "?" и "1"
     sorted_childs = LitLessSortNodes(set(childs),order)
     lower = sorted_childs[0]
     upper = sorted_childs[-1]
     return upper, lower
 
+
 #Сортировка множества узлов w.r.t. order
 def LitLessSortNodes(nodes:set,order:list):
     nodes = list(nodes)
+    #print('nodes',nodes)
+    #print('order',order)
     sorted_nodes = [node for x in order for node in nodes if node.Value() == x]
+    #print('sorted nodes',sorted_nodes)
+    #exit()
     return sorted_nodes
 
 #удаляем связь между небинарным узлом и нижним потомком по небинарной полярности
