@@ -36,8 +36,8 @@ if __name__ == '__main__':
     print('Build time:'.ljust(30,' '), build_time)
     before_cnf, tmp_ = GetCNFFromDiagram(diagram)
     before_cnf = CNF(from_clauses=before_cnf)
-    #before_cnf.to_file('Logs/beforeprep_v1_' + options.name + '.cnf')
-    DisjunctiveDiagram.PrintCurrentTable(diagram)
+    before_cnf.to_file('Logs/' + options.name + '.cnf')
+    #DisjunctiveDiagram.PrintCurrentTable(diagram)
     print()
     if options.redir_paths == True:
         start_redir_time = time.time()

@@ -3,3 +3,4 @@ run_on_tests.sh
 /Tests_tmp
 redir_lits.cnf
 /results
+out

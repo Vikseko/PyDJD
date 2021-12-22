@@ -124,19 +124,19 @@ def BDD_convert(diagram):
     BDDiagram.PrintCurrentTable(diagram)
     while stop_flag == True:
         stop_flag = FindNonbinaryNodes(diagram, question_leaf)
-        print('')
-        BDDiagram.PrintCurrentTable(diagram)
+        #BDDiagram.PrintCurrentTable(diagram)
     stop_flag = True
     true_leaf = diagram.GetTrueLeaf()
     while stop_flag == True:
         stop_flag = FindNonbinaryNodes(diagram, true_leaf)
-        BDDiagram.PrintCurrentTable(diagram)
+        #BDDiagram.PrintCurrentTable(diagram)
 
 def ConnectRoots(upper, lower,diagram):
     deleted_nodes = set()
     ConnectNodesDouble(lower,upper,deleted_nodes,diagram)
     lower.node_type = DiagramNodeType.InternalNode
-    del diagram.table_[upper.hash_key]
+    if upper.hash_key in diagram.table_:
+        del diagram.table_[upper.hash_key]
     upper.HashKey()
     diagram.table_[upper.hash_key] = upper
 
@@ -222,12 +222,16 @@ def FindNonbinaryNodes(diagram:DisjunctiveDiagram, current_node):
     find_flag = False
     for node in current_node.high_parents + current_node.low_parents:
         if len(node.high_childs) > 1:
-            print('Find nonbinary node:', (node.vertex_id, node.Value()), 'hc')
+            print('Find nonbinary node:', (node.vertex_id, node.Value()), 'hc', "hc:", [(x.vertex_id, x.Value()) for x in
+                                                                  node.high_childs], "lc:", [(x.vertex_id, x.Value())
+                                                                                             for x in node.low_childs])
             GettingRidOfNonbinary(diagram, node, 1)
             find_flag = True
             break
         elif len(node.low_childs) > 1:
-            print('Find nonbinary node:', (node.vertex_id, node.Value()), 'lc')
+            print('Find nonbinary node:', (node.vertex_id, node.Value()), 'lc', "hc:", [(x.vertex_id, x.Value()) for x in
+                                                                  node.high_childs], "lc:", [(x.vertex_id, x.Value())
+                                                                                             for x in node.low_childs])
             GettingRidOfNonbinary(diagram, node, 0)
             find_flag = True
             break
@@ -247,10 +251,14 @@ def GettingRidOfNonbinary(diagram:DisjunctiveDiagram, node, polarity):
     deleted_nodes = set()
     upper_node, lower_node = FindUpperAndLowerChilds(childs, diagram.order_)
     print('Upper node:', (upper_node.vertex_id, upper_node.Value()),'Lower node:', (lower_node.vertex_id, lower_node.Value()))
+
     DeletingNodesFromTable(upper_node, diagram, deleted_nodes)
+
     DeleteLinkFromNode(lower_node, node, polarity)
+
     if upper_node is not diagram.GetTrueLeaf() and upper_node is not diagram.GetQuestionLeaf():
         ConnectNodesDouble(lower_node, upper_node, deleted_nodes, diagram)
+
     deleted_nodes = LitLessSortNodes(deleted_nodes, diagram.order_)
     GluingNodes(deleted_nodes, diagram)
 
@@ -259,8 +267,8 @@ def DeletingNodesFromTable(node, diagram, deleted_nodes):
     deleted_nodes.add(node)
     if node.hash_key in diagram.table_ and node is not diagram.GetTrueLeaf() and node is not diagram.GetQuestionLeaf():
         del diagram.table_[node.hash_key]
-    for parent in set(node.high_parents+node.low_parents):
-        DeletingNodesFromTable(parent, diagram, deleted_nodes)
+        for parent in set(node.high_parents+node.low_parents):
+            DeletingNodesFromTable(parent, diagram, deleted_nodes)
     #for parent in node.low_parents:
         #DeletingNodesFromTable(parent, diagram, deleted_nodes)
 
@@ -268,7 +276,7 @@ def DeletingNodesFromTable(node, diagram, deleted_nodes):
 def FindUpperAndLowerChilds(childs, order):
     sorted_childs = LitLessSortNodes(set(childs),order)
     lower = sorted_childs[0]
-    upper = sorted_childs[-1]
+    upper = sorted_childs[1]
     return upper, lower
 
 
