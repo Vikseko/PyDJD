@@ -146,6 +146,7 @@ def BDD_convert(diagram):
         print('Current number of nonbinary links is',BDDiagram.NonBinaryLinkCount(diagram))
         print('Current number of nonbinary nodes is',BDDiagram.NonBinaryNodesCount(diagram))
         #BDDiagram.PrintCurrentTable(diagram)
+
     """
     stop_flag = True
     true_leaf = diagram.GetTrueLeaf()
