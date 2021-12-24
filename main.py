@@ -61,7 +61,6 @@ if __name__ == '__main__':
     if options.bdd_convert == True:
         start_bdd_time = time.time()
         print('Start \"DJD_to_BDD\" procedure:')
-        print('Initial number of nonbinary link in diagram is', BDDiagram.NonBinaryLinkCount(bdd_diagram))
         bdd_diagram = BDDiagram(diagram)
         print('Transition to BDD complete.')
         if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:

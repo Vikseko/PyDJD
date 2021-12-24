@@ -127,6 +127,8 @@ class BDDiagram:
 def BDD_convert(diagram):
     # сперва надо свести корни к одному. для этого берём корень с наименьшим порядковым номером (относительно order)
     # затем добавляем ему ссылки на каждый другой корень причем и в high_childs и в low_childs
+    print('Initial number of nonbinary links in diagram is', BDDiagram.NonBinaryLinkCount(diagram))
+    print('Initial number of nonbinary nodes in diagram is', BDDiagram.NonBinaryNodesCount(diagram))
     roots_ = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, diagram.roots_)
     main_root = roots_[-1]
     for i in range(len(roots_)-1):
@@ -141,10 +143,11 @@ def BDD_convert(diagram):
     question_leaf = diagram.GetQuestionLeaf()
     BDDiagram.PrintCurrentTable(diagram)
     while stop_flag == True:
-        #stop_flag = FindNonbinaryNodesFromTerminal(diagram, question_leaf)
-        stop_flag = FindNonbinaryNodesFromRoot(diagram, main_root)
+        print('')
         print('Current number of nonbinary links is',BDDiagram.NonBinaryLinkCount(diagram))
         print('Current number of nonbinary nodes is',BDDiagram.NonBinaryNodesCount(diagram))
+        #stop_flag = FindNonbinaryNodesFromTerminal(diagram, question_leaf)
+        stop_flag = FindNonbinaryNodesFromRoot(diagram, main_root)
         #BDDiagram.PrintCurrentTable(diagram)
 
     """
