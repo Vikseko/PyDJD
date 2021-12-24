@@ -137,6 +137,8 @@ def BDD_convert(diagram):
     main_root.HashKey()
     diagram.table_[main_root.hash_key] = main_root
     diagram.main_root_ = main_root
+    print('Number of nonbinary links in diagram after roots gluing is', BDDiagram.NonBinaryLinkCount(diagram))
+    print('Number of nonbinary nodes in diagram after roots gluing is', BDDiagram.NonBinaryNodesCount(diagram))
     # Теперь вся диаграмма выходит из одного корня.
     # начинаем рекурсивно уводить связи вниз.
     stop_flag = True
