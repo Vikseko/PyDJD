@@ -61,12 +61,14 @@ if __name__ == '__main__':
     if options.bdd_convert == True:
         start_bdd_time = time.time()
         print('Start \"DJD_to_BDD\" procedure:')
+        print('Initial number of nonbinary link in diagram is', BDDiagram.NonBinaryLinkCount(bdd_diagram))
         bdd_diagram = BDDiagram(diagram)
         print('Transition to BDD complete.')
         if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:
             print('ERROR. Number of nonbinary link is', BDDiagram.NonBinaryLinkCount(bdd_diagram))
         else:
             print('Number of nonbinary link in diagram is', BDDiagram.NonBinaryLinkCount(bdd_diagram))
+        BDDiagram.PrintCurrentTable(diagram)
         after_cnf, tmp_ = GetCNFFromDiagram(diagram)
         after_cnf = CNF(from_clauses=after_cnf)
         after_cnf.to_file('Logs/bdd_convertion_' + options.name + '.cnf')
