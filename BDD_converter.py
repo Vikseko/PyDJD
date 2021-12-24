@@ -278,10 +278,12 @@ def GettingRidOfNonbinary(diagram:DisjunctiveDiagram, node, polarity):
         childs = node.low_childs
     deleted_nodes = set()
     upper_node, lower_node = FindUpperAndLowerChilds(childs, diagram.order_)
-    #print('Upper node:', (upper_node.vertex_id, upper_node.Value()),'Lower node:', (lower_node.vertex_id, lower_node.Value()))
+    print('Upper node:', (upper_node.vertex_id, upper_node.Value()),'Lower node:', (lower_node.vertex_id, lower_node.Value()))
     DeletingNodesFromTable(upper_node, diagram, deleted_nodes)
     DeleteLinkFromNode(lower_node, node, polarity)
-    if upper_node is not diagram.GetTrueLeaf() and upper_node is not diagram.GetQuestionLeaf():
+    if lower_node is not diagram.GetQuestionLeaf() \
+            and upper_node is not diagram.GetTrueLeaf() \
+            and upper_node is not diagram.GetQuestionLeaf():
         ConnectNodesDouble(lower_node, upper_node, deleted_nodes, diagram)
     deleted_nodes = LitLessSortNodes(deleted_nodes, diagram.order_)
     GluingNodes(deleted_nodes, diagram)
