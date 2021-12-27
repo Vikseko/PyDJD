@@ -137,6 +137,7 @@ def BDD_convert(diagram):
     main_root.HashKey()
     diagram.table_[main_root.hash_key] = main_root
     diagram.main_root_ = main_root
+    print('Main root number:', main_root.vertex_id,'; variable:',main_root.var_id)
     print('Number of nonbinary links in diagram after roots gluing is', BDDiagram.NonBinaryLinkCount(diagram))
     print('Number of nonbinary nodes in diagram after roots gluing is', BDDiagram.NonBinaryNodesCount(diagram))
     # Теперь вся диаграмма выходит из одного корня.
@@ -144,20 +145,32 @@ def BDD_convert(diagram):
     stop_flag = True
     question_leaf = diagram.GetQuestionLeaf()
     BDDiagram.PrintCurrentTable(diagram)
+    while BDDiagram.NonBinaryNodesCount(diagram) > 0:
+        nodes = diagram.table_.values()
+        nodes = reversed(DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, nodes))
+        for node in nodes:
+            # stop_flag = FindNonbinaryNodesFromTerminal(diagram, question_leaf)
+            stop_flag = FindNonbinaryNodesInTable(diagram, node)
+            if stop_flag == True:
+                break
+    """
     while stop_flag == True:
+    #while BDDiagram.NonBinaryNodesCount(diagram) > 0:
         print('')
         print('Current number of nonbinary links is',BDDiagram.NonBinaryLinkCount(diagram))
         print('Current number of nonbinary nodes is',BDDiagram.NonBinaryNodesCount(diagram))
         #stop_flag = FindNonbinaryNodesFromTerminal(diagram, question_leaf)
         stop_flag = FindNonbinaryNodesFromRoot(diagram, main_root)
         #BDDiagram.PrintCurrentTable(diagram)
-
+    """
     """
     stop_flag = True
     true_leaf = diagram.GetTrueLeaf()
     while stop_flag == True:
+        print('')
+        print('Current number of nonbinary links is',BDDiagram.NonBinaryLinkCount(diagram))
+        print('Current number of nonbinary nodes is',BDDiagram.NonBinaryNodesCount(diagram))
         stop_flag = FindNonbinaryNodesFromTerminal(diagram, true_leaf)
-        print('Current number of nonbinary links is', BDDiagram.NonBinaryLinkCount(diagram))
         #BDDiagram.PrintCurrentTable(diagram)
     """
 
@@ -177,10 +190,7 @@ def ConnectNodesDouble(lower, upper, deleted_nodes, diagram):
         for node in upper.high_childs:
             if node.Value() == lower.Value():
                 high_glu = True
-                #вот тут надо передать всех детей ловера апперу в high_childs,
-                # причем рекурсивно проверять условия дублирования детей
-                #нужно сперва проверить,
-                TransferChilds(lower,node,deleted_nodes,candidates_to_deletion,diagram)
+                TransferChilds(lower,upper,node,deleted_nodes,candidates_to_deletion,diagram)
                 break
         else:
             upper.high_childs.append(lower)
@@ -195,7 +205,7 @@ def ConnectNodesDouble(lower, upper, deleted_nodes, diagram):
                 low_glu = True
                 #вот тут надо передать всех детей ловера апперу в high_childs,
                 # причем рекурсивно проверять условия дублирования детей
-                TransferChilds(lower,node,deleted_nodes,candidates_to_deletion,diagram)
+                TransferChilds(lower,upper,node,deleted_nodes,candidates_to_deletion,diagram)
                 break
         else:
             upper.low_childs.append(lower)
@@ -208,13 +218,17 @@ def ConnectNodesDouble(lower, upper, deleted_nodes, diagram):
         # затем рекурсивно првоерить детей на то, что если родителей больше нет, то удаляем и эти излы и тд
         RecursiveDeletionNodesFromDiagram(lower,diagram)
 
-def TransferChilds(from_node,to_node,deleted_nodes,candidates_to_deletion,diagram):
+def TransferChilds(from_node,upper,to_node,deleted_nodes,candidates_to_deletion,diagram):
+    # TODO суть в чем, надо копировать node к которому передаем детей, если у него есть ещё родители,
+    #  кроме upper и у node_copy не будет upper в родителях, а у node будет только upper в родителях
+    #  и вот затем мы передаем детей от lower узлу node, но не node_copy
     if diagram.GetTrueLeaf() not in to_node.high_childs:
         for from_child in from_node.high_childs:
             for to_child in to_node.high_childs:
                 if from_child.Value() == to_child.Value():
                     candidates_to_deletion.add(from_child)
-                    TransferChilds(from_child,to_child,deleted_nodes,candidates_to_deletion,diagram)
+                    # TODO тут не upper оригинальный, а новый upper должен быть
+                    TransferChilds(from_child,upper,to_child,deleted_nodes,candidates_to_deletion,diagram)
                     break
             else:
                 to_node.high_childs.append(from_child)
@@ -227,7 +241,8 @@ def TransferChilds(from_node,to_node,deleted_nodes,candidates_to_deletion,diagra
             for to_child in to_node.low_childs:
                 if from_child.Value() == to_child.Value():
                     candidates_to_deletion.add(from_child)
-                    TransferChilds(from_child, to_child, deleted_nodes,candidates_to_deletion,diagram)
+                    # TODO тут не upper оригинальный, а новый upper должен быть
+                    TransferChilds(from_child,upper, to_child, deleted_nodes,candidates_to_deletion,diagram)
                     break
             else:
                 to_node.low_childs.append(from_child)
@@ -244,6 +259,12 @@ def RecursiveDeletionNodesFromDiagram(lower,diagram):
         for child in lower.low_childs:
             child.low_parents = [x for x in child.low_parents if x is not lower]
             RecursiveDeletionNodesFromDiagram(child,diagram)
+        if lower.hash_key in diagram.table_:
+            #print('del from table', (lower.vertex_id, lower.Value()))
+            del diagram.table_[lower.hash_key]
+            #if lower.hash_key in diagram.table_:
+                #print('ERROR NO DEL')
+        #print('del node', (lower.vertex_id, lower.Value()))
         del lower
 
 
@@ -290,6 +311,8 @@ def GettingRidOfNonbinary(diagram:DisjunctiveDiagram, node, polarity):
             and upper_node is not diagram.GetTrueLeaf() \
             and upper_node is not diagram.GetQuestionLeaf():
         ConnectNodesDouble(lower_node, upper_node, deleted_nodes, diagram)
+    elif upper_node is diagram.GetTrueLeaf():
+        RecursiveDeletionNodesFromDiagram(lower_node,diagram)
     deleted_nodes = LitLessSortNodes(deleted_nodes, diagram.order_)
     GluingNodes(deleted_nodes, diagram)
 
@@ -413,4 +436,28 @@ def FindNonbinaryNodesFromRoot(diagram:DisjunctiveDiagram, current_node):
         find_flag = FindNonbinaryNodesFromRoot(diagram, node)
         if find_flag == True:
             return True
+    return False
+
+def FindNonbinaryNodesInTable(diagram, current_node):
+    find_flag = False
+    if len(current_node.high_childs) > 1:
+        print('')
+        print('Current number of nonbinary links is', BDDiagram.NonBinaryLinkCount(diagram))
+        print('Current number of nonbinary nodes is', BDDiagram.NonBinaryNodesCount(diagram))
+        print('Find nonbinary node:', (current_node.vertex_id, current_node.Value()), 'hc', "hc:", [(x.vertex_id, x.Value()) for x in
+                                                            current_node.high_childs], "lc:", [(x.vertex_id, x.Value())
+                                                                                        for x in current_node.low_childs])
+        GettingRidOfNonbinary(diagram, current_node, 1)
+        find_flag = True
+    elif len(current_node.low_childs) > 1:
+        print('')
+        print('Current number of nonbinary links is', BDDiagram.NonBinaryLinkCount(diagram))
+        print('Current number of nonbinary nodes is', BDDiagram.NonBinaryNodesCount(diagram))
+        print('Find nonbinary node:', (current_node.vertex_id, current_node.Value()), 'lc', "hc:", [(x.vertex_id, x.Value()) for x in
+                                                            current_node.high_childs], "lc:", [(x.vertex_id, x.Value())
+                                                                                        for x in current_node.low_childs])
+        GettingRidOfNonbinary(diagram, current_node, 0)
+        find_flag = True
+    if find_flag == True:
+        return True
     return False
