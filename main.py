@@ -34,9 +34,9 @@ if __name__ == '__main__':
     print('DiagramNode destructors:'.ljust(30,' '), DiagramNode.destructors_)
     build_time = time.time() - start_build_time
     print('Build time:'.ljust(30,' '), build_time)
-    before_cnf, tmp_ = GetCNFFromDiagram(diagram)
-    before_cnf = CNF(from_clauses=before_cnf)
-    before_cnf.to_file('Logs/' + options.name + '.cnf')
+    #before_cnf, tmp_ = GetCNFFromDiagram(diagram)
+    #before_cnf = CNF(from_clauses=before_cnf)
+    #before_cnf.to_file('Logs/' + options.name + '.cnf')
     #DisjunctiveDiagram.PrintCurrentTable(diagram)
     print()
     if options.redir_paths == True:
@@ -67,10 +67,10 @@ if __name__ == '__main__':
             print('ERROR. Number of nonbinary link is', BDDiagram.NonBinaryLinkCount(bdd_diagram))
         else:
             print('Number of nonbinary link in diagram is', BDDiagram.NonBinaryLinkCount(bdd_diagram))
-        BDDiagram.PrintCurrentTable(diagram)
-        after_cnf, tmp_ = GetCNFFromDiagram(diagram)
-        after_cnf = CNF(from_clauses=after_cnf)
-        after_cnf.to_file('Logs/bdd_convertion_' + options.name + '.cnf')
+        BDDiagram.PrintCurrentTable(bdd_diagram)
+        #after_cnf, tmp_ = GetCNFFromDiagram(bdd_diagram)
+        #after_cnf = CNF(from_clauses=after_cnf)
+        #after_cnf.to_file('Logs/bdd_convertion_' + options.name + '.cnf')
         print('Number of vertices:'.ljust(30, ' '), len(bdd_diagram.table_))
         convert_time = time.time() - start_bdd_time
         print('Conversion time:'.ljust(30, ' '), convert_time)
