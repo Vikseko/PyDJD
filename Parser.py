@@ -20,16 +20,16 @@ PancakeVsSelectionSort_6_6
 PancakeVsSelectionSort_7_4
 PancakeVsSelectionSort_7_5
 PancakeVsSelectionSort_7_6
-php_3hole.cnf
-php_5hole.cnf
-php_10hole.cnf
+php_3holes.cnf
+php_5holes.cnf
+php_10holes.cnf
 """
 
 import argparse
 #Parser
 def createParser ():
     parser = argparse.ArgumentParser()
-    parser.add_argument ('-f', '--file', nargs='?', type=str, default='Tests_tmp/php_20hole.cnf')
+    parser.add_argument ('-f', '--file', nargs='?', type=str, default='Tests_tmp/php_3holes.cnf')
     parser.add_argument ('-o', '--order', nargs='?', type=str, default='frequency')
     parser.add_argument ('-s', '--source', nargs='?', type=str, default='cnf')
     parser.add_argument('-rt', '--runtests', nargs='?', type=bool, default=False)

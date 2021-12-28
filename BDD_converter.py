@@ -25,7 +25,8 @@ class BDDiagram:
         self.main_root_ = None
         self.var_set_ = copy.copy(diagram.var_set_)
         BDD_convert(self)
-
+        CleaningDiagram(self)
+        EnumerateBDDiagramNodes(diagram)
 
     # Возвращает таблицу
     def GetTable(self):
@@ -123,6 +124,11 @@ class BDDiagram:
         for node in self.table_:
             del node
 
+def EnumerateBDDiagramNodes(diagram):
+    vertex_id = 0
+    for node in diagram.table_.values():
+        vertex_id += 1
+        node.vertex_id = vertex_id
 
 def BDD_convert(diagram):
     # сперва надо свести корни к одному. для этого берём корень с наименьшим порядковым номером (относительно order)
@@ -219,16 +225,19 @@ def ConnectNodesDouble(lower, upper, deleted_nodes, diagram):
         RecursiveDeletionNodesFromDiagram(lower,diagram)
 
 def TransferChilds(from_node,upper,to_node,deleted_nodes,candidates_to_deletion,diagram):
-    # TODO суть в чем, надо копировать node к которому передаем детей, если у него есть ещё родители,
-    #  кроме upper и у node_copy не будет upper в родителях, а у node будет только upper в родителях
-    #  и вот затем мы передаем детей от lower узлу node, но не node_copy
+    copy_flag = False
+    for parent in to_node.high_parents + to_node.low_parents:
+        if parent is not upper:
+            copy_flag = True
+            break
+    if copy_flag == True:
+        new_node = CopyNodeWithoutLinkToUpper(to_node, upper)
     if diagram.GetTrueLeaf() not in to_node.high_childs:
         for from_child in from_node.high_childs:
             for to_child in to_node.high_childs:
                 if from_child.Value() == to_child.Value():
                     candidates_to_deletion.add(from_child)
-                    # TODO тут не upper оригинальный, а новый upper должен быть
-                    TransferChilds(from_child,upper,to_child,deleted_nodes,candidates_to_deletion,diagram)
+                    TransferChilds(from_child,to_node,to_child,deleted_nodes,candidates_to_deletion,diagram)
                     break
             else:
                 to_node.high_childs.append(from_child)
@@ -241,8 +250,7 @@ def TransferChilds(from_node,upper,to_node,deleted_nodes,candidates_to_deletion,
             for to_child in to_node.low_childs:
                 if from_child.Value() == to_child.Value():
                     candidates_to_deletion.add(from_child)
-                    # TODO тут не upper оригинальный, а новый upper должен быть
-                    TransferChilds(from_child,upper, to_child, deleted_nodes,candidates_to_deletion,diagram)
+                    TransferChilds(from_child,to_node, to_child, deleted_nodes,candidates_to_deletion,diagram)
                     break
             else:
                 to_node.low_childs.append(from_child)
@@ -250,9 +258,33 @@ def TransferChilds(from_node,upper,to_node,deleted_nodes,candidates_to_deletion,
     else:
         candidates_to_deletion.update(from_node.low_childs)
         # тут нужно какимто образом удалить потомков, если они больше не нужны нигде (нужна вот эта проверка на нужность)
+    if copy_flag == True:
+        to_node.HashKey()
+        deleted_nodes.add(new_node)
+
+
+def CopyNodeWithoutLinkToUpper(original_node, upper):
+    new_node = DiagramNode(original_node.node_type, original_node.var_id, original_node.high_childs,
+                           original_node.low_childs)
+    new_node.high_parents = [parent for parent in original_node.high_parents if parent is not upper]
+    new_node.low_parents = [parent for parent in original_node.low_parents if parent is not upper]
+    original_node.high_parents = [node for node in original_node.high_parents if node is upper]
+    original_node.low_parents = [node for node in original_node.low_parents if node is upper]
+    # for parent in new_node.high_parents:
+    #     parent.high_childs.append(new_node)
+    # for parent in new_node.low_parents:
+    #     parent.low_childs.append(new_node)
+    # for child in new_node.high_childs:
+    #     child.high_parents.append(new_node)
+    # for child in new_node.low_childs:
+    #     child.low_parents.append(new_node)
+    return new_node
 
 def RecursiveDeletionNodesFromDiagram(lower,diagram):
-    if len(lower.high_parents) == 0 and len(lower.low_parents) == 0:
+    if lower.node_type is not DiagramNodeType.QuestionNode \
+            and lower.node_type is not DiagramNodeType.TrueNode\
+            and len(lower.high_parents) == 0\
+            and len(lower.low_parents) == 0:
         for child in lower.high_childs:
             child.high_parents = [x for x in child.high_parents if x is not lower]
             RecursiveDeletionNodesFromDiagram(child,diagram)
@@ -461,3 +493,11 @@ def FindNonbinaryNodesInTable(diagram, current_node):
     if find_flag == True:
         return True
     return False
+
+def CleaningDiagram(self):
+    all_nodes = [node for node in self.table_.values()]
+    for node in all_nodes:
+        if node.node_type is not DiagramNodeType.RootNode and len(node.high_parents) + len(node.low_parents) == 0:
+            if node.hash_key in self.table_:
+                del self.table_[node.hash_key]
+            del node
