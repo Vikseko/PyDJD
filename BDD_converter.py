@@ -7,6 +7,8 @@ from Types import DiagramNode
 
 
 class BDDiagram:
+    new_nodes_ = 0
+    deleted_nodes_ = 0
     def __init__(self,diagram:DisjunctiveDiagram):
         self.variable_count_ = diagram.variable_count_
         self.true_path_count_ = diagram.true_path_count_
@@ -26,7 +28,13 @@ class BDDiagram:
         self.var_set_ = copy.copy(diagram.var_set_)
         BDD_convert(self)
         CleaningDiagram(self)
-        EnumerateBDDiagramNodes(diagram)
+        try:
+            question_leaf = self.GetQuestionLeaf()
+            print(question_leaf.Value(), [x.Value() for x in question_leaf.high_parents],[x.Value() for x in question_leaf.low_parents])
+        except:
+            print('woops')
+        EnumerateBDDiagramNodes(self)
+
 
     # Возвращает таблицу
     def GetTable(self):
@@ -231,6 +239,7 @@ def TransferChilds(from_node,upper,to_node,deleted_nodes,candidates_to_deletion,
             copy_flag = True
             break
     if copy_flag == True:
+        diagram.new_nodes_ += 1
         new_node = CopyNodeWithoutLinkToUpper(to_node, upper)
     if diagram.GetTrueLeaf() not in to_node.high_childs:
         for from_child in from_node.high_childs:
@@ -259,7 +268,9 @@ def TransferChilds(from_node,upper,to_node,deleted_nodes,candidates_to_deletion,
         candidates_to_deletion.update(from_node.low_childs)
         # тут нужно какимто образом удалить потомков, если они больше не нужны нигде (нужна вот эта проверка на нужность)
     if copy_flag == True:
+        deleted_nodes = set([x for x in deleted_nodes if x is not to_node])
         to_node.HashKey()
+        deleted_nodes.add(to_node)
         deleted_nodes.add(new_node)
 
 
@@ -267,17 +278,21 @@ def CopyNodeWithoutLinkToUpper(original_node, upper):
     new_node = DiagramNode(original_node.node_type, original_node.var_id, original_node.high_childs,
                            original_node.low_childs)
     new_node.high_parents = [parent for parent in original_node.high_parents if parent is not upper]
+    for node in new_node.high_parents:
+        node.high_childs = [x for x in node.high_childs if x is not original_node]
     new_node.low_parents = [parent for parent in original_node.low_parents if parent is not upper]
+    for node in new_node.low_parents:
+        node.low_childs = [x for x in node.low_childs if x is not original_node]
     original_node.high_parents = [node for node in original_node.high_parents if node is upper]
     original_node.low_parents = [node for node in original_node.low_parents if node is upper]
-    # for parent in new_node.high_parents:
-    #     parent.high_childs.append(new_node)
-    # for parent in new_node.low_parents:
-    #     parent.low_childs.append(new_node)
-    # for child in new_node.high_childs:
-    #     child.high_parents.append(new_node)
-    # for child in new_node.low_childs:
-    #     child.low_parents.append(new_node)
+    for parent in new_node.high_parents:
+        parent.high_childs.append(new_node)
+    for parent in new_node.low_parents:
+        parent.low_childs.append(new_node)
+    for child in new_node.high_childs:
+        child.high_parents.append(new_node)
+    for child in new_node.low_childs:
+        child.low_parents.append(new_node)
     return new_node
 
 def RecursiveDeletionNodesFromDiagram(lower,diagram):
@@ -296,7 +311,8 @@ def RecursiveDeletionNodesFromDiagram(lower,diagram):
             del diagram.table_[lower.hash_key]
             #if lower.hash_key in diagram.table_:
                 #print('ERROR NO DEL')
-        #print('del node', (lower.vertex_id, lower.Value()))
+        print('del node', (lower.vertex_id, lower.Value()))
+        diagram.deleted_nodes_ += 1
         del lower
 
 
@@ -405,6 +421,8 @@ def GluingNodes(deleted_nodes, diagram):
                 print('ERROR')
             #print('Glued node',(node.Value(), node),'with node',(it_node.Value(),it_node))
             GluingNode(node,it_node)
+            diagram.deleted_nodes_ += 1
+            print('del glu node',(node.Value(), node))
             del node
         else:
             diagram.table_[node.hash_key] = node
@@ -494,10 +512,31 @@ def FindNonbinaryNodesInTable(diagram, current_node):
         return True
     return False
 
-def CleaningDiagram(self):
-    all_nodes = [node for node in self.table_.values()]
-    for node in all_nodes:
-        if node.node_type is not DiagramNodeType.RootNode and len(node.high_parents) + len(node.low_parents) == 0:
-            if node.hash_key in self.table_:
-                del self.table_[node.hash_key]
-            del node
+def CleaningDiagram(diagram):
+    all_nodes = sorted([node for node in diagram.table_.values()], key=lambda x: x.vertex_id)
+    while len(all_nodes) > 0:
+        node = all_nodes[0]
+        all_nodes = all_nodes[1:]
+        print('lenb',len(all_nodes))
+        print('Check node', node.vertex_id, node.var_id)
+        RecursiveCleaningNodesFromDiagram(node,diagram)
+        print('lena', len(all_nodes))
+
+def RecursiveCleaningNodesFromDiagram(node,diagram):
+    if node.node_type is not DiagramNodeType.RootNode\
+            and len(node.high_parents) == 0\
+            and len(node.low_parents) == 0:
+        for child in node.high_childs:
+            child.high_parents = [x for x in child.high_parents if x is not node]
+            RecursiveCleaningNodesFromDiagram(child,diagram)
+        for child in node.low_childs:
+            child.low_parents = [x for x in child.low_parents if x is not node]
+            RecursiveCleaningNodesFromDiagram(child,diagram)
+        if node.hash_key in diagram.table_:
+            #print('del from table', (node.vertex_id, node.Value()))
+            del diagram.table_[node.hash_key]
+            if node.hash_key in diagram.table_:
+                print('ERROR NO DEL')
+        print('del node', (node.vertex_id, node.Value()))
+        diagram.deleted_nodes_ += 1
+        del node

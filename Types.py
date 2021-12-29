@@ -21,7 +21,6 @@ class ProblemType(Enum):
 class DiagramNode:
     constructors_ = 0
     destructors_ = 0
-
     def __init__(self, Type:DiagramNodeType, VarId:int = None, HighChilds = None, LowChilds = None):
         if type(Type) == DiagramNodeType:
             self.node_type = Type
@@ -29,7 +28,7 @@ class DiagramNode:
             raise Exception('Type of diagram node should be of the following: Undefined, RootNode, InternalNode, FalseNode, QuestionNode, TrueNode')
         self.var_id = 0 if VarId == None else VarId
         self.markup_varid = 0
-        self.vertex_id = 0
+        self.vertex_id = DiagramNode.constructors_
         self.hash_key = 0
         self.visited = False
         self.high_childs = [] if HighChilds == None else sorted(copy.copy(HighChilds),key= lambda x:x.var_id)

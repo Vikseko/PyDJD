@@ -71,7 +71,11 @@ if __name__ == '__main__':
         #after_cnf, tmp_ = GetCNFFromDiagram(bdd_diagram)
         #after_cnf = CNF(from_clauses=after_cnf)
         #after_cnf.to_file('Logs/bdd_convertion_' + options.name + '.cnf')
+        print('Number of new nodes (during BDD-transformation):', bdd_diagram.new_nodes_)
+        print('Number of deleted nodes (during BDD-transformation):', bdd_diagram.deleted_nodes_)
         print('Number of vertices:'.ljust(30, ' '), len(bdd_diagram.table_))
+        print('DiagramNode constructors:'.ljust(30,' '), DiagramNode.constructors_)
+        print('DiagramNode destructors:'.ljust(30, ' '), DiagramNode.destructors_)
         convert_time = time.time() - start_bdd_time
         print('Conversion time:'.ljust(30, ' '), convert_time)
 
