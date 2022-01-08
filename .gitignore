@@ -5,3 +5,7 @@ redir_lits.cnf
 /results
 out
 /Outs/*
+/SAT_BENCH_2021/
+/Outs/
+/out1
+/results_v1.txt

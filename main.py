@@ -42,12 +42,18 @@ if __name__ == '__main__':
     if options.redir_paths == True:
         start_redir_time = time.time()
         print('Start redirection procedure:')
+        question_paths_count = CountQuestionPathsInDiagram(diagram)
+        print('Number of question paths:'.ljust(30,' '), question_paths_count)
         # v1, нужно закомментить from Redirection import * в Pathfinder.py
         # в этой версии сперва собираются все пути, затем скопом обрабатываются
-        PathsRedirection(diagram,problem)
+        #PathsRedirection(diagram,problem)
         # v2, нужно раскомментить from Redirection import * в Pathfinder.py
         # в этой версии каждый путь находит отдельно и обрабатывается сразу
+        # но часть путей может пропустить
         #RedirectQuestionPathsFromDiagram(diagram)
+        # v3 тут пути обрабатываются по одному за раз, как в v2, но не узлы помечаются посещенными
+        # а сам путь (литералы) запоминается в хэш таблице и если такой уже есть в ней, то не обрабатывается
+        RedirectQuestionPathsFromDiagram_v3(diagram, question_paths_count)
         print('Number of vertices:'.ljust(30, ' '), len(diagram.table_))
         print('DiagramNode constructors:'.ljust(30,' '), DiagramNode.constructors_)
         print('DiagramNode destructors:'.ljust(30, ' '), DiagramNode.destructors_)
@@ -57,7 +63,7 @@ if __name__ == '__main__':
         print('Total runtime'.ljust(30,' '), time.time() - start_time)
         after_cnf, tmp_ = GetCNFFromDiagram(diagram)
         after_cnf = CNF(from_clauses=after_cnf)
-        after_cnf.to_file('Logs/djdprep_v1_' + options.name + '.cnf')
+        after_cnf.to_file('Logs/djdprep_v3_' + options.name + '.cnf')
     if options.bdd_convert == True:
         start_bdd_time = time.time()
         print('Start \"DJD_to_BDD\" procedure:')
