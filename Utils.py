@@ -119,6 +119,7 @@ def ParseOptions(params):
     options.show_options = params.show_options
     options.bdd_convert = params.bdd_convert
     options.redir_paths = params.redirpaths
+    options.djd_prep = params.djd_prep
     options.lock_vars = params.lockvars
     return options
 

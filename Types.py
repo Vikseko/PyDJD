@@ -259,4 +259,5 @@ class Options:
         self.show_options = False
         self.bdd_convert = False
         self.redir_paths = False
+        self.djd_prep = False
         self.lock_vars = False

@@ -99,7 +99,7 @@ def CountQuestionPathsInDiagram(diagram:DisjunctiveDiagram):
         node_path = []
         node_path.append(node)
         CountPaths(node_path,clause,paths_table)
-    return len(paths_table)
+    return paths_table
 
 
 def CountPaths(node_path,clause,paths_table):
@@ -336,3 +336,23 @@ def RedirPaths_v3(node_path,clause, g, diagram, finded_flag,clauses_set, questio
                 if finded_flag:
                     return True
         return False
+
+
+def CheckPaths(diagram,all_question_pathes):
+    cnf, tmp_ = GetCNFFromDiagram(diagram)
+    cnf = CNF(from_clauses=cnf)
+    g = MapleChrono(bootstrap_with=cnf)
+    for clause in all_question_pathes:
+        s, model = PathCheck(clause, g)
+        if s == False:
+            # print('SAT-oracle says False. Redirect path.')
+            cnf.append([-x for x in clause])
+        if s == None:
+            # print('SAT-oracle says None. Go next path.')
+            return False
+        if s == True:
+            # print('Problem solved due false path checking.')
+            # print('Model:', model)
+            # break
+            pass
+    return cnf

@@ -34,15 +34,16 @@ if __name__ == '__main__':
     print('DiagramNode destructors:'.ljust(30,' '), DiagramNode.destructors_)
     build_time = time.time() - start_build_time
     print('Build time:'.ljust(30,' '), build_time)
-    #before_cnf, tmp_ = GetCNFFromDiagram(diagram)
-    #before_cnf = CNF(from_clauses=before_cnf)
-    #before_cnf.to_file('Logs/' + options.name + '.cnf')
+    before_cnf, tmp_ = GetCNFFromDiagram(diagram)
+    before_cnf = CNF(from_clauses=before_cnf)
+    before_cnf.to_file('Logs/' + options.name + '.cnf')
     #DisjunctiveDiagram.PrintCurrentTable(diagram)
     print()
+
     if options.redir_paths == True:
         start_redir_time = time.time()
         print('Start redirection procedure:')
-        question_paths_count = CountQuestionPathsInDiagram(diagram)
+        question_paths_count = len(CountQuestionPathsInDiagram(diagram))
         print('Number of question paths:'.ljust(30,' '), question_paths_count)
         # v1, нужно закомментить from Redirection import * в Pathfinder.py
         # в этой версии сперва собираются все пути, затем скопом обрабатываются
@@ -64,6 +65,23 @@ if __name__ == '__main__':
         after_cnf, tmp_ = GetCNFFromDiagram(diagram)
         after_cnf = CNF(from_clauses=after_cnf)
         after_cnf.to_file('Logs/djdprep_v3_' + options.name + '.cnf')
+
+    if options.djd_prep == True:
+        start_djdprep = time.time()
+        print('Start preprocessing procedure:')
+        all_question_pathes = CountQuestionPathsInDiagram(diagram)
+        question_paths_count = len(all_question_pathes)
+        print('Number of question paths:'.ljust(30,' '), question_paths_count)
+        new_cnf = CheckPaths(diagram,all_question_pathes)
+        print('Number of vertices:'.ljust(30, ' '), len(diagram.table_))
+        print('DiagramNode constructors:'.ljust(30,' '), DiagramNode.constructors_)
+        print('DiagramNode destructors:'.ljust(30, ' '), DiagramNode.destructors_)
+        djd_prep_time = time.time() - start_djdprep
+        print('Redirecting time:'.ljust(30, ' '), djd_prep_time)
+        print()
+        print('Total runtime'.ljust(30,' '), time.time() - start_time)
+        new_cnf.to_file('Logs/djdprep_v4_' + options.name + '.cnf')
+
     if options.bdd_convert == True:
         start_bdd_time = time.time()
         print('Start \"DJD_to_BDD\" procedure:')
