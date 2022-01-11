@@ -36,7 +36,7 @@ if __name__ == '__main__':
     print('Build time:'.ljust(30,' '), build_time)
     before_cnf, tmp_ = GetCNFFromDiagram(diagram)
     before_cnf = CNF(from_clauses=before_cnf)
-    before_cnf.to_file('Logs/' + options.name + '.cnf')
+    before_cnf.to_file('Logs/' + options.name + '_before.cnf')
     #DisjunctiveDiagram.PrintCurrentTable(diagram)
     print()
 
@@ -64,7 +64,7 @@ if __name__ == '__main__':
         print('Total runtime'.ljust(30,' '), time.time() - start_time)
         after_cnf, tmp_ = GetCNFFromDiagram(diagram)
         after_cnf = CNF(from_clauses=after_cnf)
-        after_cnf.to_file('Logs/djdprep_v3_' + options.name + '.cnf')
+        after_cnf.to_file('Logs/' + options.name + '_djdprep_v3.cnf')
 
     if options.djd_prep == True:
         start_djdprep = time.time()
@@ -73,14 +73,11 @@ if __name__ == '__main__':
         question_paths_count = len(all_question_pathes)
         print('Number of question paths:'.ljust(30,' '), question_paths_count)
         new_cnf = CheckPaths(diagram,all_question_pathes)
-        print('Number of vertices:'.ljust(30, ' '), len(diagram.table_))
-        print('DiagramNode constructors:'.ljust(30,' '), DiagramNode.constructors_)
-        print('DiagramNode destructors:'.ljust(30, ' '), DiagramNode.destructors_)
         djd_prep_time = time.time() - start_djdprep
-        print('Redirecting time:'.ljust(30, ' '), djd_prep_time)
+        print('Preprocessing time:'.ljust(30, ' '), djd_prep_time)
         print()
         print('Total runtime'.ljust(30,' '), time.time() - start_time)
-        new_cnf.to_file('Logs/djdprep_v4_' + options.name + '.cnf')
+        new_cnf.to_file('Logs/' + options.name + '_djdprep_v4.cnf')
 
     if options.bdd_convert == True:
         start_bdd_time = time.time()

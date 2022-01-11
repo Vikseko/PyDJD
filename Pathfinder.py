@@ -342,17 +342,24 @@ def CheckPaths(diagram,all_question_pathes):
     cnf, tmp_ = GetCNFFromDiagram(diagram)
     cnf = CNF(from_clauses=cnf)
     g = MapleChrono(bootstrap_with=cnf)
+    new_clauses_counter = 0
+    new_clauses = []
+    start_clauses_checking = time.time()
     for clause in all_question_pathes:
         s, model = PathCheck(clause, g)
         if s == False:
             # print('SAT-oracle says False. Redirect path.')
-            cnf.append([-x for x in clause])
+            new_clauses_counter += 1
+            new_clauses.append([-x for x in clause])
         if s == None:
             # print('SAT-oracle says None. Go next path.')
-            return False
+            pass
         if s == True:
             # print('Problem solved due false path checking.')
             # print('Model:', model)
             # break
             pass
+    #print('Paths checking time:'.ljust(30, ' '), time.time() - start_clauses_checking)
+    cnf.extend(new_clauses)
+    print('Number of new clauses:'.ljust(30,' '), new_clauses_counter)
     return cnf
