@@ -29,7 +29,7 @@ import argparse
 #Parser
 def createParser ():
     parser = argparse.ArgumentParser()
-    parser.add_argument ('-f', '--file', nargs='?', type=str, default='Tests_tmp/PancakeVsSelectionSort_6_6.cnf')
+    parser.add_argument ('-f', '--file', nargs='?', type=str, default='Tests/GeffeLearntsClauses_1.cnf')
     parser.add_argument ('-o', '--order', nargs='?', type=str, default='frequency')
     parser.add_argument ('-s', '--source', nargs='?', type=str, default='cnf')
     parser.add_argument('-rt', '--runtests', nargs='?', type=bool, default=False)

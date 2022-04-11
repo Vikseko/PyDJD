@@ -363,3 +363,23 @@ def CheckPaths(diagram,all_question_pathes):
     cnf.extend(new_clauses)
     print('Number of new clauses:'.ljust(30,' '), new_clauses_counter)
     return cnf
+
+def SortClausesInCnf(cnf):
+    for clause in cnf:
+        clause.sort(key=lambda x: abs(x))
+    cnf.sort(key = cmp_to_key(SortClauses))
+    return cnf
+
+def SortClauses(clause1, clause2):
+    minlen = min(len(clause1),len(clause2))
+    for i in range(minlen):
+        if abs(clause1[i]) > abs(clause2[i]):
+            return 1
+        elif abs(clause1[i]) < abs(clause2[i]):
+            return -1
+    for i in range(minlen):
+        if clause1[i] > clause2[i]:
+            return 1
+        elif clause1[i] < clause2[i]:
+            return -1
+    return 0

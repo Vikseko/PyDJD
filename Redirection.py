@@ -217,11 +217,10 @@ def RedirOriginalPath(last_lit, last_node, diagram):
 # Рекурсивное удаление узлов из таблицы от node наверх
 def DeletingNodesFromTable(node, diagram, deleted_nodes):
     deleted_nodes.add(node)
-    del diagram.table_[node.hash_key]
-    for parent in node.high_parents:
-        DeletingNodesFromTable(parent, diagram, deleted_nodes)
-    for parent in node.low_parents:
-        DeletingNodesFromTable(parent, diagram, deleted_nodes)
+    if node.hash_key in diagram.table_ and node is not diagram.GetTrueLeaf() and node is not diagram.GetQuestionLeaf():
+        del diagram.table_[node.hash_key]
+        for parent in set(node.high_parents+node.low_parents):
+            DeletingNodesFromTable(parent, diagram, deleted_nodes)
 
 
 def GluingNodes(deleted_nodes, diagram):

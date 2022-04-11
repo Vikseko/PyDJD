@@ -21,6 +21,7 @@ class ProblemType(Enum):
 class DiagramNode:
     constructors_ = 0
     destructors_ = 0
+    destructor_errors_ = 0
     def __init__(self, Type:DiagramNodeType, VarId:int = None, HighChilds = None, LowChilds = None):
         if type(Type) == DiagramNodeType:
             self.node_type = Type
@@ -125,6 +126,8 @@ class DiagramNode:
 
     def __del__(self):
         DiagramNode.destructors_ += 1
+        if sys.getrefcount(self) > 0:
+            DiagramNode.destructor_errors_ += 1
 
 
 # Таблица с узлами диаграммы

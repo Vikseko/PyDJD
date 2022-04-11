@@ -28,21 +28,31 @@ def DimacsParser(lines):
         else:
             if lit_count == 0 and lit_count_flag == False:
                 lit_count_flag = True
-            clause = list(map(int,line.split()[:-1]))
+            clause = list(set(map(int,line.split()[:-1])))
+            sat_flag = False
             for lit in clause:
-                varset.add(abs(lit))
-            problem.append(clause)
-            if lit_count_flag == True:
-                lit_count += len(clause)
-    if min_var_num == 0:
-        for clause in problem:
-            for lit in clause:
-                if abs(lit) < min_var_num or abs(lit) == 1:
-                    min_var_num = abs(lit)
+                if -lit in clause:
+                    sat_flag = True
+                    break
+            if sat_flag == False:
+                for lit in clause:
+                    varset.add(abs(lit))
+                if len(clause) > 0:
+                    problem.append(clause)
+                if lit_count_flag == True:
+                    lit_count += len(clause)
     if max_var_num == 0:
         for clause in problem:
             for lit in clause:
                 if abs(lit) > max_var_num:
                     max_var_num = abs(lit)
+    if min_var_num == 0:
+        min_var_num = max_var_num
+        for clause in problem:
+            for lit in clause:
+                if abs(lit) < min_var_num:
+                    min_var_num = abs(lit)
+            if min_var_num == 1:
+                break
     var_count = len(varset)
     return problem, order, var_count, lit_count, min_var_num, max_var_num
