@@ -11,3 +11,4 @@ out
 /results_v1.txt
 /scratch.py
 /completed_sat_tests/
+/__pycache__

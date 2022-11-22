@@ -338,7 +338,7 @@ def RedirPaths_v3(node_path,clause, g, diagram, finded_flag,clauses_set, questio
         return False
 
 
-def CheckPaths(diagram,all_question_pathes):
+def CheckPaths(diagram, all_question_pathes):
     cnf, tmp_ = GetCNFFromDiagram(diagram)
     cnf = CNF(from_clauses=cnf)
     g = MapleChrono(bootstrap_with=cnf)

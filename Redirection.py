@@ -53,6 +53,7 @@ def PathCheck(lit_path, solver):
     timer.start()
     s = solver.solve_limited(assumptions=lit_path, expect_interrupt=True)
     solver.clear_interrupt()
+    timer.cancel()
     if s == None:
         return s, None
     elif s == False:

@@ -16,7 +16,7 @@ if __name__ == '__main__':
     if (not FileExists(options)):
         raise RuntimeError('File', options.filename, 'doesn\'t exist in directory', options.dir)
     print('Problem:'.ljust(30,' '), options.filename)
-    problem, order = ReadProblem(options)
+    problem, order, problem_comments = ReadProblem(options)
     if len(order) == 0:
         raise RuntimeError('Order is empty')
     # Журнализируем текущий порядок переменных
@@ -35,8 +35,8 @@ if __name__ == '__main__':
     build_time = time.time() - start_build_time
     print('Build time:'.ljust(30,' '), build_time)
     before_cnf, tmp_ = GetCNFFromDiagram(diagram)
-    before_cnf = CNF(from_clauses=SortClausesInCnf(before_cnf))
-    before_cnf.to_file('Logs/' + options.name + '_before.cnf')
+    #before_cnf = CNF(from_clauses=SortClausesInCnf(before_cnf))
+    #before_cnf.to_file('Logs/' + options.name + '_before.cnf', comments = problem_comments)
     #DisjunctiveDiagram.PrintCurrentTable(diagram)
     print()
 
@@ -52,7 +52,7 @@ if __name__ == '__main__':
         print()
         print('Total runtime'.ljust(30,' '), time.time() - start_time)
         new_cnf = CNF(from_clauses=SortClausesInCnf(new_cnf.clauses))
-        new_cnf.to_file('Logs/' + options.name + '_djdprep_v4.cnf')
+        new_cnf.to_file('DJD_prep_cnfs_1sec/djdprep_' + options.name + '.cnf', comments = problem_comments)
 
     if options.redir_paths == True:
         start_redir_time = time.time()
@@ -80,7 +80,7 @@ if __name__ == '__main__':
         print('Total runtime'.ljust(30,' '), time.time() - start_time)
         after_cnf, tmp_ = GetCNFFromDiagram(diagram)
         after_cnf = CNF(from_clauses=after_cnf)
-        after_cnf.to_file('Logs/' + options.name + '_djdprep_v2.cnf')
+        after_cnf.to_file('Logs/' + options.name + '_djdprep_v2.cnf', comments = problem_comments)
 
     if options.bdd_convert == True:
         start_bdd_time = time.time()
@@ -94,7 +94,7 @@ if __name__ == '__main__':
         BDDiagram.PrintCurrentTable(bdd_diagram)
         #after_cnf, tmp_ = GetCNFFromDiagram(bdd_diagram)
         #after_cnf = CNF(from_clauses=after_cnf)
-        #after_cnf.to_file('Logs/bdd_convertion_' + options.name + '.cnf')
+        #after_cnf.to_file('Logs/bdd_convertion_' + options.name + '.cnf', comments = problem_comments)
         print('Number of new nodes (during BDD-transformation):', bdd_diagram.new_nodes_)
         print('Number of deleted nodes (during BDD-transformation):', bdd_diagram.deleted_nodes_)
         print('Number of vertices:'.ljust(30, ' '), len(bdd_diagram.table_))
