@@ -32,4 +32,5 @@ if __name__ == '__main__':
     print('DiagramNode destructors:'.ljust(30,' '), DiagramNode.destructors_)
     build_time = time.time() - start_build_time
     print('Build time:'.ljust(30,' '), build_time)
+    diagram.PrintCurrentTable()
 
