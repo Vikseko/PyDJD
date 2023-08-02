@@ -4,7 +4,7 @@ from DimacsParser import *
 
 def ReadProblem(options):
     lines = open(options.path,'r').readlines()
-    problem, order, var_count, lit_count, min_var_num, max_var_num = DimacsParser(lines)
+    problem, order, comments, var_count, lit_count, min_var_num, max_var_num = DimacsParser(lines)
     print('Lit count:'.ljust(30,' '), lit_count)
     print('Variables:'.ljust(30,' '), var_count)
     print('Lowest variable number:'.ljust(30,' '), min_var_num)
@@ -28,7 +28,7 @@ def ReadProblem(options):
             raise RuntimeError('No maximum variable found, check DIMACS file.')
     order.append('true')
     order.insert(0, '?')
-    return problem, order
+    return problem, order, comments
 
 
 def FrequencyOrder(problem,min_var_num, max_var_num):

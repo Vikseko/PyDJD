@@ -7,6 +7,7 @@ def DimacsParser(lines):
     lit_count_flag = False
     order = None
     problem = []
+    comments = []
     varset = set()
     if len(lines) == 0:
         raise RuntimeError('DimacsParser: Empty file')
@@ -17,6 +18,8 @@ def DimacsParser(lines):
             vars = int(line.split()[2])
             clauses = int(line.split()[3])
         elif 'c' in line:
+            if line[0] == 'c':
+                comments.append(line if line[-1] != '\n' else line[:-1])
             if 'literals_count' in line:
                 lit_count = int(line.split()[2])
             if 'min_var_num' in line:
@@ -55,4 +58,4 @@ def DimacsParser(lines):
             if min_var_num == 1:
                 break
     var_count = len(varset)
-    return problem, order, var_count, lit_count, min_var_num, max_var_num
+    return problem, order, comments, var_count, lit_count, min_var_num, max_var_num
