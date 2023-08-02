@@ -57,8 +57,12 @@ def GetMinMaxVars(problem, min_var_id, max_var_id):
 
 #азделить путь к папке и имя файла
 def SplitFilename(path):
-    dir = ''.join(path.split('/')[:-1])
-    filename = ''.join(path.split('/')[-1])
+    if '\\' not in path:
+        dir = ''.join(path.split('/')[:-1])
+        filename = ''.join(path.split('/')[-1])
+    else:
+        dir = ''.join(path.split('\\')[:-1])
+        filename = ''.join(path.split('\\')[-1])
     return dir,filename
 
 #Разделить имя файла на имя и суффикс
@@ -117,12 +121,31 @@ def ParseOptions(params):
     options.show_statistic = params.show_stats
     options.show_version = params.show_ver
     options.show_options = params.show_options
-    options.bdd_convert = params.bdd_convert
-    options.redir_paths = params.redirpaths
-    options.djd_prep = params.djd_prep
-    options.lock_vars = params.lockvars
+    options.bdd_convert = False if (params.bdd_convert in [False, 'False', 0, '0']) else True
+    options.redir_paths = False if params.redirpaths in [False, 'False', 0, '0'] else True
+    options.djd_prep = False if params.djd_prep in [False, 'False', 0, '0'] else True
+    options.lock_vars = False if params.lockvars in [False, 'False', 0, '0'] else True
     return options
 
 def PrintOptions(options):
-    print('Printed options')
+    print('Options:')
+    print('Full path:', options.path)
+    #print('Directory:', options.dir)
+    print('Filename:', options.filename)
+    #print('Name only:', options.name)
+    #print('Suffix:', options.suffix)
+    print('Source type:', options.source_type)
+    print('Order:', options.order_type)
+    #print('Analyze log:', options.analyze_log)
+    #print('Analyze var limit:', options.analyze_var_limit)
+    #print('Analyze var fraction:', options.analyze_var_fraction)
+    print('Run tests:', options.run_tests)
+    print('Show statistics:', options.show_statistic)
+    print('Show version:', options.show_version)
+    print('Show options:', options.show_options)
+    print('Convert to BDD:', options.bdd_convert)
+    print('Redirecting pathes:', options.redir_paths)
+    print('DJD preprocessing:', options.djd_prep)
+    print('Lock variables:', options.lock_vars)
+    print()
 

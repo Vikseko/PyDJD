@@ -179,15 +179,15 @@ def RedirPaths(node_path,clause, g, diagram, finded_flag):
         #node_paths.append(node_path)
         #print(clause)
         s, model = PathCheck(clause, g)
-        if s == False:
+        if not s:
             flag_copy_path = RedirectPath(clause, node_path, diagram)
-            if flag_copy_path == True:
+            if flag_copy_path:
                 diagram.copy_redir += 1
             else:
                 diagram.uniq_redir += 1
-        if s == None:
+        if s is None:
             pass
-        if s == True:
+        if s:
             # print('Problem solved due false path checking.')
             # print('Model:', model)
             # break
@@ -199,7 +199,7 @@ def RedirPaths(node_path,clause, g, diagram, finded_flag):
         for node in itertools.chain(current_node.high_parents, current_node.low_parents):
             if not node.IsVisited():
                 visited_flag = False
-        if visited_flag == True:
+        if visited_flag:
             current_node.Visit()
             for node in itertools.chain(current_node.high_parents, current_node.low_parents):
                 node.UnVisit()

@@ -2,11 +2,10 @@ from Builder import *
 from Parser import *
 from Pathfinder import *
 from Redirection import *
-#from BDD_converter import *
+from BDD_converter import *
 
 if __name__ == '__main__':
     start_time = time.time()
-    print('Start building procedure:')
     parser = createParser()
     options = ParseOptions(parser.parse_args(sys.argv[1:]))
     if options.show_version:
@@ -25,6 +24,7 @@ if __name__ == '__main__':
     # Строим отрицание считанной формулы(КНФ= > ДНФ)
     if (options.source_type == "conflicts" or options.source_type == "cnf"):
         NegateProblem(problem)
+    #print('Start building procedure')
     start_build_time = time.time()
     builder = DisjunctiveDiagramsBuilder(problem, order, GetProblemType(options.source_type))
     diagram = builder.BuildDiagram()
@@ -34,9 +34,9 @@ if __name__ == '__main__':
     print('DiagramNode destructors:'.ljust(30,' '), DiagramNode.destructors_)
     build_time = time.time() - start_build_time
     print('Build time:'.ljust(30,' '), build_time)
-    before_cnf, tmp_ = GetCNFFromDiagram(diagram)
-    before_cnf = CNF(from_clauses=SortClausesInCnf(before_cnf))
-    before_cnf.to_file('Logs/' + options.name + '_before.cnf')
+    #before_cnf, tmp_ = GetCNFFromDiagram(diagram)
+    #before_cnf = CNF(from_clauses=SortClausesInCnf(before_cnf))
+    #before_cnf.to_file('Logs/' + options.filename + '_before.cnf')
     #DisjunctiveDiagram.PrintCurrentTable(diagram)
     print()
 
@@ -52,7 +52,7 @@ if __name__ == '__main__':
         print()
         print('Total runtime'.ljust(30,' '), time.time() - start_time)
         new_cnf = CNF(from_clauses=SortClausesInCnf(new_cnf.clauses))
-        new_cnf.to_file('Logs/' + options.name + '_djdprep_v4.cnf')
+        new_cnf.to_file('Logs/' + options.filename + '_djdprep_v4.cnf')
 
     if options.redir_paths == True:
         start_redir_time = time.time()

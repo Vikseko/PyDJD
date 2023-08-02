@@ -31,7 +31,7 @@ class BDDiagram:
         try:
             question_leaf = self.GetQuestionLeaf()
             print(question_leaf.Value(), [x.Value() for x in question_leaf.high_parents],[x.Value() for x in question_leaf.low_parents])
-        except:
+        except Exception:
             print('woops')
         EnumerateBDDiagramNodes(self)
 
