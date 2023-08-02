@@ -2,6 +2,7 @@ from Pathfinder import *
 import pysat
 from pysat.solvers import MapleChrono
 from pysat.formula import CNF
+from Draw import *
 
 from Types import DiagramNode
 
@@ -117,9 +118,12 @@ class BDDiagram:
         return counter
 
     def PrintCurrentTable(self):
-        print('')
         for node in self.table_.values():
-            print("Node", node.vertex_id, " var", node.Value(), "hc:",[(x.vertex_id,x.Value()) for x in node.high_childs], "lc:",[(x.vertex_id,x.Value()) for x in node.low_childs])
+            print("Node", node.vertex_id,
+                "var", node.Value(),
+                node.node_type,
+                "hc:", [(x.vertex_id, x.Value()) for x in node.high_childs],
+                "lc:", [(x.vertex_id, x.Value()) for x in node.low_childs])
 
     # Возвращает размер диаграммы в байтах
     def DiagramSize(self):
@@ -127,6 +131,7 @@ class BDDiagram:
         for node in self.table_:
             size += node.Size()
         return size
+
 
     def __del__(self):
         for node in self.table_:
@@ -144,8 +149,11 @@ def BDD_convert(diagram):
     print('Initial number of nonbinary links in diagram is', BDDiagram.NonBinaryLinkCount(diagram))
     print('Initial number of nonbinary nodes in diagram is', BDDiagram.NonBinaryNodesCount(diagram))
     roots_ = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, diagram.roots_)
+    print('\nTable before roots gluing:')
+    BDDiagram.PrintCurrentTable(diagram)
     main_root = roots_[-1]
     for i in range(len(roots_)-1):
+        print('Connect root', str(roots_[i].vertex_id) + '_' + str(roots_[i].var_id), ' to root', str(roots_[i+1].vertex_id) + '_' + str(roots_[i+1].var_id))
         ConnectRoots(roots_[i+1], roots_[i],diagram)
     del diagram.table_[main_root.hash_key]
     main_root.HashKey()
@@ -158,10 +166,25 @@ def BDD_convert(diagram):
     # начинаем рекурсивно уводить связи вниз.
     stop_flag = True
     question_leaf = diagram.GetQuestionLeaf()
+    print('\nTable after roots gluing:')
     BDDiagram.PrintCurrentTable(diagram)
     while BDDiagram.NonBinaryNodesCount(diagram) > 0:
         nodes = diagram.table_.values()
-        nodes = reversed(DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, nodes))
+        print('\nNodes list before sort')
+        for node in nodes:
+            print("Node", node.vertex_id,
+                "var", node.Value(),
+                node.node_type,
+                "hc:", [(x.vertex_id, x.Value()) for x in node.high_childs],
+                "lc:", [(x.vertex_id, x.Value()) for x in node.low_childs])
+        nodes = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, nodes)
+        print('\nNodes list after sort')
+        for node in nodes:
+            print("Node", node.vertex_id,
+                "var", node.Value(),
+                node.node_type,
+                "hc:", [(x.vertex_id, x.Value()) for x in node.high_childs],
+                "lc:", [(x.vertex_id, x.Value()) for x in node.low_childs])
         for node in nodes:
             # stop_flag = FindNonbinaryNodesFromTerminal(diagram, question_leaf)
             stop_flag = FindNonbinaryNodesInTable(diagram, node)
@@ -190,12 +213,16 @@ def BDD_convert(diagram):
 
 def ConnectRoots(upper, lower,diagram):
     deleted_nodes = set()
-    ConnectNodesDouble(lower,upper,deleted_nodes,diagram)
+    #ConnectNodesDouble(lower,upper,deleted_nodes,diagram)
+    upper.high_childs.append(lower)
+    upper.low_childs.append(lower)
+    upper.SortChilds()
     lower.node_type = DiagramNodeType.InternalNode
     if upper.hash_key in diagram.table_:
         del diagram.table_[upper.hash_key]
     upper.HashKey()
     diagram.table_[upper.hash_key] = upper
+
 
 def ConnectNodesDouble(lower, upper, deleted_nodes, diagram):
     high_glu = False
@@ -540,3 +567,15 @@ def RecursiveCleaningNodesFromDiagram(node,diagram):
         print('del node', (node.vertex_id, node.Value()))
         diagram.deleted_nodes_ += 1
         del node
+
+def DrawDiagram(diagram):
+    G = GraphVisualization()
+    for node in diagram.table_.values():
+        nodename = str(node.vertex_id) + ' ' + str(node.Value())
+        for highchild in node.high_childs:
+            childname = str(highchild.vertex_id) + ' ' + str(highchild.Value())
+            G.addHighEdge(nodename, childname)
+        for lowchild in node.low_childs:
+            childname = str(lowchild.vertex_id) + ' ' + str(lowchild.Value())
+            G.addLowEdge(nodename, childname)
+    G.visualize()

@@ -92,15 +92,21 @@ class DisjunctiveDiagramsBuilder:
             for c_node in node.low_childs:
                 c_node.low_parents.append(node)
 
+    # Некоторые узлы помечаются как корни, хотя у них есть родители, тут исправление
     def FixRoots(diagram:DisjunctiveDiagram):
+        real_roots = set()
         for node in diagram.roots_:
             if len(node.low_parents) != 0 or len(node.high_parents) != 0:
-                nodes_for_check = OrderedSet()
-                nodes_for_check.update(node.high_parents)
-                nodes_for_check.update(node.low_parents)
-                node.high_parents.clear()
-                node.low_parents.clear()
-                DisjunctiveDiagramsBuilder.CheckNodesForDelRootGluing(nodes_for_check, node)
+                node.node_type = DiagramNodeType.InternalNode
+            else:
+                real_roots.add(node)
+                #nodes_for_check = OrderedSet()
+                #nodes_for_check.update(node.high_parents)
+                #nodes_for_check.update(node.low_parents)
+                #node.high_parents.clear()
+                #node.low_parents.clear()
+                #DisjunctiveDiagramsBuilder.CheckNodesForDelRootGluing(nodes_for_check, node)
+        diagram.SetRoots(real_roots)
 
     def CheckNodesForDelRootGluing(nodes_for_check:OrderedSet, current_node):
         for node in nodes_for_check:

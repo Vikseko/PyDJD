@@ -124,6 +124,10 @@ class DiagramNode:
     def IsInternal(self):
         return True if (self.node_type == DiagramNodeType.InternalNode) else False
 
+    def SortChilds(self):
+        self.high_childs =  sorted(self.high_childs, key=lambda x: x.var_id)
+        self.low_childs = sorted(self.low_childs, key=lambda x: x.var_id)
+
     def __del__(self):
         DiagramNode.destructors_ += 1
         if sys.getrefcount(self) > 0:
@@ -164,6 +168,10 @@ class DisjunctiveDiagram:
     # Возвращает множество корней
     def GetRoots(self):
         return self.roots_
+
+    # задаёт корни
+    def SetRoots(self, real_roots):
+        self.roots_ = real_roots
 
     # Возращает тип исходной формулы: кнф, днф, конфликтная база
     def GetProblemType(self):
@@ -232,7 +240,11 @@ class DisjunctiveDiagram:
 
     def PrintCurrentTable(self):
         for node in self.table_.values():
-            print("Node", node.vertex_id, " var", node.Value(), "hc:",[(x.vertex_id,x.Value()) for x in node.high_childs], "lc:",[(x.vertex_id,x.Value()) for x in node.low_childs])
+            print("Node", node.vertex_id,
+                  "var", node.Value(),
+                  node.node_type,
+                  "hc:", [(x.vertex_id,x.Value()) for x in node.high_childs],
+                  "lc:", [(x.vertex_id,x.Value()) for x in node.low_childs])
 
     def __del__(self):
         for node in self.table_:

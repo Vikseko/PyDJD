@@ -2,7 +2,7 @@ from Builder import *
 from Parser import *
 from Pathfinder import *
 from Redirection import *
-#from BDD_converter import *
+from BDD_converter import *
 
 if __name__ == '__main__':
     start_time = time.time()
@@ -19,6 +19,7 @@ if __name__ == '__main__':
     problem, order, problem_comments = ReadProblem(options)
     if len(order) == 0:
         raise RuntimeError('Order is empty')
+    print('Order', order)
     # Журнализируем текущий порядок переменных
     with open('Logs/order.log','w') as orderf:
         print(*order,file=orderf)
@@ -38,6 +39,9 @@ if __name__ == '__main__':
     #before_cnf = CNF(from_clauses=SortClausesInCnf(before_cnf))
     #before_cnf.to_file('Logs/' + options.name + '_before.cnf', comments = problem_comments)
     #DisjunctiveDiagram.PrintCurrentTable(diagram)
+    #print(diagram.GetRoots())
+    print('Roots:', [str(x.vertex_id) + '_' + str(x.var_id) for x in diagram.GetRoots()])
+    #DrawDiagram(diagram)
     print()
 
     if options.djd_prep == True:
@@ -92,6 +96,7 @@ if __name__ == '__main__':
         else:
             print('Number of nonbinary link in diagram is', BDDiagram.NonBinaryLinkCount(bdd_diagram))
         BDDiagram.PrintCurrentTable(bdd_diagram)
+        #DrawDiagram(bdd_diagram)
         #after_cnf, tmp_ = GetCNFFromDiagram(bdd_diagram)
         #after_cnf = CNF(from_clauses=after_cnf)
         #after_cnf.to_file('Logs/bdd_convertion_' + options.name + '.cnf', comments = problem_comments)
