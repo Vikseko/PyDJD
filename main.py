@@ -36,9 +36,9 @@ if __name__ == '__main__':
     build_time = time.time() - start_build_time
     print('Build time:'.ljust(30,' '), build_time)
     before_cnf, tmp_ = GetCNFFromDiagram(diagram)
-    #before_cnf = CNF(from_clauses=SortClausesInCnf(before_cnf))
-    #before_cnf.to_file('Logs/' + options.name + '_before.cnf', comments = problem_comments)
-    #DisjunctiveDiagram.PrintCurrentTable(diagram)
+    before_cnf = CNF(from_clauses=SortClausesInCnf(before_cnf))
+    before_cnf.to_file('Logs/' + options.name + '_before.cnf', comments = problem_comments)
+    DisjunctiveDiagram.PrintCurrentTable(diagram)
     #print(diagram.GetRoots())
     print('Roots:', [str(x.vertex_id) + '_' + str(x.var_id) for x in diagram.GetRoots()])
     #DrawDiagram(diagram)

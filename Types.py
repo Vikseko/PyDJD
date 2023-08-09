@@ -32,8 +32,8 @@ class DiagramNode:
         self.vertex_id = DiagramNode.constructors_
         self.hash_key = 0
         self.visited = False
-        self.high_childs = [] if HighChilds == None else sorted(copy.copy(HighChilds),key= lambda x:x.var_id)
-        self.low_childs = [] if LowChilds == None else sorted(copy.copy(LowChilds),key= lambda x:x.var_id)
+        self.high_childs = [] if HighChilds == None else sorted(copy.copy(HighChilds),key= lambda x: (x.var_id, x.vertex_id))
+        self.low_childs = [] if LowChilds == None else sorted(copy.copy(LowChilds),key= lambda x: (x.var_id, x.vertex_id))
         self.high_parents = []
         self.low_parents = []
         self.HashKey()
@@ -43,6 +43,10 @@ class DiagramNode:
     # Вычисляет хэш узла (выполняется при создании узла)
     def HashKey(self):
         hashtuple_ = tuple([self.Value()]+sorted([node.hash_key for node in self.high_childs])+sorted([node.hash_key for node in self.low_childs]))
+        if self.node_type == DiagramNodeType.QuestionNode:
+            hashtuple_ = 'questionnode'
+        elif self.node_type == DiagramNodeType.TrueNode:
+            hashtuple_ = 'truenode'
         #print('hk',hashtuple_)
         #print(hash(hashtuple_))
         self.hash_key = hash(hashtuple_)
@@ -125,8 +129,8 @@ class DiagramNode:
         return True if (self.node_type == DiagramNodeType.InternalNode) else False
 
     def SortChilds(self):
-        self.high_childs =  sorted(self.high_childs, key=lambda x: x.var_id)
-        self.low_childs = sorted(self.low_childs, key=lambda x: x.var_id)
+        self.high_childs =  sorted(self.high_childs, key=lambda x: (x.var_id, x.vertex_id))
+        self.low_childs = sorted(self.low_childs, key=lambda x: (x.var_id, x.vertex_id))
 
     def __del__(self):
         DiagramNode.destructors_ += 1

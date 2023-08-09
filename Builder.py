@@ -25,7 +25,11 @@ class DisjunctiveDiagramsBuilder:
         for node in diagram_.roots_:
             node.node_type = DiagramNodeType.RootNode
         DisjunctiveDiagramsBuilder.FillParents(diagram_)
+        print('Before fix roots')
+        DisjunctiveDiagram.PrintCurrentTable(diagram_)
         DisjunctiveDiagramsBuilder.FixRoots(diagram_)
+        print('After fix roots')
+        DisjunctiveDiagram.PrintCurrentTable(diagram_)
         DisjunctiveDiagramsBuilder.EnumerateDiagramNodes(diagram_)
         return diagram_
 
@@ -92,35 +96,70 @@ class DisjunctiveDiagramsBuilder:
             for c_node in node.low_childs:
                 c_node.low_parents.append(node)
 
-    # Некоторые узлы помечаются как корни, хотя у них есть родители, тут исправление
+    # Некоторые узлы помечаются как корни, хотя у них есть родители
+    # Суть данной проблемы в том, что когда поддерево вклеивается в диаграмму, то оно может
+    # поглотить часть диаграммы. Корень поддерева всегда должен быть корнем диаграммы
     def FixRoots(diagram:DisjunctiveDiagram):
-        real_roots = set()
+        #real_roots = set()
+        current_roots_ = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, diagram.roots_)
         for node in diagram.roots_:
             if len(node.low_parents) != 0 or len(node.high_parents) != 0:
-                node.node_type = DiagramNodeType.InternalNode
-            else:
-                real_roots.add(node)
-                #nodes_for_check = OrderedSet()
-                #nodes_for_check.update(node.high_parents)
-                #nodes_for_check.update(node.low_parents)
-                #node.high_parents.clear()
-                #node.low_parents.clear()
-                #DisjunctiveDiagramsBuilder.CheckNodesForDelRootGluing(nodes_for_check, node)
-        diagram.SetRoots(real_roots)
+            #     node.node_type = DiagramNodeType.InternalNode
+            # else:
+            #     real_roots.add(node)
+                nodes_for_check = OrderedSet()
+                nodes_for_check.update(node.high_parents)
+                nodes_for_check.update(node.low_parents)
+                node.high_parents.clear()
+                node.low_parents.clear()
+                deleted_nodes = set()
+                DisjunctiveDiagramsBuilder.CheckNodesForDelRootGluing(nodes_for_check, node, diagram, deleted_nodes)
+        #diagram.SetRoots(real_roots)
 
-    def CheckNodesForDelRootGluing(nodes_for_check:OrderedSet, current_node):
+    def CheckNodesForDelRootGluing(nodes_for_check:OrderedSet, current_node, diagram, deleted_nodes):
         for node in nodes_for_check:
+            print('CheckNodesForDelRootGluing Node', node.vertex_id, node.Value())
+            DisjunctiveDiagram.PrintCurrentTable(diagram)
             if current_node in node.low_childs:
+                DisjunctiveDiagramsBuilder.DeletingNodesFromTable(node, diagram, deleted_nodes)
                 node.low_childs.remove(current_node)
             if current_node in node.high_childs:
+                DisjunctiveDiagramsBuilder.DeletingNodesFromTable(node, diagram, deleted_nodes)
                 node.high_childs.remove(current_node)
-            if len(node.low_childs) == 0 and len(node.high_childs) == 0:
+            DisjunctiveDiagram.PrintCurrentTable(diagram)
+            if (len(node.low_childs) == 0 and len(node.high_childs) == 0) or \
+                    (len(node.low_childs) == 0 and diagram.GetQuestionLeaf() in node.high_childs) or \
+                    (diagram.GetQuestionLeaf() in node.low_childs and len(node.high_childs) == 0):
+                DisjunctiveDiagramsBuilder.DeletingNodesFromTable(node, diagram, deleted_nodes)
                 new_nodes_for_check = OrderedSet()
                 new_nodes_for_check.update(node.high_parents)
                 new_nodes_for_check.update(node.low_parents)
-                DisjunctiveDiagramsBuilder.CheckNodesForDelRootGluing(new_nodes_for_check, node)
+                DisjunctiveDiagramsBuilder.CheckNodesForDelRootGluing(new_nodes_for_check, node, diagram, deleted_nodes)
+                DisjunctiveDiagramsBuilder.DeleteLinksToNodeInTable(node, diagram)
+                print('Deleting node', node.vertex_id, node.Value())
+                deleted_nodes.remove(node)
                 del node
+            elif len(node.low_childs) == 0:
+                node.low_childs.append(diagram.GetQuestionLeaf())
+            elif len(node.high_childs) == 0:
+                node.high_childs.append(diagram.GetQuestionLeaf())
+            # Проверяем ранее удаленные из таблицы узлы на склейку
+            DisjunctiveDiagramsBuilder.GluingNodes(deleted_nodes, diagram, new_nodes_for_check)
 
+    def DeleteLinksToNodeInTable(delnode,diagram_):
+        for node in diagram_.table_.values():
+            if delnode in node.low_childs:
+                node.low_childs.remove(delnode)
+                print('DeleteLinksToNodeInTable deleting',delnode.vertex_id, delnode.Value(),'from low_childs of', node.vertex_id, node.Value())
+            if delnode in node.high_childs:
+                node.high_childs.remove(delnode)
+                print('DeleteLinksToNodeInTable deleting',delnode.vertex_id, delnode.Value(),'from high_childs of', node.vertex_id, node.Value())
+            if delnode in node.low_parents:
+                node.low_parents.remove(delnode)
+                print('DeleteLinksToNodeInTable deleting',delnode.vertex_id, delnode.Value(),'from low_parents of', node.vertex_id, node.Value())
+            if delnode in node.high_parents:
+                node.high_parents.remove(delnode)
+                print('DeleteLinksToNodeInTable deleting',delnode.vertex_id, delnode.Value(),'from high_parents of', node.vertex_id, node.Value())
 
     def AddDiagramNode(node:DiagramNode,diagram_):
         if node.hash_key in diagram_.table_:
@@ -161,4 +200,58 @@ class DisjunctiveDiagramsBuilder:
     def __del__(self):
         del self
 
+    # Рекурсивное удаление узлов из таблицы от node наверх
+    def DeletingNodesFromTable(node, diagram, deleted_nodes):
+        deleted_nodes.add(node)
+        if node.hash_key in diagram.table_ and node is not diagram.GetTrueLeaf() and node is not diagram.GetQuestionLeaf():
+            del diagram.table_[node.hash_key]
+            for parent in set(node.high_parents + node.low_parents):
+                DisjunctiveDiagramsBuilder.DeletingNodesFromTable(parent, diagram, deleted_nodes)
 
+    def GluingNodes(deleted_nodes, diagram, new_nodes_for_check):
+        deleted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, deleted_nodes)
+        for node in deleted_nodes:
+            node.HashKey()
+            if node.hash_key in diagram.table_ and diagram.table_[node.hash_key] is not node:
+                it_node = diagram.table_[node.hash_key]
+                if node is it_node:
+                    print('ERROR')
+                #print('Glued node',(node.Value(), node),'with node',(it_node.Value(),it_node))
+                DisjunctiveDiagramsBuilder.GluingNode(node,it_node)
+                del node
+            else:
+                diagram.table_[node.hash_key] = node
+
+    def GluingNode(node,it_node):
+        # заменяем ссылки в родителях
+        DisjunctiveDiagramsBuilder.ReplaceParentsLinksToNode(node,it_node)
+        # Удаляем ссылки потомков узла на него
+        DisjunctiveDiagramsBuilder.DeleteChildsLinksToNode(node)
+
+    def ReplaceParentsLinksToNode(node,it_node):
+        for parent in node.high_parents:
+            parent.high_childs = [x for x in parent.high_childs if x is not node and x is not it_node]
+            parent.high_childs.append(it_node)
+            for tmpnode in it_node.high_parents:
+                if tmpnode is parent:
+                    break
+            else:
+                #print('add as highparent ', (parent.Value(), parent), 'to node', (it_node.Value(), it_node))
+                it_node.high_parents.append(parent)
+        for parent in node.low_parents:
+            parent.low_childs = [x for x in parent.low_childs if x is not node and x is not it_node]
+            parent.low_childs.append(it_node)
+            for tmpnode in it_node.low_parents:
+                if tmpnode is parent:
+                    break
+            else:
+                it_node.low_parents.append(parent)
+                #print('add as lowparent ', (parent.Value(), parent), 'to node', (it_node.Value(), it_node))
+
+
+
+    def DeleteChildsLinksToNode(node):
+        for child in node.high_childs:
+            child.high_parents = [x for x in child.high_parents if x is not node]
+        for child in node.low_childs:
+            child.low_parents = [x for x in child.low_parents if x is not node]
