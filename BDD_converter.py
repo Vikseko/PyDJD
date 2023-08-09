@@ -83,11 +83,11 @@ class BDDiagram:
 
     # Возвращает терминальный узел ?
     def GetQuestionLeaf(self):
-        return self.table_[hash(tuple(['?']+[]+[]))]
+        return self.table_[hash('questionnode')]
 
     # Возвращает терминальный узел 1
     def GetTrueLeaf(self):
-        return self.table_[hash(tuple(['true']+[]+[]))]
+        return self.table_[hash('truenode')]
 
     # Возвращается число удаленных узлов изза дупликации потомков (когда потомки совпадают по ребрам разной полярности)
     def DuplicateReducedCount(self):
@@ -211,12 +211,13 @@ def BDD_convert(diagram):
         #BDDiagram.PrintCurrentTable(diagram)
     """
 
-def ConnectRoots(upper, lower,diagram):
+
+def ConnectRoots(upper, lower, diagram):
     deleted_nodes = set()
-    #ConnectNodesDouble(lower,upper,deleted_nodes,diagram)
-    upper.high_childs.append(lower)
-    upper.low_childs.append(lower)
-    upper.SortChilds()
+    ConnectNodesDouble(lower,upper,deleted_nodes,diagram)
+    #upper.high_childs.append(lower)
+    #upper.low_childs.append(lower)
+    #upper.SortChilds()
     lower.node_type = DiagramNodeType.InternalNode
     if upper.hash_key in diagram.table_:
         del diagram.table_[upper.hash_key]
@@ -256,15 +257,31 @@ def ConnectNodesDouble(lower, upper, deleted_nodes, diagram):
         low_glu = True
     if high_glu == True and low_glu == True:
         # нужно удалить сам узел, сперва проверив, что у него нет родителей и удалив его из родителей его детей,
-        # затем рекурсивно првоерить детей на то, что если родителей больше нет, то удаляем и эти излы и тд
+        # затем рекурсивно првоерить детей на то, что если родителей больше нет, то удаляем и эти узлы и тд
         RecursiveDeletionNodesFromDiagram(lower,diagram)
 
 def TransferChilds(from_node,upper,to_node,deleted_nodes,candidates_to_deletion,diagram):
     copy_flag = False
-    for parent in to_node.high_parents + to_node.low_parents:
-        if parent is not upper:
-            copy_flag = True
-            break
+    print('TransferChilds')
+    print('from node', [from_node.vertex_id, from_node.Value()])
+    print('upper', [upper.vertex_id, upper.Value()])
+    print('to node', [to_node.vertex_id, to_node.Value()])
+    print('Upper high_childs:', [[x.vertex_id, x.Value()] for x in upper.high_childs])
+    print('Upper low_childs:', [[x.vertex_id, x.Value()] for x in upper.low_childs])
+    if from_node.node_type == DiagramNodeType.TrueNode:
+        print('Wtf, from node is TrueNode', from_node.vertex_id)
+    elif from_node.node_type == DiagramNodeType.QuestionNode:
+        print('Wtf, from node is QuestionNode', from_node.vertex_id)
+    if to_node.node_type == DiagramNodeType.TrueNode:
+        print('Wtf, to node is TrueNode', to_node.vertex_id)
+    elif to_node.node_type == DiagramNodeType.QuestionNode:
+        print('Wtf, to node is QuestionNode', to_node.vertex_id)
+    if to_node.node_type!=DiagramNodeType.QuestionNode:
+        if to_node.node_type!=DiagramNodeType.TrueNode:
+            for parent in to_node.high_parents + to_node.low_parents:
+                if parent is not upper:
+                    copy_flag = True
+                    break
     if copy_flag == True:
         diagram.new_nodes_ += 1
         new_node = CopyNodeWithoutLinkToUpper(to_node, upper)
