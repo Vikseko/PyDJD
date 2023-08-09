@@ -23,6 +23,7 @@ class DiagramNode:
     destructors_ = 0
     destructor_errors_ = 0
     def __init__(self, Type:DiagramNodeType, VarId:int = None, HighChilds = None, LowChilds = None):
+        DiagramNode.constructors_ += 1
         if type(Type) == DiagramNodeType:
             self.node_type = Type
         else:
@@ -38,15 +39,22 @@ class DiagramNode:
         self.low_parents = []
         self.HashKey()
         #print('Node',self.Value(), [x.Value() for x in self.high_childs], [x.Value() for x in self.low_childs])
-        DiagramNode.constructors_ += 1
 
     # Вычисляет хэш узла (выполняется при создании узла)
     def HashKey(self):
         hashtuple_ = tuple([self.Value()]+sorted([node.hash_key for node in self.high_childs])+sorted([node.hash_key for node in self.low_childs]))
-        if self.node_type == DiagramNodeType.QuestionNode:
+        if self.node_type == DiagramNodeType.InternalNode:
+            hashtuple_ = tuple(list(hashtuple_) + ['internal'])
+        elif self.node_type == DiagramNodeType.RootNode:
+            hashtuple_ = tuple(list(hashtuple_) + ['root'])
+        elif self.node_type == DiagramNodeType.QuestionNode:
             hashtuple_ = 'questionnode'
         elif self.node_type == DiagramNodeType.TrueNode:
             hashtuple_ = 'truenode'
+        elif self.node_type == DiagramNodeType.FalseNode:
+            hashtuple_ = 'false'
+        elif self.node_type == DiagramNodeType.Undefined:
+            hashtuple_ = tuple(list(hashtuple_) + ['undefined'])
         #print('hk',hashtuple_)
         #print(hash(hashtuple_))
         self.hash_key = hash(hashtuple_)
