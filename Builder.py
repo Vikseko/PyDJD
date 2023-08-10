@@ -173,7 +173,7 @@ class DisjunctiveDiagramsBuilder:
             #DisjunctiveDiagramsBuilder.AddQuestionLink(self,diagram, high_child)
         # из табилцы узел уже удалён, но его, возможно, ещё надо удалить из nodes_with_changed_hash
         if node in self.nodes_with_changed_hash:
-            # хотя он, по идее обязательно тут должен быть
+            # хотя он, по идее, обязательно тут должен быть, так что проверка не особо то и нужна, но пусть будет
             self.nodes_with_changed_hash.remove(node)
         if node.node_type == DiagramNodeType.RootNode:
             diagram.roots_.remove(node)
