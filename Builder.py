@@ -23,14 +23,12 @@ class DisjunctiveDiagramsBuilder:
             ranges.append([idx,0,len(self.problem_[idx])])
         root_set = DisjunctiveDiagramsBuilder.BuildDiagramNodes(self,ranges,diagram_)
         diagram_.roots_.update(root_set)
-        #for node in diagram_.roots_:
-            #node.node_type = DiagramNodeType.RootNode
         DisjunctiveDiagramsBuilder.FillParents(diagram_)
-        print('Before fix roots')
-        DisjunctiveDiagram.PrintCurrentTable(diagram_)
-        DisjunctiveDiagramsBuilder.FixRoots(self,diagram_)
-        print('After fix roots')
-        DisjunctiveDiagram.PrintCurrentTable(diagram_)
+        #print('Before consuming subtrees')
+        #DisjunctiveDiagram.PrintCurrentTable(diagram_)
+        DisjunctiveDiagramsBuilder.ConsumingSubtrees(self,diagram_)
+        #print('After consuming subtrees')
+        #DisjunctiveDiagram.PrintCurrentTable(diagram_)
         DisjunctiveDiagramsBuilder.EnumerateDiagramNodes(diagram_)
         return diagram_
 
@@ -91,8 +89,8 @@ class DisjunctiveDiagramsBuilder:
             node = DisjunctiveDiagramsBuilder.AddDiagramNode(node,diagram_)
             nodes.add(node)
             diagram_.var_set_.add(var_id)
-        print('Level', reclevel)
-        print('Nodes:', [(x.vertex_id, x.var_id, x.node_type) for x in nodes])
+        #print('Level', reclevel)
+        #print('Nodes:', [(x.vertex_id, x.var_id, x.node_type) for x in nodes])
         return nodes
 
     def FillParents(diagram:DisjunctiveDiagram):
@@ -105,10 +103,10 @@ class DisjunctiveDiagramsBuilder:
     # Некоторые узлы помечаются как корни, хотя у них есть родители
     # Суть данной проблемы в том, что когда поддерево вклеивается в диаграмму, то оно может
     # поглотить часть диаграммы. Корень поддерева всегда должен быть корнем диаграммы
-    def FixRoots(self, diagram:DisjunctiveDiagram):
+    def ConsumingSubtrees(self, diagram:DisjunctiveDiagram):
         #real_roots = set()
         current_roots_ = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, diagram.roots_)
-        print('Sorted roots:', [(x.vertex_id, x.var_id, x.node_type) for x in current_roots_])
+        #print('Sorted roots 1:', [(x.vertex_id, x.var_id, x.node_type) for x in current_roots_])
         for root in current_roots_:
             # перебираем все корни
             # для каждого проверяем, есть ли в таблице внутренний узел с таким хэшем
@@ -131,6 +129,7 @@ class DisjunctiveDiagramsBuilder:
             # root.low_parents.clear()
             # deleted_nodes = set()
             # DisjunctiveDiagramsBuilder.CheckNodesForDelRootGluing(nodes_for_check, root, diagram, deleted_nodes)
+        #print('Sorted roots 2:', [(x.vertex_id, x.var_id, x.node_type) for x in current_roots_])
 
     def ConsumeSubtree(self, diagram:DisjunctiveDiagram, root, consumed_node):
         # поглощение поддерева, выходящего из узла consumed_node

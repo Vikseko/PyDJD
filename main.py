@@ -38,9 +38,10 @@ if __name__ == '__main__':
     before_cnf, tmp_ = GetCNFFromDiagram(diagram)
     before_cnf = CNF(from_clauses=SortClausesInCnf(before_cnf))
     before_cnf.to_file('Logs/' + options.name + '_before.cnf', comments = problem_comments)
-    DisjunctiveDiagram.PrintCurrentTable(diagram)
+    #DisjunctiveDiagram.PrintCurrentTable(diagram)
     #print(diagram.GetRoots())
-    print('Roots:', [str(x.vertex_id) + '_' + str(x.var_id) for x in diagram.GetRoots()])
+    current_roots_ = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, diagram.roots_)
+    print('Roots:', [str(x.vertex_id) + '_' + str(x.var_id) for x in current_roots_])
     #DrawDiagram(diagram)
     print()
 
