@@ -150,10 +150,8 @@ def BDD_convert(diagram):
     print('Initial number of nonbinary links in diagram is', BDDiagram.NonBinaryLinkCount(diagram))
     print('Initial number of nonbinary nodes in diagram is', BDDiagram.NonBinaryNodesCount(diagram))
     sorted_roots_ = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, diagram.roots_)
-    #sorted_roots2_ = DisjunctiveDiagramsBuilder.LitLessSortNodes2(diagram.order_, diagram.roots_)
-    print('Roots', [(x.vertex_id, x.var_id, x.node_type) for x in diagram.roots_])
-    #print('Sorted Roots 1', [(x.vertex_id, x.var_id, x.node_type) for x in sorted_roots_])
-    #print('Sorted Roots 2', [(x.vertex_id, x.var_id, x.node_type) for x in sorted_roots2_])
+    #sorted_roots2_ = DisjunctiveDiagramsBuilder.LitLessSortNodeswrtOrderAndVertex(diagram.order_, diagram.roots_)
+    print('Sorted Roots', [(x.vertex_id, x.var_id, x.node_type) for x in sorted_roots_])
     print('\nTable before roots gluing:')
     BDDiagram.PrintCurrentTable(diagram)
     main_root = sorted_roots_[-1]
@@ -225,14 +223,13 @@ def BDD_convert(diagram):
 
 
 def ConnectRoots(upper, lower, diagram):
-    # в deleted_nodes хранятся узлы, временно удаленные из таблицы, потому что их хэш изменится
-    deleted_nodes = set()
 
     # все корни просто соединяем последовательно двойными связями
-    ConnectNodesDouble(None, lower, upper, deleted_nodes, diagram)
+    lower.node_type = DiagramNodeType.InternalNode
+    ConnectNodesDouble(None, lower, upper, diagram)
 
 
-def ConnectNodesDouble(host, lower, upper, deleted_nodes, diagram):
+def ConnectNodesDouble(host, lower, upper, diagram):
     # проверяем количество родителей у узла, в которому приклеиваем
     # если больше 1, то нужно будет его расклеивать
     # когда склеиваем корни такой ситуации вообще не должно происходить
@@ -304,7 +301,13 @@ def ConnectNodesDouble(host, lower, upper, deleted_nodes, diagram):
                     low_child.low_parents = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_,
                                                                                           low_child.low_parents)
             upper.low_childs = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, upper.low_childs)
+
     # удаляем из таблицы всё от upper (включительно) наверх и добавляем снова с пересчитыванием хэшей и склейкой
+    nodes_with_changed_hash = set()
+    DisjunctiveDiagramsBuilder.DeletingNodesFromTable(upper, diagram, nodes_with_changed_hash)
+
+    # возвращаем всё в таблицу с проверкой на склейку
+    DisjunctiveDiagramsBuilder.GluingNodes(nodes_with_changed_hash, diagram)
 
     #
     # high_glu = False

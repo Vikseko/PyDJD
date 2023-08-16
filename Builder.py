@@ -229,7 +229,7 @@ class DisjunctiveDiagramsBuilder:
         sorted_nodes = [node for x in order for node in nodes if node.Value() == x]
         return sorted_nodes
 
-    def LitLessSortNodes2(order:list,nodes:set):
+    def LitLessSortNodeswrtOrderAndVertex(order:list, nodes:set):
         nodes = list(nodes)
         sorted_nodes = sorted(nodes, key = lambda x: (order.index(x.Value()),x.vertex_id))
         return sorted_nodes
