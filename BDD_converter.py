@@ -276,10 +276,14 @@ def ConnectNodesDouble(host, lower, upper, diagram):
         # тут надо помнить, что если у узла есть 1-ребёнок по какой-то полярности, то по ней мы связи больше не добавляем
         if diagram.GetTrueLeaf() not in upper.high_childs:
             upper.high_childs.append(lower)
+            upper.high_childs = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, upper.high_childs)
             lower.high_parents.append(upper)
+            lower.high_parents = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, lower.high_parents)
         if diagram.GetTrueLeaf() not in upper.low_childs:
             upper.low_childs.append(lower)
+            upper.low_childs = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, upper.low_childs)
             lower.low_parents.append(upper)
+            lower.low_parents = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, lower.low_parents)
     else:
         # если upper и lower с одинаковыми переменными,
         # то добавляем ссылки на детей lower к upper'у по обеим полярностям (без рекурсии)

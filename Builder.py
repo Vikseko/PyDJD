@@ -250,7 +250,7 @@ class DisjunctiveDiagramsBuilder:
                 if node is it_node:
                     print('ERROR')
                 #print('Glued node',(node.Value(), node),'with node',(it_node.Value(),it_node))
-                DisjunctiveDiagramsBuilder.GluingNode(node,it_node)
+                DisjunctiveDiagramsBuilder.GluingNode(node, it_node)
                 del node
             else:
                 diagram.table_[node.hash_key] = node
