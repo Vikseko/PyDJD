@@ -287,8 +287,6 @@ def ConnectNodesDouble(host, lower, upper, diagram):
     else:
         # если upper и lower с одинаковыми переменными,
         # то добавляем ссылки на детей lower к upper'у по обеим полярностям (без рекурсии)
-        # после чего, если у lower нет родителей больше (кроме host, ссылку на который мы удалили)
-        # то удаляем lower (всех его детей мы передали, но лучше проверить, чтобы у них были другие родители кроме lower)
         if diagram.GetTrueLeaf() not in upper.high_childs:
             for high_child in lower.high_childs:
                 if high_child not in upper.high_childs:
@@ -305,6 +303,11 @@ def ConnectNodesDouble(host, lower, upper, diagram):
                     low_child.low_parents = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_,
                                                                                           low_child.low_parents)
             upper.low_childs = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, upper.low_childs)
+        # после чего, если у lower нет родителей больше (кроме host, ссылку на который мы удалили)
+        # то удаляем lower (всех его детей мы передали, но лучше проверить, чтобы у них были другие родители кроме lower)
+
+
+
 
     # удаляем из таблицы всё от upper (включительно) наверх и добавляем снова с пересчитыванием хэшей и склейкой
     nodes_with_changed_hash = set()
