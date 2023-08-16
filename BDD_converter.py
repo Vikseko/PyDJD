@@ -150,7 +150,10 @@ def BDD_convert(diagram):
     print('Initial number of nonbinary links in diagram is', BDDiagram.NonBinaryLinkCount(diagram))
     print('Initial number of nonbinary nodes in diagram is', BDDiagram.NonBinaryNodesCount(diagram))
     sorted_roots_ = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, diagram.roots_)
+    #sorted_roots2_ = DisjunctiveDiagramsBuilder.LitLessSortNodes2(diagram.order_, diagram.roots_)
     print('Roots', [(x.vertex_id, x.var_id, x.node_type) for x in diagram.roots_])
+    #print('Sorted Roots 1', [(x.vertex_id, x.var_id, x.node_type) for x in sorted_roots_])
+    #print('Sorted Roots 2', [(x.vertex_id, x.var_id, x.node_type) for x in sorted_roots2_])
     print('\nTable before roots gluing:')
     BDDiagram.PrintCurrentTable(diagram)
     main_root = sorted_roots_[-1]
@@ -271,20 +274,36 @@ def ConnectNodesDouble(host, lower, upper, deleted_nodes, diagram):
             else:
                 print('ERROR host have double polarity to lower')
 
-    # если upper и lower с разными переменными, то добавляем upper связь к lower по обеим полярностям
-    # тут надо помнить, что если у узла есть 1-ребёнок по какой-то полярности, то по ней мы связи больше не добавляем
-    if diagram.GetTrueLeaf() not in upper.high_childs:
-        upper.high_childs.append(lower)
-        lower.high_parents.append(upper)
-    if diagram.GetTrueLeaf() not in upper.low_childs:
-        upper.low_childs.append(lower)
-        lower.low_parents.append(upper)
-
-    # если upper и lower с одинаковыми переменными,
-    # то добавляем ссылки на детей lower к upper'у по обеим полярностям (без рекурсии)
-    # после чего, если у lower нет родителей больше (кроме host, ссылку на который мы удалили)
-    # то удаляем lower (всех его детей мы передали, но лучше проверить, чтобы у них были другие родители кроме lower)
-
+    if upper.Value() != lower.Value():
+        # если upper и lower с разными переменными, то добавляем upper связь к lower по обеим полярностям
+        # тут надо помнить, что если у узла есть 1-ребёнок по какой-то полярности, то по ней мы связи больше не добавляем
+        if diagram.GetTrueLeaf() not in upper.high_childs:
+            upper.high_childs.append(lower)
+            lower.high_parents.append(upper)
+        if diagram.GetTrueLeaf() not in upper.low_childs:
+            upper.low_childs.append(lower)
+            lower.low_parents.append(upper)
+    else:
+        # если upper и lower с одинаковыми переменными,
+        # то добавляем ссылки на детей lower к upper'у по обеим полярностям (без рекурсии)
+        # после чего, если у lower нет родителей больше (кроме host, ссылку на который мы удалили)
+        # то удаляем lower (всех его детей мы передали, но лучше проверить, чтобы у них были другие родители кроме lower)
+        if diagram.GetTrueLeaf() not in upper.high_childs:
+            for high_child in lower.high_childs:
+                if high_child not in upper.high_childs:
+                    upper.high_childs.append(high_child)
+                    high_child.high_parents.append(upper)
+                    high_child.high_parents = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_,
+                                                                                          high_child.high_parents)
+            upper.high_childs = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, upper.high_childs)
+        if diagram.GetTrueLeaf() not in upper.low_childs:
+            for low_child in lower.low_childs:
+                if low_child not in upper.low_childs:
+                    upper.low_childs.append(low_child)
+                    low_child.low_parents.append(upper)
+                    low_child.low_parents = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_,
+                                                                                          low_child.low_parents)
+            upper.low_childs = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, upper.low_childs)
     # удаляем из таблицы всё от upper (включительно) наверх и добавляем снова с пересчитыванием хэшей и склейкой
 
     #
