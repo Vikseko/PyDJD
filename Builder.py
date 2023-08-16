@@ -231,7 +231,7 @@ class DisjunctiveDiagramsBuilder:
 
     def LitLessSortNodeswrtOrderAndVertex(order:list, nodes:set):
         nodes = list(nodes)
-        sorted_nodes = sorted(nodes, key = lambda x: (order.index(x.Value()),x.vertex_id))
+        sorted_nodes = sorted(nodes, key=lambda x: (order.index(x.Value()), x.vertex_id))
         return sorted_nodes
 
     def ClauseLessSort(self,):

@@ -88,7 +88,7 @@ class DiagramNode:
         self.visited = False
 
     def IsVisited(self):
-        return  self.visited
+        return self.visited
 
     # Сравнение узлов на основе их потомков (рекурсивно)
     def Equals(self, other):
