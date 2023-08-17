@@ -137,8 +137,26 @@ class DiagramNode:
         return True if (self.node_type == DiagramNodeType.InternalNode) else False
 
     def SortChilds(self):
-        self.high_childs =  sorted(self.high_childs, key=lambda x: (x.var_id, x.vertex_id))
+        self.high_childs = sorted(self.high_childs, key=lambda x: (x.var_id, x.vertex_id))
         self.low_childs = sorted(self.low_childs, key=lambda x: (x.var_id, x.vertex_id))
+
+    def PrintNode(self):
+        print('Node:', self.vertex_id,
+              'variable:', self.var_id,
+              'hc:', [(x.vertex_id, x.Value()) for x in self.high_childs],
+              'lc:', [(x.vertex_id, x.Value()) for x in self.low_childs],
+              'hp:', [(x.vertex_id, x.Value()) for x in self.high_parents],
+              'lp:', [(x.vertex_id, x.Value()) for x in self.low_parents],
+              self.node_type,
+              self)
+
+    def PrintNodeWithoutParents(self):
+        print('Node:', self.vertex_id,
+              'variable:', self.var_id,
+              'hc:', [(x.vertex_id, x.Value()) for x in self.high_childs],
+              'lc:', [(x.vertex_id, x.Value()) for x in self.low_childs],
+              self.node_type,
+              self)
 
     def __del__(self):
         DiagramNode.destructors_ += 1
