@@ -32,7 +32,7 @@ class BDDiagram:
         #CleaningDiagram(self)
         try:
             question_leaf = self.GetQuestionLeaf()
-            print(question_leaf.Value(), [x.Value() for x in question_leaf.high_parents],[x.Value() for x in question_leaf.low_parents])
+            #print(question_leaf.Value(), [x.Value() for x in question_leaf.high_parents],[x.Value() for x in question_leaf.low_parents])
         except Exception:
             print('woops')
         EnumerateBDDiagramNodes(self)
@@ -212,9 +212,9 @@ def RemoveNonbinaryLink(host, polarity, diagram):
                                                                                  (host.high_childs if polarity == 1
                                                                                   else host.low_childs))
     lower = sorted_childs[0]
-    print('Current lower number:', lower.vertex_id, '; variable:', lower.var_id,)
+    print('Current lower number:', lower.vertex_id, '; variable:', lower.var_id)
     upper = sorted_childs[1]
-    print('Current upper number:', upper.vertex_id, '; variable:', upper.var_id,)
+    print('Current upper number:', upper.vertex_id, '; variable:', upper.var_id)
     upper_and_polarity = ConnectNodesDouble(host, polarity, lower, upper, diagram)
     if upper_and_polarity[1] != 'no':
         BDDiagram.nonbinary_queue.put(upper_and_polarity)
@@ -275,6 +275,11 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
                     lower.high_parents = [x for x in lower.high_parents if x is not host]
                 else:
                     print('ERROR there is no high_parent link from lower to host')
+                    print('Host:', end=' ')
+                    host.PrintNode()
+                    print('Lower:', end=' ')
+                    lower.PrintNode()
+                    exit()
             else:
                 print('ERROR polarity is 1, but there is no high_child link from host to lower')
         elif polarity == 0:
@@ -291,60 +296,36 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
 
     if upper.Value() != lower.Value():
         # если upper и lower с разными переменными, то добавляем upper связь к lower по обеим полярностям
-        # тут надо помнить, что если у узла есть 1-ребёнок по какой-то полярности, то по ней мы связи больше не добавляем
-        if diagram.GetTrueLeaf() not in upper.high_childs:
-            if lower not in upper.high_childs:
-                upper.high_childs.append(lower)
-                upper.high_childs = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, upper.high_childs)
-            if upper not in lower.high_parents:
-                lower.high_parents.append(upper)
-                lower.high_parents = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, lower.high_parents)
-        if diagram.GetTrueLeaf() not in upper.low_childs:
-            if lower not in upper.low_childs:
-                upper.low_childs.append(lower)
-                upper.low_childs = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, upper.low_childs)
-            if upper not in lower.low_parents:
-                lower.low_parents.append(upper)
-                lower.low_parents = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, lower.low_parents)
+        # тут надо помнить, что если у узла есть 1-ребёнок по какой-то полярности,
+        # то по ней мы связи больше не добавляем
+        DoubleConnectLowerToUpper(diagram, upper, lower)
     else:
         # если upper и lower с одинаковыми переменными,
         # то добавляем ссылки на детей lower к upper'у по обеим полярностям (без рекурсии)
-        if diagram.GetTrueLeaf() not in upper.high_childs:
-            for high_child in lower.high_childs:
-                if high_child not in upper.high_childs:
-                    upper.high_childs.append(high_child)
-                    high_child.high_parents.append(upper)
-                    high_child.high_parents = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_,
-                                                                                          high_child.high_parents)
-            upper.high_childs = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, upper.high_childs)
-        if diagram.GetTrueLeaf() not in upper.low_childs:
-            for low_child in lower.low_childs:
-                if low_child not in upper.low_childs:
-                    upper.low_childs.append(low_child)
-                    low_child.low_parents.append(upper)
-                    low_child.low_parents = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_,
-                                                                                          low_child.low_parents)
-            upper.low_childs = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, upper.low_childs)
+        # при этом если у lower есть 1-вершина в детях, то она поглощает детей аппера.
+        TranferChildsFromLowerToUpper(diagram, upper, lower)
         # после чего, если у lower нет родителей больше (кроме host, ссылку на который мы удалили)
         # то удаляем lower (всех его детей мы передали, но лучше проверить)
-        if (len(lower.high_parents) + len(lower.low_parents)) == 0:
-            print('Lower without parents. Delete it.')
-            DeleteNodeWithoutParents(lower, nodes_with_changed_hash, diagram)
+    if (len(lower.high_parents) + len(lower.low_parents)) == 0:
+        print('Lower without parents. Delete it.')
+        DeleteNodeWithoutParents(lower, nodes_with_changed_hash, diagram)
 
 
     # тут мы проверяем, что если у аппера после наших действий есть небинарность такая
     # что одна связь идёт в внутреннюю вершину, а другая в ?-вершину
     # то связь в ?-вершину мы просто удаляем
-    CheckNonbinaryWithQuestionNode(upper, diagram)
-
+    # UPD такого быть больше не должно в принципе, так что комментим
+    # CheckNonbinaryWithQuestionNode(upper, diagram)
     # тут мы проверяем, что если у аппера после наших действий есть небинарность такая
     # что одна связь идёт в внутреннюю вершину, а другая в 1-вершину
     # то все связи, кроме той, что ведёт в 1-вершину, мы удаляем
-    CheckNonbinaryWithTrueNode(upper, diagram)
+    # UPD такого быть больше не должно в принципе, так что комментим
+    # CheckNonbinaryWithTrueNode(upper, diagram)
 
     # возвращаем всё в таблицу с проверкой на склейку
     DisjunctiveDiagramsBuilder.GluingNodes(nodes_with_changed_hash, diagram)
 
+    # проверяем небинарность upper
     if len(upper.high_childs) > 1:
         upper_nonbinary_polarity = 1
     elif len(upper.low_childs) > 1:
@@ -353,6 +334,55 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
         upper_nonbinary_polarity = 'no'
 
     return [upper, upper_nonbinary_polarity]
+
+
+def DoubleConnectLowerToUpper(diagram, upper, lower):
+    true_leaf = diagram.GetTrueLeaf()
+    question_leaf = diagram.GetQuestionLeaf()
+    if true_leaf not in upper.high_childs:
+        if lower not in upper.high_childs:
+            upper.high_childs.append(lower)
+            upper.high_childs = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, upper.high_childs)
+        if upper not in lower.high_parents:
+            lower.high_parents.append(upper)
+            lower.high_parents = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, lower.high_parents)
+        if question_leaf in upper.high_childs and len(upper.high_childs) > 1:
+            upper.high_childs.remove(question_leaf)
+            question_leaf.high_parents = [x for x in question_leaf.high_parents if x is not upper]
+    if true_leaf not in upper.low_childs:
+        if lower not in upper.low_childs:
+            upper.low_childs.append(lower)
+            upper.low_childs = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, upper.low_childs)
+        if upper not in lower.low_parents:
+            lower.low_parents.append(upper)
+            lower.low_parents = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, lower.low_parents)
+        if question_leaf in upper.low_childs and len(upper.low_childs) > 1:
+            upper.low_childs.remove(question_leaf)
+            question_leaf.low_parents = [x for x in question_leaf.low_parents if x is not upper]
+
+def TranferChildsFromLowerToUpper(diagram, upper, lower):
+    if diagram.GetTrueLeaf() not in upper.high_childs:
+        if diagram.GetTrueLeaf() in lower.high_childs:
+            SetTrueChild(diagram, upper, 1)
+        else:
+            for high_child in lower.high_childs:
+                if high_child not in upper.high_childs:
+                    upper.high_childs.append(high_child)
+                    high_child.high_parents.append(upper)
+                    high_child.high_parents = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_,
+                                                                                          high_child.high_parents)
+            upper.high_childs = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, upper.high_childs)
+    if diagram.GetTrueLeaf() not in upper.low_childs:
+        if diagram.GetTrueLeaf() in lower.low_childs:
+            SetTrueChild(diagram, upper, 0)
+        else:
+            for low_child in lower.low_childs:
+                if low_child not in upper.low_childs:
+                    upper.low_childs.append(low_child)
+                    low_child.low_parents.append(upper)
+                    low_child.low_parents = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_,
+                                                                                        low_child.low_parents)
+            upper.low_childs = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, upper.low_childs)
 
 
 def CheckNonbinaryWithTrueNode(node, diagram):
@@ -390,11 +420,23 @@ def CheckNonbinaryWithQuestionNode(node, diagram):
             exit()
 
 
+def SetTrueChild(diagram, node, polarity):
+    if polarity == 1:
+        for child in node.high_childs:
+            child.high_parents = [x for x in child.high_parents if x is not node]
+        node.high_childs = [diagram.GetTrueLeaf()]
+    elif polarity == 0:
+        for child in node.low_childs:
+            child.low_parents = [x for x in child.low_parents if x is not node]
+        node.low_childs = [diagram.GetTrueLeaf()]
+
 
 def UngluingNode(original_node, host, polarity):
     # сперва создаем узел с тем же типом, той же переменной и теми же детьми
     new_node = DiagramNode(original_node.node_type, original_node.var_id, original_node.high_childs,
                            original_node.low_childs)
+    # и добавляем его в родители детей
+    AddNodeToParentsOfChilds(new_node)
     if polarity == None:
         print('ERROR Polarity None when ungluing node')
         exit()
@@ -402,18 +444,21 @@ def UngluingNode(original_node, host, polarity):
     # и удаляем ссылку из upper на original_node
     if polarity == 1:
         if host in original_node.high_parents:
-            original_node.high_parents.remove(host)
+            original_node.high_parents = [x for x in original_node.high_parents if x is not host]
             if original_node in host.high_childs:
-                host.high_childs.remove(original_node)
+                host.high_childs = [x for x in host.high_childs if x is not original_node]
             else:
-                print('ERROR ungluing node 1 high')
+                print('ERROR ungluing node 1 high (no old upper in host highchilds)')
         else:
-            print('ERROR ungluing node 2 high')
+            print('Old upper high parents:', [(x.vertex_id, x.var_id) for x in original_node.high_parents])
+            print('Host', end=' ')
+            host.PrintNodeWithoutParents()
+            print('ERROR ungluing node 2 high (no host in old upper highparents)')
     elif polarity == 0:
         if host in original_node.low_parents:
-            original_node.low_parents.remove(host)
+            original_node.low_parents = [x for x in original_node.low_parents if x is not host]
             if original_node in host.low_childs:
-                host.low_childs.remove(original_node)
+                host.low_childs = [x for x in host.low_childs if x is not original_node]
             else:
                 print('ERROR ungluing node 1 low')
         else:
@@ -431,11 +476,6 @@ def UngluingNode(original_node, host, polarity):
     else:
         print('ERROR ungluing node no polarity')
 
-    # а также добавляем всем детям оригинального узла new_node в родители
-    for child in new_node.high_childs:
-        child.high_parents.append(new_node)
-    for child in new_node.low_childs:
-        child.low_parents.append(new_node)
     return new_node
 
 def DeleteNodeWithoutParents(node, nodes_with_changed_hash, diagram):
@@ -445,15 +485,24 @@ def DeleteNodeWithoutParents(node, nodes_with_changed_hash, diagram):
     print('Low childs:')
     for low_child in node.low_childs:
         low_child.PrintNode()
-        low_child.low_parents.remove(node)
+        low_child.low_parents = [x for x in low_child.low_parents if x is not node]
     print('High childs:')
     for high_child in node.high_childs:
         high_child.PrintNode()
-        high_child.high_parents.remove(node)
+        high_child.high_parents = [x for x in low_child.high_parents if x is not node]
     if node in nodes_with_changed_hash:
         # хотя он, по идее, обязательно тут должен быть, так что проверка не особо то и нужна, но пусть будет
         nodes_with_changed_hash.remove(node)
     del node
+
+
+def AddNodeToParentsOfChilds(new_node):
+    # эта функция нужна при создании новых узлов вне процедуры построения DJD,
+    # так как в __init__ нет работы с родителями
+    for child in new_node.high_childs:
+        child.high_parents.append(new_node)
+    for child in new_node.low_childs:
+        child.low_parents.append(new_node)
 
 
 def DrawDiagram(diagram):
