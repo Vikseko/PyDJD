@@ -3,7 +3,7 @@ import pysat
 from pysat.solvers import MapleChrono
 from pysat.formula import CNF
 
-from Types import DiagramNode
+from Types import DiagramNode, DiagramNodeType
 
 
 def PathsRedirection(diagram, problem):

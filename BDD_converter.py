@@ -186,7 +186,7 @@ def BDD_convert(diagram):
     # а не заново строить и сортировать таблицу
     print('Start remove nonbinary links.')
     while BDDiagram.NonBinaryNodesCount(diagram) > 0:
-        print('Current number of nonbinary nodes in diagram', BDDiagram.NonBinaryNodesCount(diagram))
+        print('\n\nCurrent number of nonbinary nodes in diagram', BDDiagram.NonBinaryNodesCount(diagram))
         sorted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodeswrtOrderAndVertex(diagram.order_, diagram.table_.values())
         print('Number of nodes', len(sorted_nodes))
         first_nonbinary_node, polarity = FindFirstNonbinaryNode(sorted_nodes)
@@ -195,7 +195,7 @@ def BDD_convert(diagram):
         print('Current size of queue', BDDiagram.nonbinary_queue.qsize())
         while not BDDiagram.nonbinary_queue.empty():
             host = BDDiagram.nonbinary_queue.get()
-            print('Current host number:', host[0].vertex_id,
+            print('\nCurrent host number:', host[0].vertex_id,
                   'variable:', host[0].var_id,
                   "hc:", [(x.vertex_id, x.Value()) for x in host[0].high_childs],
                   "lc:", [(x.vertex_id, x.Value()) for x in host[0].low_childs],
@@ -239,28 +239,8 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
     # проверяем количество родителей у узла, в которому приклеиваем
     # если больше 1, то нужно будет его расклеивать
     # когда склеиваем корни такой ситуации вообще не должно происходить
-    ungluing_flag = False
-    if upper.node_type != DiagramNodeType.QuestionNode:
-        if upper.node_type != DiagramNodeType.TrueNode:
-            if (len(upper.high_parents) + len(upper.low_parents)) > 1:
-                print('Upper have more than 1 parent. Need ungluing.')
-                ungluing_flag = True
-    if ungluing_flag == True:
-        diagram.new_nodes_ += 1
-        # тут нам надо расклеить узел на два так, чтобы у одного были все родители, кроме host
-        # а у второго только host
-        if host is None:
-            print('ERROR host is None, but try to ungluing')
-        old_upper = upper
-        print('Old upper')
-        old_upper.PrintNodeWithoutParents()
-        if old_upper in diagram.GetQuestionLeaf().high_parents:
-            print('? in high')
-        if old_upper in diagram.GetQuestionLeaf().low_parents:
-            print('? in low')
-        upper = UngluingNode(upper, host, polarity)
-        print('New upper')
-        upper.PrintNodeWithoutParents()
+    old_upper = upper
+    upper = CheckNodeForUngluing(diagram, upper, host, polarity)
 
     # удаляем из таблицы всё от upper (включительно) наверх и добавляем снова с пересчитыванием хэшей и склейкой
     nodes_with_changed_hash = set()
@@ -268,31 +248,7 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
 
     # затем, если хост есть, то удаляем связь host и lower
     if host is not None:
-        if polarity == 1:
-            if lower in host.high_childs:
-                host.high_childs = [x for x in host.high_childs if x is not lower]
-                if host in lower.high_parents:
-                    lower.high_parents = [x for x in lower.high_parents if x is not host]
-                else:
-                    print('ERROR there is no high_parent link from lower to host')
-                    print('Host:', end=' ')
-                    host.PrintNode()
-                    print('Lower:', end=' ')
-                    lower.PrintNode()
-                    exit()
-            else:
-                print('ERROR polarity is 1, but there is no high_child link from host to lower')
-        elif polarity == 0:
-            if lower in host.low_childs:
-                host.low_childs = [x for x in host.low_childs if x is not lower]
-                if host in lower.low_parents:
-                    lower.low_parents = [x for x in lower.low_parents if x is not host]
-                else:
-                    print('ERROR there is no low_parent link from lower to host')
-            else:
-                print('ERROR polarity is 0, but there is no low_child link from host to lower')
-        else:
-            print('ERROR Host is not None, but polarity not 0 or 1.')
+        RemoveLinkFromHostToLower(diagram, host, lower, polarity)
 
     if upper.Value() != lower.Value():
         # если upper и lower с разными переменными, то добавляем upper связь к lower по обеим полярностям
@@ -335,6 +291,74 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
 
     return [upper, upper_nonbinary_polarity]
 
+
+def RemoveLinkFromHostToLower(diagram, host, lower, polarity):
+    print('RemoveLinkFromHostToLower before Host:', end=' ')
+    host.PrintNode()
+    print('RemoveLinkFromHostToLower before Lower:', end=' ')
+    lower.PrintNode()
+    if polarity == 1:
+        if lower in host.high_childs:
+            host.high_childs = [x for x in host.high_childs if x is not lower]
+            if host in lower.high_parents:
+                lower.high_parents = [x for x in lower.high_parents if x is not host]
+            else:
+                print('ERROR there is no high_parent link from lower to host')
+                exit()
+        else:
+            print('ERROR polarity is 1, but there is no high_child link from host to lower')
+            exit()
+    elif polarity == 0:
+        if lower in host.low_childs:
+            host.low_childs = [x for x in host.low_childs if x is not lower]
+            if host in lower.low_parents:
+                lower.low_parents = [x for x in lower.low_parents if x is not host]
+            else:
+                print('ERROR there is no low_parent link from lower to host')
+                exit()
+        else:
+            print('ERROR polarity is 0, but there is no low_child link from host to lower')
+            exit()
+    else:
+        print('ERROR Host is not None, but polarity not 0 or 1.')
+        exit()
+    print('RemoveLinkFromHostToLower after Host:', end=' ')
+    host.PrintNode()
+    print('RemoveLinkFromHostToLower after Lower:', end=' ')
+    lower.PrintNode()
+
+
+def CheckNodeForUngluing(diagram, upper, host, polarity):
+    if upper.node_type != DiagramNodeType.QuestionNode:
+        if upper.node_type != DiagramNodeType.TrueNode:
+            if (len(upper.high_parents) + len(upper.low_parents)) > 1:
+                print('Upper have more than 1 parent. Need ungluing.')
+                diagram.new_nodes_ += 1
+                # тут нам надо расклеить узел на два так, чтобы у одного были все родители, кроме host
+                # а у второго только host
+                if host is None:
+                    print('ERROR host is None, but try to ungluing')
+                    exit()
+                print('Old upper')
+                upper.PrintNodeWithoutParents()
+                new_upper = UngluingNode(upper, host, polarity)
+                print('New upper')
+                new_upper.PrintNode()
+                return new_upper
+            else:
+                return upper
+        else:
+            print('\nHost:', end=' ')
+            host.PrintNodeWithoutParents()
+            print('Upper:', end=' ')
+            upper.PrintNodeWithoutParents()
+            raise Exception('ERROR Upper is a TrueNode')
+    else:
+        print('\nHost:', end=' ')
+        host.PrintNodeWithoutParents()
+        print('Upper:', end=' ')
+        upper.PrintNodeWithoutParents()
+        raise Exception('ERROR Upper is a QuestionNode')
 
 def DoubleConnectLowerToUpper(diagram, upper, lower):
     true_leaf = diagram.GetTrueLeaf()
@@ -449,11 +473,13 @@ def UngluingNode(original_node, host, polarity):
                 host.high_childs = [x for x in host.high_childs if x is not original_node]
             else:
                 print('ERROR ungluing node 1 high (no old upper in host highchilds)')
+                exit()
         else:
             print('Old upper high parents:', [(x.vertex_id, x.var_id) for x in original_node.high_parents])
             print('Host', end=' ')
             host.PrintNodeWithoutParents()
             print('ERROR ungluing node 2 high (no host in old upper highparents)')
+            exit()
     elif polarity == 0:
         if host in original_node.low_parents:
             original_node.low_parents = [x for x in original_node.low_parents if x is not host]
@@ -461,9 +487,10 @@ def UngluingNode(original_node, host, polarity):
                 host.low_childs = [x for x in host.low_childs if x is not original_node]
             else:
                 print('ERROR ungluing node 1 low')
+                exit()
         else:
             print('ERROR ungluing node 2 low')
-
+            exit()
 
     # работаем с new_node. добавляем ему upper в родители по нужной полярности
     # а upper'у добавляем new_node в дети по той же полярности
@@ -475,7 +502,7 @@ def UngluingNode(original_node, host, polarity):
         host.low_childs.append(new_node)
     else:
         print('ERROR ungluing node no polarity')
-
+        exit()
     return new_node
 
 def DeleteNodeWithoutParents(node, nodes_with_changed_hash, diagram):
@@ -484,12 +511,18 @@ def DeleteNodeWithoutParents(node, nodes_with_changed_hash, diagram):
     node.PrintNode()
     print('Low childs:')
     for low_child in node.low_childs:
+        print('Low child before:', end=' ')
         low_child.PrintNode()
         low_child.low_parents = [x for x in low_child.low_parents if x is not node]
+        print('Low child after:', end=' ')
+        low_child.PrintNode()
     print('High childs:')
     for high_child in node.high_childs:
+        print('High child before:', end=' ')
         high_child.PrintNode()
-        high_child.high_parents = [x for x in low_child.high_parents if x is not node]
+        high_child.high_parents = [x for x in high_child.high_parents if x is not node]
+        print('High child after:', end=' ')
+        high_child.PrintNode()
     if node in nodes_with_changed_hash:
         # хотя он, по идее, обязательно тут должен быть, так что проверка не особо то и нужна, но пусть будет
         nodes_with_changed_hash.remove(node)
