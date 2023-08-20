@@ -19,12 +19,12 @@ class GraphVisualization:
         self.lowvisual.append(temp)
         self.nodes.add(a)
         self.nodes.add(b)
+
     def addHighEdge(self, a, b):
         temp = [a, b]
         self.highvisual.append(temp)
         self.nodes.add(a)
         self.nodes.add(b)
-
 
     # In visualize function G is an object of
     # class Graph given by networkx G.add_edges_from(visual)
@@ -40,3 +40,15 @@ class GraphVisualization:
         nx.draw_networkx(G)
         plt.show()
 
+
+def DrawDiagram(diagram):
+    G = GraphVisualization()
+    for node in diagram.table_.values():
+        nodename = str(node.vertex_id) + ' ' + str(node.Value())
+        for highchild in node.high_childs:
+            childname = str(highchild.vertex_id) + ' ' + str(highchild.Value())
+            G.addHighEdge(nodename, childname)
+        for lowchild in node.low_childs:
+            childname = str(lowchild.vertex_id) + ' ' + str(lowchild.Value())
+            G.addLowEdge(nodename, childname)
+    G.visualize()
