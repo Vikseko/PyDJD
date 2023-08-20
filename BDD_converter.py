@@ -626,6 +626,7 @@ def GluingNodes(upper, nodes_with_changed_hash, diagram):
                 new_upper = node_to_which_glue
             GluingNode(node, node_to_which_glue)
             del node
+            diagram.deleted_nodes_ += 1
         else:
             diagram.table_[node.hash_key] = node
     return new_upper
