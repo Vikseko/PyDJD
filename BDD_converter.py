@@ -246,7 +246,11 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
 
     # удаляем из таблицы всё от upper (включительно) наверх и добавляем снова с пересчитыванием хэшей и склейкой
     nodes_with_changed_hash = set()
-    DisjunctiveDiagramsBuilder.DeletingNodesFromTable(upper, diagram, nodes_with_changed_hash)
+    if host is not None:
+        DisjunctiveDiagramsBuilder.DeletingNodesFromTable(upper, diagram, nodes_with_changed_hash)
+    else:
+        del diagram.table_[upper.hash_key]
+
 
     print('\nАfter DeletingNodesFromTable New node')
     upper.PrintNode()
@@ -321,7 +325,11 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
     # CheckNonbinaryWithTrueNode(upper, diagram)
 
     # возвращаем всё в таблицу с проверкой на склейку
-    upper = GluingNodes(upper, nodes_with_changed_hash, diagram)
+    if host is not None:
+        upper = GluingNodes(upper, nodes_with_changed_hash, diagram)
+    else:
+        upper.HashKey()
+        diagram.table_[upper.hash_key] = upper
 
     print('\nАfter GluingNodes ungluing New node')
     upper.PrintNode()
@@ -425,6 +433,9 @@ def CheckNodeForUngluing(diagram, upper, host, polarity):
 def DoubleConnectLowerToUpper(diagram, upper, lower):
     true_leaf = diagram.GetTrueLeaf()
     question_leaf = diagram.GetQuestionLeaf()
+    # все проверки можно переделать под проверки ссылок, а не "not in"
+    # к примеру добавить метод NotIn в класс узлов, который бы проверял как раз ссылки
+    # хотя вообще это ничего поменять не должно, потому что тут расклейка не влияет
     if true_leaf not in upper.high_childs:
         if lower not in upper.high_childs:
             upper.high_childs.append(lower)
