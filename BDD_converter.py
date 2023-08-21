@@ -10,7 +10,8 @@ import queue
 class BDDiagram:
     new_nodes_ = 0
     deleted_nodes_ = 0
-    nonbinary_queue = queue.LifoQueue()
+    #nonbinary_queue = queue.LifoQueue()
+    nonbinary_queue = []
     def __init__(self,diagram:DisjunctiveDiagram):
         self.variable_count_ = diagram.variable_count_
         self.true_path_count_ = diagram.true_path_count_
@@ -191,10 +192,14 @@ def BDD_convert(diagram):
         print('Number of nodes', len(sorted_nodes))
         first_nonbinary_node, polarity = FindFirstNonbinaryNode(sorted_nodes)
         print('First nonbinary node', first_nonbinary_node.vertex_id, 'var', first_nonbinary_node.var_id)
-        BDDiagram.nonbinary_queue.put([first_nonbinary_node, polarity])
-        while not BDDiagram.nonbinary_queue.empty():
-            print('\nCurrent size of queue', BDDiagram.nonbinary_queue.qsize())
-            host = BDDiagram.nonbinary_queue.get()
+        # BDDiagram.nonbinary_queue.put([first_nonbinary_node, polarity])
+        BDDiagram.nonbinary_queue.append([first_nonbinary_node, polarity])
+        # while not BDDiagram.nonbinary_queue.empty():
+        while BDDiagram.nonbinary_queue:
+            # print('\nCurrent size of queue', BDDiagram.nonbinary_queue.qsize())
+            # host = BDDiagram.nonbinary_queue.get()
+            print('\nCurrent size of queue', len(BDDiagram.nonbinary_queue))
+            host = BDDiagram.nonbinary_queue.pop()
             print('Current host:', end=' ')
             host[0].PrintNode()
             print('Polarity:', host[1])
@@ -206,21 +211,23 @@ def BDD_convert(diagram):
 
 
 def RemoveNonbinaryLink(host, polarity, diagram):
-    sorted_childs = DisjunctiveDiagramsBuilder.LitLessSortNodeswrtOrderAndVertex(diagram.order_,
-                                                                                 (host.high_childs if polarity == 1
-                                                                                  else host.low_childs))
-    lower = sorted_childs[0]
-    print('Current lower:', end=' ')
-    lower.PrintNode()
-    upper = sorted_childs[1]
-    print('Current upper:', end=' ')
-    upper.PrintNode()
-    upper_and_polarity = ConnectNodesDouble(host, polarity, lower, upper, diagram)
-    # if upper_and_polarity[1] == 'both':
-    #     BDDiagram.nonbinary_queue.put([upper_and_polarity[0], 0])
-    #     BDDiagram.nonbinary_queue.put([upper_and_polarity[0], 1])
-    if upper_and_polarity[1] != 'no':
-        BDDiagram.nonbinary_queue.put(upper_and_polarity)
+    if (polarity == 1 and len(host.high_childs) > 1) or (polarity == 0 and len(host.low_childs) > 1):
+        sorted_childs = DisjunctiveDiagramsBuilder.LitLessSortNodeswrtOrderAndVertex(diagram.order_,
+                                                                                     (host.high_childs if polarity == 1
+                                                                                      else host.low_childs))
+        lower = sorted_childs[0]
+        print('Current lower:', end=' ')
+        lower.PrintNode()
+        upper = sorted_childs[1]
+        print('Current upper:', end=' ')
+        upper.PrintNode()
+        upper_and_polarity = ConnectNodesDouble(host, polarity, lower, upper, diagram)
+        if upper_and_polarity[1] == 'both':
+            # если через очередь, то append заменяем на put
+            BDDiagram.nonbinary_queue.append([upper_and_polarity[0], 0])
+            BDDiagram.nonbinary_queue.append([upper_and_polarity[0], 1])
+        elif upper_and_polarity[1] != 'no':
+            BDDiagram.nonbinary_queue.append(upper_and_polarity)
 
 
 def FindFirstNonbinaryNode(sorted_nodes):
@@ -342,9 +349,9 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
     print()
 
     # проверяем небинарность upper
-    #if len(upper.high_childs) > 1 and len(upper.low_childs) > 1:
-    #    upper_nonbinary_polarity = 'both'
-    if len(upper.high_childs) > 1:
+    if len(upper.high_childs) > 1 and len(upper.low_childs) > 1:
+        upper_nonbinary_polarity = 'both'
+    elif len(upper.high_childs) > 1:
         upper_nonbinary_polarity = 1
     elif len(upper.low_childs) > 1:
         upper_nonbinary_polarity = 0
@@ -632,9 +639,15 @@ def GluingNodes(upper, nodes_with_changed_hash, diagram):
             node_to_which_glue = diagram.table_[node.hash_key]
             if node is node_to_which_glue:
                 print('ERROR')
-            print('Glued node',(node.vertex_id, node.Value()),'with node',(node_to_which_glue.vertex_id, node_to_which_glue.Value()))
+            print('Glued node', end=' ')
+            node.PrintNode()
+            print('with node', end=' ')
+            node_to_which_glue.PrintNode()
             if node is upper:
                 new_upper = node_to_which_glue
+            for node_pol in diagram.nonbinary_queue:
+                if node_pol[0] is node:
+                    node_pol[0] = node_to_which_glue
             GluingNode(node, node_to_which_glue)
             del node
             diagram.deleted_nodes_ += 1

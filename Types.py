@@ -145,8 +145,8 @@ class DiagramNode:
               'variable:', self.var_id,
               'hc:', [(x.vertex_id, x.Value()) for x in self.high_childs],
               'lc:', [(x.vertex_id, x.Value()) for x in self.low_childs],
-              'hp:', [(x.vertex_id, x.Value()) for x in self.high_parents] if self.node_type == DiagramNodeType.InternalNode else '...',
-              'lp:', [(x.vertex_id, x.Value()) for x in self.low_parents] if self.node_type == DiagramNodeType.InternalNode else '...',
+              'hp:', [(x.vertex_id, x.Value()) for x in self.high_parents] if len(self.high_parents) < 10 else '...',
+              'lp:', [(x.vertex_id, x.Value()) for x in self.low_parents] if len(self.low_parents) < 10 else '...',
               self.node_type,
               self)
 
