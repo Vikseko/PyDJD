@@ -3,6 +3,7 @@ import pysat
 from pysat.solvers import MapleChrono
 from pysat.formula import CNF
 from Draw import *
+import gc
 
 from Types import DiagramNode
 import queue
@@ -12,6 +13,7 @@ class BDDiagram:
     deleted_nodes_ = 0
     #nonbinary_queue = queue.LifoQueue()
     nonbinary_queue = []
+    actions_with_links_ = 0
     def __init__(self,diagram:DisjunctiveDiagram):
         self.variable_count_ = diagram.variable_count_
         self.true_path_count_ = diagram.true_path_count_
@@ -159,8 +161,8 @@ def EnumerateBDDiagramNodes(diagram):
 def BDD_convert(diagram):
     # сперва надо свести корни к одному. для этого берём корень с наименьшим порядковым номером (относительно order)
     # затем добавляем ему ссылки на каждый другой корень причем и в high_childs и в low_childs
-    print('Initial number of nonbinary links in diagram is', BDDiagram.NonBinaryLinkCount(diagram))
-    print('Initial number of nonbinary nodes in diagram is', BDDiagram.NonBinaryNodesCount(diagram))
+    print('Initial number of nonbinary links in diagram is', diagram.NonBinaryLinkCount())
+    print('Initial number of nonbinary nodes in diagram is', diagram.NonBinaryNodesCount())
     sorted_roots_ = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, diagram.roots_)
     #sorted_roots2_ = DisjunctiveDiagramsBuilder.LitLessSortNodeswrtOrderAndVertex(diagram.order_, diagram.roots_)
     print('Sorted Roots', [(x.vertex_id, x.var_id) for x in sorted_roots_])
@@ -168,15 +170,17 @@ def BDD_convert(diagram):
     #BDDiagram.PrintCurrentTable(diagram)
     main_root = sorted_roots_[-1]
     for i in range(len(sorted_roots_)-1):
-        print('Connect root', str(sorted_roots_[i].vertex_id) + '_' + str(sorted_roots_[i].var_id), ' to root', str(sorted_roots_[i+1].vertex_id) + '_' + str(sorted_roots_[i+1].var_id))
+        print('Connect root', str(sorted_roots_[i].vertex_id) + '_' + str(sorted_roots_[i].var_id),
+              ' to root', str(sorted_roots_[i+1].vertex_id) + '_' + str(sorted_roots_[i+1].var_id))
         # присоединяем нижний корень к верхнему по двум полярностям
         ConnectRoots(sorted_roots_[i+1], sorted_roots_[i],diagram)
     # теперь diagram.roots_ неправильная, потому что хэши поменялись (бтв, в table всё обновлено), но это и неважно
     #print('Roots', [(x.vertex_id, x.var_id, x.node_type) for x in diagram.roots_])
     diagram.main_root_ = main_root
     print('Main root number:', main_root.vertex_id,'; variable:',main_root.var_id)
-    print('Number of nonbinary links in diagram after roots gluing is', BDDiagram.NonBinaryLinkCount(diagram))
-    print('Number of nonbinary nodes in diagram after roots gluing is', BDDiagram.NonBinaryNodesCount(diagram))
+    print('Current number of actions with links', diagram.actions_with_links_)
+    print('Number of nonbinary links in diagram after roots gluing is', diagram.NonBinaryLinkCount())
+    print('Number of nonbinary nodes in diagram after roots gluing is', diagram.NonBinaryNodesCount())
     #print('\nTable after roots gluing:')
     #BDDiagram.PrintCurrentTable(diagram)
     #exit()
@@ -186,22 +190,27 @@ def BDD_convert(diagram):
     # и идём снизу вверх. если небинарность мы опустили вниз, то можно дальше убирать её в нижнем узле
     # а не заново строить и сортировать таблицу
     print('Start remove nonbinary links.')
-    while BDDiagram.NonBinaryNodesCount(diagram) > 0:
-        print('\n\nCurrent number of nonbinary nodes in diagram', BDDiagram.NonBinaryNodesCount(diagram))
+    while diagram.NonBinaryNodesCount() > 0:
+        print('\n\nCurrent number of nonbinary nodes in diagram', diagram.NonBinaryNodesCount())
+        print('Current number of actions with links', diagram.actions_with_links_)
         sorted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodeswrtOrderAndVertex(diagram.order_, diagram.table_.values())
-        print('Number of nodes', len(sorted_nodes))
+        print('Current number of nodes', len(sorted_nodes))
+        print('Current number of deleted nodes', diagram.deleted_nodes_)
         first_nonbinary_node, polarity = FindFirstNonbinaryNode(sorted_nodes)
         print('First nonbinary node', first_nonbinary_node.vertex_id, 'var', first_nonbinary_node.var_id)
+        if polarity == 'both':
+            diagram.nonbinary_queue.append([first_nonbinary_node, 1])
+            diagram.nonbinary_queue.append([first_nonbinary_node, 0])
         # BDDiagram.nonbinary_queue.put([first_nonbinary_node, polarity])
-        BDDiagram.nonbinary_queue.append([first_nonbinary_node, polarity])
+        else:
+            diagram.nonbinary_queue.append([first_nonbinary_node, polarity])
         # while not BDDiagram.nonbinary_queue.empty():
-        while BDDiagram.nonbinary_queue:
+        while diagram.nonbinary_queue:
             # print('\nCurrent size of queue', BDDiagram.nonbinary_queue.qsize())
             # host = BDDiagram.nonbinary_queue.get()
-            print('\nCurrent size of queue', len(BDDiagram.nonbinary_queue))
-            host = BDDiagram.nonbinary_queue.pop()
-            print('Current host:', end=' ')
-            host[0].PrintNode()
+            print('\nCurrent size of queue', len(diagram.nonbinary_queue))
+            host = diagram.nonbinary_queue.pop()
+            host[0].PrintNode('Current host:')
             print('Polarity:', host[1])
             # BDDiagram.PrintCurrentQueue(diagram)
             RemoveNonbinaryLink(host[0], host[1], diagram)
@@ -211,28 +220,29 @@ def BDD_convert(diagram):
 
 
 def RemoveNonbinaryLink(host, polarity, diagram):
-    if (polarity == 1 and len(host.high_childs) > 1) or (polarity == 0 and len(host.low_childs) > 1):
+    while (polarity == 1 and len(host.high_childs) > 1) or (polarity == 0 and len(host.low_childs) > 1):
         sorted_childs = DisjunctiveDiagramsBuilder.LitLessSortNodeswrtOrderAndVertex(diagram.order_,
                                                                                      (host.high_childs if polarity == 1
                                                                                       else host.low_childs))
         lower = sorted_childs[0]
-        print('Current lower:', end=' ')
-        lower.PrintNode()
+        lower.PrintNode('Current lower:')
         upper = sorted_childs[1]
-        print('Current upper:', end=' ')
-        upper.PrintNode()
-        upper_and_polarity = ConnectNodesDouble(host, polarity, lower, upper, diagram)
-        if upper_and_polarity[1] == 'both':
+        upper.PrintNode('Current upper:')
+        host_upper_polarity = ConnectNodesDouble(host, polarity, lower, upper, diagram)
+        if host_upper_polarity[2] == 'both':
             # если через очередь, то append заменяем на put
-            BDDiagram.nonbinary_queue.append([upper_and_polarity[0], 0])
-            BDDiagram.nonbinary_queue.append([upper_and_polarity[0], 1])
-        elif upper_and_polarity[1] != 'no':
-            BDDiagram.nonbinary_queue.append(upper_and_polarity)
+            BDDiagram.nonbinary_queue.append([host_upper_polarity[1], 0])
+            BDDiagram.nonbinary_queue.append([host_upper_polarity[1], 1])
+        elif host_upper_polarity[2] != 'no':
+            BDDiagram.nonbinary_queue.append([host_upper_polarity[1], host_upper_polarity[2]])
+        host = host_upper_polarity[0]
 
 
 def FindFirstNonbinaryNode(sorted_nodes):
     for node in sorted_nodes:
-        if len(node.high_childs) > 1:
+        if len(node.high_childs) > 1 and len(node.low_childs) > 1:
+            return node, 'both'
+        elif len(node.high_childs) > 1:
             return node, 1
         elif len(node.low_childs) > 1:
             return node, 0
@@ -241,7 +251,7 @@ def FindFirstNonbinaryNode(sorted_nodes):
 def ConnectRoots(upper, lower, diagram):
     # все корни просто соединяем последовательно двойными связями
     lower.node_type = DiagramNodeType.InternalNode
-    upper_and_polarity = ConnectNodesDouble(None, None, lower, upper, diagram)
+    host_upper_polarity = ConnectNodesDouble(None, None, lower, upper, diagram)
 
 
 def ConnectNodesDouble(host, polarity, lower, upper, diagram):
@@ -259,29 +269,29 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
         del diagram.table_[upper.hash_key]
 
 
-    print('\nАfter DeletingNodesFromTable New node')
-    upper.PrintNode()
-    print('New node highchilds')
-    for child in upper.high_childs:
-        child.PrintNode()
-    print('New node lowchilds')
-    for child in upper.low_childs:
-        child.PrintNode()
-    print()
+    # print('\nАfter DeletingNodesFromTable New node')
+    # upper.PrintNode()
+    # print('New node highchilds')
+    # for child in upper.high_childs:
+    #     child.PrintNode()
+    # print('New node lowchilds')
+    # for child in upper.low_childs:
+    #     child.PrintNode()
+    # print()
 
     # затем, если хост есть, то удаляем связь host и lower
     if host is not None:
         RemoveLinkFromHostToLower(diagram, host, lower, polarity)
 
-    print('\nАfter RemoveLinkFromHostToLower New node')
-    upper.PrintNode()
-    print('New node highchilds')
-    for child in upper.high_childs:
-        child.PrintNode()
-    print('New node lowchilds')
-    for child in upper.low_childs:
-        child.PrintNode()
-    print()
+    # print('\nАfter RemoveLinkFromHostToLower New node')
+    # upper.PrintNode()
+    # print('New node highchilds')
+    # for child in upper.high_childs:
+    #     child.PrintNode()
+    # print('New node lowchilds')
+    # for child in upper.low_childs:
+    #     child.PrintNode()
+    # print()
 
     if upper.Value() != lower.Value():
         # если upper и lower с разными переменными, то добавляем upper связь к lower по обеим полярностям
@@ -294,31 +304,31 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
         # при этом если у lower есть 1-вершина в детях, то она поглощает детей аппера.
         TranferChildsFromLowerToUpper(diagram, upper, lower)
 
-    print('\nАfter connect lower to upper New node')
-    upper.PrintNode()
-    print('New node highchilds')
-    for child in upper.high_childs:
-        child.PrintNode()
-    print('New node lowchilds')
-    for child in upper.low_childs:
-        child.PrintNode()
-    print()
+    # print('\nАfter connect lower to upper New node')
+    # upper.PrintNode()
+    # print('New node highchilds')
+    # for child in upper.high_childs:
+    #     child.PrintNode()
+    # print('New node lowchilds')
+    # for child in upper.low_childs:
+    #     child.PrintNode()
+    # print()
 
     # после чего, если у lower нет родителей больше (кроме host, ссылку на который мы удалили)
     # то удаляем lower (всех его детей мы передали, но лучше проверить)
     if (len(lower.high_parents) + len(lower.low_parents)) == 0:
-        print('Lower without parents. Delete it.')
+        #print('Lower without parents. Delete it.')
         DeleteNodeWithoutParents(lower, nodes_with_changed_hash, diagram)
 
-    print('\nАfter DeleteNodeWithoutParents New node')
-    upper.PrintNode()
-    print('New node highchilds')
-    for child in upper.high_childs:
-        child.PrintNode()
-    print('New node lowchilds')
-    for child in upper.low_childs:
-        child.PrintNode()
-    print()
+    # print('\nАfter DeleteNodeWithoutParents New node')
+    # upper.PrintNode()
+    # print('New node highchilds')
+    # for child in upper.high_childs:
+    #     child.PrintNode()
+    # print('New node lowchilds')
+    # for child in upper.low_childs:
+    #     child.PrintNode()
+    # print()
 
     # тут мы проверяем, что если у аппера после наших действий есть небинарность такая
     # что одна связь идёт в внутреннюю вершину, а другая в ?-вершину
@@ -331,47 +341,48 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
     # UPD такого быть больше не должно в принципе, так что комментим
     # CheckNonbinaryWithTrueNode(upper, diagram)
 
+    # Тут надо проверять, что если у upper 1-вершина по обеим полярностям в потомках
+    # то мы его должны удалить, а его родителям добавить единицы по соответствующим полярностям
+    # причем делать это желательно рекурсивно
+    #upper = CheckForTrueNodes(upper, nodes_with_changed_hash, diagram)
+
     # возвращаем всё в таблицу с проверкой на склейку
     if host is not None:
-        upper = GluingNodes(upper, nodes_with_changed_hash, diagram)
+        host, upper = GluingNodes(upper, host, nodes_with_changed_hash, diagram)
     else:
         upper.HashKey()
         diagram.table_[upper.hash_key] = upper
 
-    print('\nАfter GluingNodes ungluing New node')
-    upper.PrintNode()
-    print('New node highchilds')
-    for child in upper.high_childs:
-        child.PrintNode()
-    print('New node lowchilds')
-    for child in upper.low_childs:
-        child.PrintNode()
-    print()
 
-    # проверяем небинарность upper
-    if len(upper.high_childs) > 1 and len(upper.low_childs) > 1:
-        upper_nonbinary_polarity = 'both'
-    elif len(upper.high_childs) > 1:
-        upper_nonbinary_polarity = 1
-    elif len(upper.low_childs) > 1:
-        upper_nonbinary_polarity = 0
+    if upper is not 'deleted':
+        # проверяем небинарность upper
+        if len(upper.high_childs) > 1 and len(upper.low_childs) > 1:
+            upper_nonbinary_polarity = 'both'
+        elif len(upper.high_childs) > 1:
+            upper_nonbinary_polarity = 1
+        elif len(upper.low_childs) > 1:
+            upper_nonbinary_polarity = 0
+        else:
+            upper_nonbinary_polarity = 'no'
     else:
         upper_nonbinary_polarity = 'no'
 
-    return [upper, upper_nonbinary_polarity]
+    return [host, upper, upper_nonbinary_polarity]
 
 
 def RemoveLinkFromHostToLower(diagram, host, lower, polarity):
-    print('RemoveLinkFromHostToLower before Host:', end=' ')
-    host.PrintNode()
-    print('RemoveLinkFromHostToLower before Lower:', end=' ')
-    lower.PrintNode()
+    # print('RemoveLinkFromHostToLower before Host:', end=' ')
+    # host.PrintNode()
+    # print('RemoveLinkFromHostToLower before Lower:', end=' ')
+    # lower.PrintNode()
     if polarity == 1:
         host_len_childs_before = len(host.high_childs)
         lower_len_parents_before = len(lower.high_parents)
         if lower in host.high_childs:
+            diagram.actions_with_links_ += 1
             host.high_childs = [x for x in host.high_childs if x is not lower]
             if host in lower.high_parents:
+                diagram.actions_with_links_ += 1
                 lower.high_parents = [x for x in lower.high_parents if x is not host]
             else:
                 print('ERROR there is no high_parent link from lower to host')
@@ -387,8 +398,10 @@ def RemoveLinkFromHostToLower(diagram, host, lower, polarity):
         #     exit()
     elif polarity == 0:
         if lower in host.low_childs:
+            diagram.actions_with_links_ += 1
             host.low_childs = [x for x in host.low_childs if x is not lower]
             if host in lower.low_parents:
+                diagram.actions_with_links_ += 1
                 lower.low_parents = [x for x in lower.low_parents if x is not host]
             else:
                 print('ERROR there is no low_parent link from lower to host')
@@ -409,18 +422,18 @@ def CheckNodeForUngluing(diagram, upper, host, polarity):
     if upper.node_type != DiagramNodeType.QuestionNode:
         if upper.node_type != DiagramNodeType.TrueNode:
             if (len(upper.high_parents) + len(upper.low_parents)) > 1:
-                print('Upper have more than 1 parent. Need ungluing.')
+                #print('Upper have more than 1 parent. Need ungluing.')
                 diagram.new_nodes_ += 1
                 # тут нам надо расклеить узел на два так, чтобы у одного были все родители, кроме host
                 # а у второго только host
                 if host is None:
                     print('ERROR host is None, but try to ungluing')
                     exit()
-                print('Old upper')
-                upper.PrintNode()
-                new_upper = UngluingNode(upper, host, polarity)
-                print('New upper')
-                new_upper.PrintNode()
+                #print('Old upper')
+                #upper.PrintNode()
+                new_upper = UngluingNode(upper, host, polarity, diagram)
+                #print('New upper')
+                #new_upper.PrintNode()
                 return new_upper
             else:
                 return upper
@@ -445,22 +458,28 @@ def DoubleConnectLowerToUpper(diagram, upper, lower):
     # хотя вообще это ничего поменять не должно, потому что тут расклейка не влияет
     if true_leaf not in upper.high_childs:
         if lower not in upper.high_childs:
+            diagram.actions_with_links_ += 1
             upper.high_childs.append(lower)
             upper.high_childs = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, upper.high_childs)
         if upper not in lower.high_parents:
+            diagram.actions_with_links_ += 1
             lower.high_parents.append(upper)
             lower.high_parents = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, lower.high_parents)
         if question_leaf in upper.high_childs and len(upper.high_childs) > 1:
+            diagram.actions_with_links_ += 1
             upper.high_childs.remove(question_leaf)
             question_leaf.high_parents = [x for x in question_leaf.high_parents if x is not upper]
     if true_leaf not in upper.low_childs:
         if lower not in upper.low_childs:
+            diagram.actions_with_links_ += 1
             upper.low_childs.append(lower)
             upper.low_childs = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, upper.low_childs)
         if upper not in lower.low_parents:
+            diagram.actions_with_links_ += 1
             lower.low_parents.append(upper)
             lower.low_parents = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, lower.low_parents)
         if question_leaf in upper.low_childs and len(upper.low_childs) > 1:
+            diagram.actions_with_links_ += 1
             upper.low_childs.remove(question_leaf)
             question_leaf.low_parents = [x for x in question_leaf.low_parents if x is not upper]
 
@@ -471,6 +490,7 @@ def TranferChildsFromLowerToUpper(diagram, upper, lower):
         else:
             for high_child in lower.high_childs:
                 if high_child not in upper.high_childs:
+                    diagram.actions_with_links_ += 1
                     upper.high_childs.append(high_child)
                     high_child.high_parents.append(upper)
                     high_child.high_parents = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_,
@@ -482,6 +502,7 @@ def TranferChildsFromLowerToUpper(diagram, upper, lower):
         else:
             for low_child in lower.low_childs:
                 if low_child not in upper.low_childs:
+                    diagram.actions_with_links_ += 1
                     upper.low_childs.append(low_child)
                     low_child.low_parents.append(upper)
                     low_child.low_parents = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_,
@@ -490,8 +511,8 @@ def TranferChildsFromLowerToUpper(diagram, upper, lower):
 
 
 def CheckNonbinaryWithTrueNode(node, diagram):
-    print('\nCheckNonbinaryWithTrueNode')
-    node.PrintNodeWithoutParents()
+    #print('\nCheckNonbinaryWithTrueNode')
+    #node.PrintNodeWithoutParents()
     true_leaf = diagram.GetTrueLeaf()
     if len(node.high_childs) > 1 and true_leaf in node.high_childs:
         for child in node.high_childs:
@@ -505,8 +526,8 @@ def CheckNonbinaryWithTrueNode(node, diagram):
         node.low_childs = [true_leaf]
 
 def CheckNonbinaryWithQuestionNode(node, diagram):
-    print('\nCheckNonbinaryWithQuestionNode')
-    node.PrintNodeWithoutParents()
+    #print('\nCheckNonbinaryWithQuestionNode')
+    #node.PrintNodeWithoutParents()
     question_leaf = diagram.GetQuestionLeaf()
     if len(node.high_childs) > 1 and question_leaf in node.high_childs:
         node.high_childs.remove(question_leaf)
@@ -527,20 +548,25 @@ def CheckNonbinaryWithQuestionNode(node, diagram):
 def SetTrueChild(diagram, node, polarity):
     if polarity == 1:
         for child in node.high_childs:
+            diagram.actions_with_links_ += 1
             child.high_parents = [x for x in child.high_parents if x is not node]
+        diagram.actions_with_links_ += 1
         node.high_childs = [diagram.GetTrueLeaf()]
     elif polarity == 0:
         for child in node.low_childs:
+            diagram.actions_with_links_ += 1
             child.low_parents = [x for x in child.low_parents if x is not node]
+        diagram.actions_with_links_ += 1
         node.low_childs = [diagram.GetTrueLeaf()]
 
 
-def UngluingNode(original_node, host, polarity):
+def UngluingNode(original_node, host, polarity, diagram):
     # сперва создаем узел с тем же типом, той же переменной и теми же детьми
+    diagram.actions_with_links_ += len(original_node.high_childs) + len(original_node.low_childs)
     new_node = DiagramNode(original_node.node_type, original_node.var_id, original_node.high_childs,
                            original_node.low_childs)
     # и добавляем его в родители детей
-    AddNodeToParentsOfChilds(new_node)
+    AddNodeToParentsOfChilds(new_node, diagram)
     if polarity == None:
         print('ERROR Polarity None when ungluing node')
         exit()
@@ -548,8 +574,10 @@ def UngluingNode(original_node, host, polarity):
     # и удаляем ссылку из upper на original_node
     if polarity == 1:
         if host in original_node.high_parents:
+            diagram.actions_with_links_ += 1
             original_node.high_parents = [x for x in original_node.high_parents if x is not host]
             if original_node in host.high_childs:
+                diagram.actions_with_links_ += 1
                 host.high_childs = [x for x in host.high_childs if x is not original_node]
             else:
                 print('ERROR ungluing node 1 high (no old upper in host highchilds)')
@@ -562,8 +590,10 @@ def UngluingNode(original_node, host, polarity):
             exit()
     elif polarity == 0:
         if host in original_node.low_parents:
+            diagram.actions_with_links_ += 1
             original_node.low_parents = [x for x in original_node.low_parents if x is not host]
             if original_node in host.low_childs:
+                diagram.actions_with_links_ += 1
                 host.low_childs = [x for x in host.low_childs if x is not original_node]
             else:
                 print('ERROR ungluing node 1 low')
@@ -575,95 +605,139 @@ def UngluingNode(original_node, host, polarity):
     # работаем с new_node. добавляем ему host в родители по нужной полярности
     # а host'у добавляем new_node в дети по той же полярности
     if polarity == 1:
+        diagram.actions_with_links_ += 1
         new_node.high_parents.append(host)
         host.high_childs.append(new_node)
     elif polarity == 0:
+        diagram.actions_with_links_ += 1
         new_node.low_parents.append(host)
         host.low_childs.append(new_node)
     else:
         print('ERROR ungluing node no polarity')
         exit()
     # проверка чтобы new_node был где надо
-    print('\nRight after ungluing New node')
-    new_node.PrintNode()
-    print('New node highchilds')
-    for child in new_node.high_childs:
-        child.PrintNode()
-    print('New node lowchilds')
-    for child in new_node.low_childs:
-        child.PrintNode()
-    print()
+    # print('\nRight after ungluing New node')
+    # new_node.PrintNode()
+    # print('New node highchilds')
+    # for child in new_node.high_childs:
+    #     child.PrintNode()
+    # print('New node lowchilds')
+    # for child in new_node.low_childs:
+    #     child.PrintNode()
+    # print()
     return new_node
 
 
 def DeleteNodeWithoutParents(node, nodes_with_changed_hash, diagram):
     # при удалении узла мы удаляем ссылки на него из детей
-    print('Delete node without parents')
-    node.PrintNode()
-    print('Low childs:')
+    #print('Delete node without parents')
+    #node.PrintNode('Delete node without parents:')
+    #print('Low childs:')
     for low_child in node.low_childs:
-        print('Low child before:', end=' ')
-        low_child.PrintNode()
+        #print('Low child before:', end=' ')
+        #low_child.PrintNode()
+        diagram.actions_with_links_ += 1
         low_child.low_parents = [x for x in low_child.low_parents if x is not node]
-        print('Low child after:', end=' ')
-        low_child.PrintNode()
-    print('High childs:')
+        #print('Low child after:', end=' ')
+        #low_child.PrintNode()
+    #print('High childs:')
     for high_child in node.high_childs:
-        print('High child before:', end=' ')
-        high_child.PrintNode()
+        #print('High child before:', end=' ')
+        #high_child.PrintNode()
+        diagram.actions_with_links_ += 1
         high_child.high_parents = [x for x in high_child.high_parents if x is not node]
-        print('High child after:', end=' ')
-        high_child.PrintNode()
+        #print('High child after:', end=' ')
+        #high_child.PrintNode()
     if node in nodes_with_changed_hash:
         # хотя он, по идее, обязательно тут должен быть, так что проверка не особо то и нужна, но пусть будет
-        nodes_with_changed_hash.remove(node)
+        #nodes_with_changed_hash.remove(node)
+        nodes_with_changed_hash = [x for x in nodes_with_changed_hash if x is not node]
+        if node in nodes_with_changed_hash:
+            print('ERROR node still in nodes_with_changed_hash')
+            exit()
+    diagram.deleted_nodes_ += 1
     del node
 
 
-def AddNodeToParentsOfChilds(new_node):
+def CheckForTrueNodes(node, nodes_with_changed_hash, diagram):
+    #FIXME может удалить хоста
+    if diagram.GetTrueLeaf() in node.low_childs and \
+            diagram.GetTrueLeaf() in node.high_childs and \
+            node.node_type != DiagramNodeType.RootNode:
+        node.PrintNode('Double True child deleting node:')
+        for hp in node.high_parents:
+            SetTrueChild(diagram, hp, 1)
+            node_ = CheckForTrueNodes(hp, nodes_with_changed_hash, diagram)
+        for lp in node.low_parents:
+            SetTrueChild(diagram, lp, 0)
+            node_ = CheckForTrueNodes(lp, nodes_with_changed_hash, diagram)
+        if len(node.high_parents) + len(node.low_parents) == 0:
+            node.PrintNode('Double True child deleted node:')
+            print(sys.getrefcount(node))
+            print(gc.get_referrers(node))
+            DeleteNodeWithoutParents(node, nodes_with_changed_hash, diagram)
+            print(sys.getrefcount(node))
+            print(gc.get_referrers(node))
+            node.PrintNode('deleted node after deleting:')
+            return 'deleted'
+        else:
+            print('True node still has parents')
+            node.PrintNode()
+            exit()
+    else:
+        return node
+
+
+def AddNodeToParentsOfChilds(new_node, diagram):
     # эта функция нужна при создании новых узлов вне процедуры построения DJD,
     # так как в __init__ нет работы с родителями
+    diagram.actions_with_links_ += len(new_node.high_childs) + len(new_node.low_childs)
     for child in new_node.high_childs:
         child.high_parents.append(new_node)
     for child in new_node.low_childs:
         child.low_parents.append(new_node)
 
 
-def GluingNodes(upper, nodes_with_changed_hash, diagram):
+def GluingNodes(upper, host, nodes_with_changed_hash, diagram):
     nodes_with_changed_hash = DisjunctiveDiagramsBuilder.LitLessSortNodeswrtOrderAndVertex(diagram.order_,
                                                                                            nodes_with_changed_hash)
     new_upper = upper
+    new_host = host
     for node in nodes_with_changed_hash:
         node.HashKey()
         if node.hash_key in diagram.table_ and diagram.table_[node.hash_key] is not node:
             node_to_which_glue = diagram.table_[node.hash_key]
             if node is node_to_which_glue:
                 print('ERROR')
-            print('Glued node', end=' ')
-            node.PrintNode()
-            print('with node', end=' ')
-            node_to_which_glue.PrintNode()
+            # print('Glued node', end=' ')
+            # node.PrintNode()
+            # print('with node', end=' ')
+            # node_to_which_glue.PrintNode()
             if node is upper:
                 new_upper = node_to_which_glue
+            elif node is host:
+                print('Host changed')
+                new_host = node_to_which_glue
             for node_pol in diagram.nonbinary_queue:
                 if node_pol[0] is node:
                     node_pol[0] = node_to_which_glue
-            GluingNode(node, node_to_which_glue)
+            GluingNode(node, node_to_which_glue, diagram)
             del node
             diagram.deleted_nodes_ += 1
         else:
             diagram.table_[node.hash_key] = node
-    return new_upper
+    return new_host, new_upper
 
-def GluingNode(node, node_to_which_glue):
+def GluingNode(node, node_to_which_glue, diagram):
     # заменяем ссылки в родителях
-    ReplaceParentsLinksToNode(node, node_to_which_glue)
+    ReplaceParentsLinksToNode(node, node_to_which_glue, diagram)
     # Удаляем ссылки потомков узла на него
-    DeleteChildsLinksToNode(node)
+    DeleteChildsLinksToNode(node, diagram)
 
 
-def ReplaceParentsLinksToNode(node,node_to_which_glue):
+def ReplaceParentsLinksToNode(node,node_to_which_glue, diagram):
     for parent in node.high_parents:
+        diagram.actions_with_links_ += 1
         parent.high_childs = [x for x in parent.high_childs if x is not node and x is not node_to_which_glue]
         parent.high_childs.append(node_to_which_glue)
         for tmpnode in node_to_which_glue.high_parents:
@@ -673,6 +747,7 @@ def ReplaceParentsLinksToNode(node,node_to_which_glue):
             #print('add as highparent ', (parent.Value(), parent), 'to node', (it_node.Value(), it_node))
             node_to_which_glue.high_parents.append(parent)
     for parent in node.low_parents:
+        diagram.actions_with_links_ += 1
         parent.low_childs = [x for x in parent.low_childs if x is not node and x is not node_to_which_glue]
         parent.low_childs.append(node_to_which_glue)
         for tmpnode in node_to_which_glue.low_parents:
@@ -683,7 +758,8 @@ def ReplaceParentsLinksToNode(node,node_to_which_glue):
             #print('add as lowparent ', (parent.Value(), parent), 'to node', (it_node.Value(), it_node))
 
 
-def DeleteChildsLinksToNode(node):
+def DeleteChildsLinksToNode(node, diagram):
+    diagram.actions_with_links_ += len(node.high_childs) + len(node.low_childs)
     for child in node.high_childs:
         child.high_parents = [x for x in child.high_parents if x is not node]
     for child in node.low_childs:

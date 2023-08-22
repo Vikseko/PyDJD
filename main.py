@@ -93,9 +93,9 @@ if __name__ == '__main__':
         bdd_diagram = BDDiagram(diagram)
         print('Transition to BDD complete.')
         if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:
-            print('ERROR. Number of nonbinary link is', BDDiagram.NonBinaryLinkCount(bdd_diagram))
+            print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())
         else:
-            print('Number of nonbinary link in diagram is', BDDiagram.NonBinaryLinkCount(bdd_diagram))
+            print('Number of nonbinary link in diagram is', bdd_diagram.NonBinaryLinkCount())
         BDDiagram.PrintCurrentTable(bdd_diagram)
         #DrawDiagram(bdd_diagram)
         #after_cnf, tmp_ = GetCNFFromDiagram(bdd_diagram)
@@ -103,6 +103,7 @@ if __name__ == '__main__':
         #after_cnf.to_file('Logs/bdd_convertion_' + options.name + '.cnf', comments = problem_comments)
         print('Number of new nodes (during BDD-transformation):', bdd_diagram.new_nodes_)
         print('Number of deleted nodes (during BDD-transformation):', bdd_diagram.deleted_nodes_)
+        print('Number of actions with links (during BDD-transformation):', bdd_diagram.actions_with_links_)
         print('Number of vertices:'.ljust(30, ' '), len(bdd_diagram.table_))
         print('DiagramNode constructors:'.ljust(30,' '), DiagramNode.constructors_)
         print('DiagramNode destructors:'.ljust(30, ' '), DiagramNode.destructors_)
