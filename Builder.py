@@ -190,6 +190,7 @@ class DisjunctiveDiagramsBuilder:
 
     # Рекурсивное удаление узлов из таблицы от node наверх
     def DeletingNodesFromTable(node, diagram, deleted_nodes):
+        # node.PrintNode('Delete from table:')
         deleted_nodes.add(node)
         if node.hash_key in diagram.table_ and node is not diagram.GetTrueLeaf() and node is not diagram.GetQuestionLeaf():
             del diagram.table_[node.hash_key]

@@ -38,7 +38,7 @@ if __name__ == '__main__':
     before_cnf, tmp_ = GetCNFFromDiagram(diagram)
     before_cnf = CNF(from_clauses=SortClausesInCnf(before_cnf))
     before_cnf.to_file('Logs/' + options.name + '_before.cnf', comments = problem_comments)
-    #DisjunctiveDiagram.PrintCurrentTable(diagram)
+    DisjunctiveDiagram.PrintCurrentTable(diagram)
     #print(diagram.GetRoots())
     current_roots_ = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, diagram.roots_)
     print('Roots:', [str(x.vertex_id) + '_' + str(x.var_id) for x in current_roots_])
@@ -96,7 +96,7 @@ if __name__ == '__main__':
             print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())
         else:
             print('Number of nonbinary link in diagram is', bdd_diagram.NonBinaryLinkCount())
-        BDDiagram.PrintCurrentTable(bdd_diagram)
+        bdd_diagram.PrintCurrentTable('Final BDD table:')
         #DrawDiagram(bdd_diagram)
         #after_cnf, tmp_ = GetCNFFromDiagram(bdd_diagram)
         #after_cnf = CNF(from_clauses=after_cnf)

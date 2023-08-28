@@ -143,12 +143,13 @@ class DiagramNode:
     def PrintNode(self, preamble=''):
         print(preamble,
               'Node:', self.vertex_id,
-              'variable:', self.var_id,
+              'value:', self.Value(),
               'hc:', [(x.vertex_id, x.Value()) for x in self.high_childs],
               'lc:', [(x.vertex_id, x.Value()) for x in self.low_childs],
               'hp:', [(x.vertex_id, x.Value()) for x in self.high_parents] if len(self.high_parents) < 10 else '...',
               'lp:', [(x.vertex_id, x.Value()) for x in self.low_parents] if len(self.low_parents) < 10 else '...',
               self.node_type,
+              self.hash_key,
               self)
 
     def PrintNodeWithoutParents(self):
@@ -276,10 +277,6 @@ class DisjunctiveDiagram:
                   node.node_type,
                   "hc:", [(x.vertex_id,x.Value()) for x in node.high_childs],
                   "lc:", [(x.vertex_id,x.Value()) for x in node.low_childs])
-
-    def __del__(self):
-        for node in self.table_:
-            del node
 
 
 # Функция по элементу ищет в множестве такой же и возвращает его (проверять наличие нужно отдельно)
