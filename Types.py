@@ -33,10 +33,11 @@ class DiagramNode:
         self.vertex_id = DiagramNode.constructors_
         self.hash_key = 0
         self.visited = False
-        self.high_childs = [] if HighChilds == None else sorted(copy.copy(HighChilds), key= lambda x: (x.var_id, x.vertex_id))
-        self.low_childs = [] if LowChilds == None else sorted(copy.copy(LowChilds), key= lambda x: (x.var_id, x.vertex_id))
+        self.high_childs = [] if HighChilds is None else sorted(copy.copy(HighChilds), key=lambda x: (x.var_id, x.vertex_id))
+        self.low_childs = [] if LowChilds is None else sorted(copy.copy(LowChilds), key=lambda x: (x.var_id, x.vertex_id))
         self.high_parents = []
         self.low_parents = []
+        self.deleted = False
         self.HashKey()
         #print('Node',self.Value(), [x.Value() for x in self.high_childs], [x.Value() for x in self.low_childs])
 

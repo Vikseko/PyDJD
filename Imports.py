@@ -7,9 +7,10 @@ import time
 from threading import Timer
 import itertools
 from functools import cmp_to_key
+# from memory_profiler import profile
 
 # if cpython
 from sortedcontainers import SortedSet
 
-#if PyPI
-#from SortedSet.sorted_set import SortedSet
+# if PyPI
+# from SortedSet.sorted_set import SortedSet

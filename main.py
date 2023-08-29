@@ -96,7 +96,7 @@ if __name__ == '__main__':
             print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())
         else:
             print('Number of nonbinary link in diagram is', bdd_diagram.NonBinaryLinkCount())
-        bdd_diagram.PrintCurrentTable('Final BDD table:')
+        # bdd_diagram.PrintCurrentTable('Final BDD table:')
         #DrawDiagram(bdd_diagram)
         #after_cnf, tmp_ = GetCNFFromDiagram(bdd_diagram)
         #after_cnf = CNF(from_clauses=after_cnf)
