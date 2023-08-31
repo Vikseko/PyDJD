@@ -135,15 +135,47 @@ class BDDiagram:
                 print(' Given conflict database is UNSAT.')
         print()
 
-    # def PrintCurrentQueue(self):
-    #     for node_pol in list(self.nonbinary_queue):
-    #         print("\nNode", node_pol[0].vertex_id,
-    #               "var", node_pol[0].Value(),
-    #               node_pol[0].node_type,
-    #               "hc:", [(x.vertex_id, x.Value()) for x in node_pol[0].high_childs],
-    #               "lc:", [(x.vertex_id, x.Value()) for x in node_pol[0].low_childs],
-    #               'polarity', node_pol[1],
-    #               '\n')
+    # Получаем КНФ из диаграммы (все пути из корней в терминальную 'true')
+    def GetCNFFromDiagram(self):
+        cnf = []
+        node_paths = []
+        true_leaf = self.GetTrueLeaf()
+        question_leaf = self.GetQuestionLeaf()
+        for node in true_leaf.high_parents:
+            clause = []
+            clause.append(node.var_id)
+            node_path = []
+            node_path.append(node)
+            self.WritePaths(cnf, node_paths, node_path, clause)
+        for node in true_leaf.low_parents:
+            clause = []
+            clause.append(-node.var_id)
+            node_path = []
+            node_path.append(node)
+            self.WritePaths(cnf, node_paths, node_path, clause)
+        NegateProblem(cnf)
+        return cnf, node_paths
+
+    def WritePaths(self, problem, node_paths, node_path, clause):
+        current_node: DiagramNode = node_path[-1]
+        if current_node.IsRoot():
+            clause.reverse()
+            node_path.reverse()
+            problem.append(clause)
+            node_paths.append(node_path)
+        else:
+            for node in current_node.high_parents:
+                hclause = copy.copy(clause)
+                hnode_path = copy.copy(node_path)
+                hclause.append(node.var_id)
+                hnode_path.append(node)
+                WritePaths(problem, node_paths, hnode_path, hclause)
+            for node in current_node.low_parents:
+                lclause = copy.copy(clause)
+                lnode_path = copy.copy(node_path)
+                lclause.append(-node.var_id)
+                lnode_path.append(node)
+                WritePaths(problem, node_paths, lnode_path, lclause)
 
     # Возвращает размер диаграммы в байтах
     def DiagramSize(self):
@@ -824,6 +856,9 @@ def DeletingNodesFromTable(node, diagram):
             del diagram.table_[node.hash_key]
         for parent in set(node.high_parents + node.low_parents):
             DeletingNodesFromTable(parent, diagram)
+
+
+
 
 
 # def TransferChilds(from_node,upper,to_node,deleted_nodes,candidates_to_deletion,diagram):
