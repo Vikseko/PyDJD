@@ -24,7 +24,7 @@ def ReadProblem(options):
             raise RuntimeError('No maximum variable found, check DIMACS file.')
     order.insert(0, 'true')
     order.insert(0, '?')
-    return problem, order, comments
+    return var_count, problem, order, comments
 
 
 def FrequencyOrder(problem,min_var_num, max_var_num):
@@ -96,6 +96,12 @@ def GetProblemType(str_type):
     else:
         raise RuntimeError('Unknown type of problem')
     return type
+
+
+def WritePathsToFile(paths, filename):
+    with open(filename, 'w') as f:
+        for path in paths:
+            print(*path, sep=' ', file=f)
 
 # Отрицание формулы. Применяется для перехода от КНФ конфликтных баз к ДНФ.
 def NegateProblem(problem):

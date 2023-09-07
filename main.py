@@ -2,7 +2,6 @@ from Builder import *
 from Parser import *
 from Pathfinder import *
 from Redirection import *
-from BDD_converter import *
 
 if __name__ == '__main__':
     start_time = time.time()
@@ -16,7 +15,7 @@ if __name__ == '__main__':
     if (not FileExists(options)):
         raise RuntimeError('File', options.filename, 'doesn\'t exist in directory', options.dir)
     print('Problem:'.ljust(30,' '), options.filename)
-    problem, order, problem_comments = ReadProblem(options)
+    var_count, problem, order, problem_comments = ReadProblem(options)
     if len(order) == 0:
         raise RuntimeError('Order is empty')
     print('Order', order)
@@ -27,7 +26,7 @@ if __name__ == '__main__':
     if (options.source_type == "conflicts" or options.source_type == "cnf"):
         NegateProblem(problem)
     start_build_time = time.time()
-    builder = DisjunctiveDiagramsBuilder(problem, order, GetProblemType(options.source_type))
+    builder = DisjunctiveDiagramsBuilder(var_count, problem, order, GetProblemType(options.source_type))
     diagram = builder.BuildDiagram()
     print('Number of vertices:'.ljust(30,' '), len(diagram.table_))
     print('Number of roots:'.ljust(30,' '), len(diagram.roots_))
@@ -88,6 +87,8 @@ if __name__ == '__main__':
         after_cnf.to_file('Logs/' + options.name + '_djdprep_v2.cnf', comments = problem_comments)
 
     if options.bdd_convert == True:
+        from BDD_converter import *
+        from Test_diagram import *
         start_bdd_time = time.time()
         print('Start \"DJD_to_BDD\" procedure:')
         bdd_diagram = BDDiagram(diagram)
@@ -98,9 +99,14 @@ if __name__ == '__main__':
             print('Number of nonbinary link in diagram is', bdd_diagram.NonBinaryLinkCount())
         # bdd_diagram.PrintCurrentTable('Final BDD table:')
         #DrawDiagram(bdd_diagram)
-        after_cnf, tmp_ = bdd_diagram.GetCNFFromDiagram()
-        after_cnf = CNF(from_clauses=after_cnf)
-        after_cnf.to_file('Logs/' + options.name + '_bdd_convertion.cnf', comments = problem_comments)
+        paths_to_true, tmp_ = bdd_diagram.GetPathsToTrue()
+        WritePathsToFile(paths_to_true, 'Logs/' + options.name + '_bdd_convertion.true_paths')
+        sat_assigments, tmp2_ = bdd_diagram.GetSatAssignmentFromDiagram()
+        WritePathsToFile(sat_assigments, 'Logs/' + options.name + '_bdd_convertion.sat_assignments')
+        bdd_diagram.PrintCurrentTableJSON('Logs/' + options.name + '_bdd_convertion.json')
+        bdd_cnf, tmp3_ = bdd_diagram.GetCNFFromBDD()
+        bdd_cnf = CNF(from_clauses=bdd_cnf)
+        bdd_cnf.to_file('Logs/' + options.name + '_bdd_convertion.cnf', comments = problem_comments)
         print('Number of new nodes (during BDD-transformation):', bdd_diagram.new_nodes_)
         print('Number of deleted nodes (during BDD-transformation):', bdd_diagram.deleted_nodes_)
         print('Number of actions with links (during BDD-transformation):', bdd_diagram.actions_with_links_)
@@ -109,4 +115,14 @@ if __name__ == '__main__':
         print('DiagramNode destructors:'.ljust(30, ' '), DiagramNode.destructors_)
         convert_time = time.time() - start_bdd_time
         print('Conversion time:'.ljust(30, ' '), convert_time)
+        if len(bdd_diagram.table_) > 0:
+            start_testing_time = time.time()
+            print('Start testing BDD.')
+            nof_inputs, false_paths, true_paths = test_bdd(bdd_diagram)
+            print('Total checked inputs:', nof_inputs)
+            print('Number of paths to 1-vertex:', true_paths)
+            print('Number of paths to 0-vertex:', false_paths)
+            testing_time = time.time() - start_testing_time
+            print('Testing time:'.ljust(30, ' '), testing_time)
+
 

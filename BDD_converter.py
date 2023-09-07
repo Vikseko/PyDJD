@@ -39,7 +39,6 @@ class BDDiagram:
         #CleaningDiagram(self)
         EnumerateBDDiagramNodes(self)
 
-
     # Возвращает таблицу
     def GetTable(self):
         return self.table_
@@ -123,7 +122,8 @@ class BDDiagram:
     def PrintCurrentTable(self, preambule=''):
         print('\n', preambule)
         if len(self.table_) > 0:
-            for node in self.table_.values():
+            sorted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodes(self.order_, self.table_.values())
+            for node in sorted_nodes:
                 node.PrintNode()
         else:
             print(' Empty table (all nodes are eliminated).')
@@ -135,12 +135,33 @@ class BDDiagram:
                 print(' Given conflict database is UNSAT.')
         print()
 
+    def PrintCurrentTableJSON(self, filename):
+        if len(self.table_) > 0:
+            table_dict = dict()
+            sorted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodes(self.order_, self.table_.values())
+            for node in sorted_nodes:
+                node_dict = dict()
+                node_dict['variable'] = node.Value()
+                node_dict['high_childs'] = ' '.join([(str(x.vertex_id) + '_' + str(x.Value())) for x in
+                                                               node.high_childs])
+                node_dict['low_childs'] = ' '.join([(str(x.vertex_id) + '_' + str(x.Value())) for x in
+                                                              node.low_childs])
+                node_dict['high_parents'] = ' '.join([(str(x.vertex_id) + '_' + str(x.Value())) for x in
+                                                                node.high_parents])
+                node_dict['low_parents'] = ' '.join([(str(x.vertex_id) + '_' + str(x.Value())) for x in
+                                                               node.low_parents])
+                table_dict[node.vertex_id] = node_dict
+            #json_string = json.dumps(table_dict)
+            with open(filename, 'w') as outfile:
+                json.dump(table_dict, outfile, indent=2)
+        else:
+            print('Cannot dump diagram to json-file, because table is empty.')
+
     # Получаем КНФ из диаграммы (все пути из корней в терминальную 'true')
-    def GetCNFFromDiagram(self):
+    def GetCNFFromBDD(self):
         cnf = []
         node_paths = []
         true_leaf = self.GetTrueLeaf()
-        question_leaf = self.GetQuestionLeaf()
         for node in true_leaf.high_parents:
             clause = []
             clause.append(node.var_id)
@@ -154,6 +175,45 @@ class BDDiagram:
             node_path.append(node)
             self.WritePaths(cnf, node_paths, node_path, clause)
         NegateProblem(cnf)
+        return cnf, node_paths
+
+
+    # Получаем КНФ из диаграммы (все пути из корней в терминальную 'true')
+    def GetPathsToTrue(self):
+        cnf = []
+        node_paths = []
+        true_leaf = self.GetTrueLeaf()
+        for node in true_leaf.high_parents:
+            clause = []
+            clause.append(node.var_id)
+            node_path = []
+            node_path.append(node)
+            self.WritePaths(cnf, node_paths, node_path, clause)
+        for node in true_leaf.low_parents:
+            clause = []
+            clause.append(-node.var_id)
+            node_path = []
+            node_path.append(node)
+            self.WritePaths(cnf, node_paths, node_path, clause)
+        return cnf, node_paths
+
+    # Получаем выполняющие наборы из диаграммы (все пути из корней в терминальную 'question')
+    def GetSatAssignmentFromDiagram(self):
+        cnf = []
+        node_paths = []
+        question_leaf = self.GetQuestionLeaf()
+        for node in question_leaf.high_parents:
+            clause = []
+            clause.append(node.var_id)
+            node_path = []
+            node_path.append(node)
+            self.WritePaths(cnf, node_paths, node_path, clause)
+        for node in question_leaf.low_parents:
+            clause = []
+            clause.append(-node.var_id)
+            node_path = []
+            node_path.append(node)
+            self.WritePaths(cnf, node_paths, node_path, clause)
         return cnf, node_paths
 
     def WritePaths(self, problem, node_paths, node_path, clause):
@@ -612,12 +672,14 @@ def SetTrueChild(diagram, node, polarity):
             child.high_parents = [x for x in child.high_parents if x is not node]
         diagram.actions_with_links_ += 1
         node.high_childs = [diagram.GetTrueLeaf()]
+        diagram.GetTrueLeaf().high_parents.append(node)
     elif polarity == 0:
         for child in node.low_childs:
             diagram.actions_with_links_ += 1
             child.low_parents = [x for x in child.low_parents if x is not node]
         diagram.actions_with_links_ += 1
         node.low_childs = [diagram.GetTrueLeaf()]
+        diagram.GetTrueLeaf().low_parents.append(node)
 
 
 def UngluingNode(original_node, host, polarity, diagram):
@@ -739,7 +801,11 @@ def DeleteNodeWithoutParents(node, diagram):
 def CheckForTrueNodes(node, host, diagram):
     if diagram.GetTrueLeaf() in node.low_childs and \
             diagram.GetTrueLeaf() in node.high_childs:
-        # node.PrintNode('Double True child deleting node:')
+        node.PrintNode('\nDouble True child deleting node:')
+        for parent in node.high_parents:
+            parent.PrintNode('    High parent:')
+        for parent in node.low_parents:
+            parent.PrintNode('    Low parent:')
         for hp in node.high_parents:
             SetTrueChild(diagram, hp, 1)
             node_, host = CheckForTrueNodes(hp, host, diagram)
@@ -752,6 +818,7 @@ def CheckForTrueNodes(node, host, diagram):
             # print(gc.get_referrers(node))
             if node is host:
                 host = 'deleted'
+                print('Host is deleted during True-Nodes Elimination.')
             # for x in diagram.changed_hash_nodes:
             #     x.PrintNode('ChangedHash before 1:')
             DeleteNodeWithoutParents(node, diagram)

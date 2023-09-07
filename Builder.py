@@ -1,9 +1,9 @@
 from Utils import *
 
 
-
 class DisjunctiveDiagramsBuilder:
-    def __init__(self, dnf, order, problem_type):
+    def __init__(self, var_count, dnf, order, problem_type):
+        self.variable_count_ = var_count
         self.problem_ = dnf
         self.order_ = order
         self.lit_less_ = order
@@ -17,6 +17,7 @@ class DisjunctiveDiagramsBuilder:
         diagram_ = DisjunctiveDiagram()
         diagram_.problem_type_ = self.problem_type_
         diagram_.order_ = self.order_
+        diagram_.variable_count_ = self.variable_count_
         ranges = []
         for idx in range(len(self.problem_)):
             self.problem_[idx] = DisjunctiveDiagramsBuilder.LitLessSort(order=self.order_,lits=self.problem_[idx])
