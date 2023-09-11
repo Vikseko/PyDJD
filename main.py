@@ -99,14 +99,15 @@ if __name__ == '__main__':
             print('Number of nonbinary link in diagram is', bdd_diagram.NonBinaryLinkCount())
         # bdd_diagram.PrintCurrentTable('Final BDD table:')
         #DrawDiagram(bdd_diagram)
-        paths_to_true, tmp_ = bdd_diagram.GetPathsToTrue()
-        WritePathsToFile(paths_to_true, 'Logs/' + options.name + '_bdd_convertion.true_paths')
-        sat_assigments, tmp2_ = bdd_diagram.GetSatAssignmentFromDiagram()
-        WritePathsToFile(sat_assigments, 'Logs/' + options.name + '_bdd_convertion.sat_assignments')
-        bdd_diagram.PrintCurrentTableJSON('Logs/' + options.name + '_bdd_convertion.json')
-        bdd_cnf, tmp3_ = bdd_diagram.GetCNFFromBDD()
-        bdd_cnf = CNF(from_clauses=bdd_cnf)
-        bdd_cnf.to_file('Logs/' + options.name + '_bdd_convertion.cnf', comments = problem_comments)
+        if len(bdd_diagram.table_) > 0:
+            paths_to_true, tmp_ = bdd_diagram.GetPathsToTrue()
+            WritePathsToFile(paths_to_true, 'Logs/' + options.name + '_bdd_convertion.true_paths')
+            sat_assigments, tmp2_ = bdd_diagram.GetSatAssignmentsFromDiagram()
+            WritePathsToFile(sat_assigments, 'Logs/' + options.name + '_bdd_convertion.sat_assignments')
+            bdd_diagram.PrintCurrentTableJSON('Logs/' + options.name + '_bdd_convertion.json')
+            bdd_cnf, tmp3_ = bdd_diagram.GetCNFFromBDD()
+            bdd_cnf = CNF(from_clauses=bdd_cnf)
+            bdd_cnf.to_file('Logs/' + options.name + '_bdd_convertion.cnf', comments = problem_comments)
         print('Number of new nodes (during BDD-transformation):', bdd_diagram.new_nodes_)
         print('Number of deleted nodes (during BDD-transformation):', bdd_diagram.deleted_nodes_)
         print('Number of actions with links (during BDD-transformation):', bdd_diagram.actions_with_links_)
@@ -115,7 +116,7 @@ if __name__ == '__main__':
         print('DiagramNode destructors:'.ljust(30, ' '), DiagramNode.destructors_)
         convert_time = time.time() - start_bdd_time
         print('Conversion time:'.ljust(30, ' '), convert_time)
-        if len(bdd_diagram.table_) > 0:
+        if len(bdd_diagram.table_) > 0 and bdd_diagram.variable_count_ < 20:
             start_testing_time = time.time()
             print('Start testing BDD.')
             nof_inputs, false_paths, true_paths = test_bdd(bdd_diagram)

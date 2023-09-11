@@ -198,7 +198,7 @@ class BDDiagram:
         return cnf, node_paths
 
     # Получаем выполняющие наборы из диаграммы (все пути из корней в терминальную 'question')
-    def GetSatAssignmentFromDiagram(self):
+    def GetSatAssignmentsFromDiagram(self):
         cnf = []
         node_paths = []
         question_leaf = self.GetQuestionLeaf()
