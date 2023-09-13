@@ -8,6 +8,36 @@ import gc
 from Types import DiagramNode
 import queue
 
+
+def DJDtoBDD_separated(diagrams):
+    current_diagrams = diagrams
+    while len(current_diagrams) > 1:
+        diagram1 = current_diagrams.pop(0)
+        diagram2 = current_diagrams.pop(0)
+        diagram1.PrintCurrentTable('Diagram1:')
+        diagram2.PrintCurrentTable('Diagram2:')
+        new_diagram = ConjoinDJDs(diagram1,diagram2)
+        new_diagram.PrintCurrentTable('New diagram')
+        exit()
+        new_diagram = DJDtoBDD(new_diagram)
+
+
+def ConjoinDJDs(diagram1, diagram2):
+    # соединяем две диаграммы в одну, чтобы потом избавляться от небинарностей
+    sorted_nodes2 = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram2.order_, diagram2.table_.values())
+    max_vertex = len(diagram1.table_)
+    current_vertex_id = max_vertex+1
+    for node in sorted_nodes2:
+        node.vertex_id = current_vertex_id
+        current_vertex_id += 1
+    DisjunctiveDiagramsBuilder.GluingNodes(sorted_nodes2, diagram1)
+    return diagram1
+
+
+def DJDtoBDD(djddiagram):
+    return BDDiagram(djddiagram)
+
+
 class BDDiagram:
     new_nodes_ = 0
     deleted_nodes_ = 0
@@ -15,7 +45,7 @@ class BDDiagram:
     nonbinary_queue = []
     changed_hash_nodes = set()
     actions_with_links_ = 0
-    def __init__(self,diagram:DisjunctiveDiagram):
+    def __init__(self,diagram):
         self.variable_count_ = diagram.variable_count_
         self.true_path_count_ = diagram.true_path_count_
         self.question_path_count_ = diagram.question_path_count_

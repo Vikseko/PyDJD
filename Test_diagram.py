@@ -1,4 +1,4 @@
-import itertools
+from Imports import *
 
 
 def test_bdd(bdd_diagram):

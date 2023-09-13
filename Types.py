@@ -43,22 +43,24 @@ class DiagramNode:
 
     # Вычисляет хэш узла (выполняется при создании узла)
     def HashKey(self):
-        hashtuple_ = tuple([self.Value()]+sorted([node.hash_key for node in self.high_childs])+sorted([node.hash_key for node in self.low_childs]))
+        hashstr_ = str(self.Value())
+        hashstr_ += ''.join(sorted([str(node.hash_key) for node in self.high_childs]))
+        hashstr_ += ''.join(sorted([str(node.hash_key) for node in self.low_childs]))
         if self.node_type == DiagramNodeType.InternalNode:
-            hashtuple_ = tuple(list(hashtuple_) + ['internal'])
+            hashstr_ = hashstr_ + 'internal'
         elif self.node_type == DiagramNodeType.RootNode:
-            hashtuple_ = tuple(list(hashtuple_) + ['root'])
+            hashstr_ = hashstr_ + 'root'
         elif self.node_type == DiagramNodeType.QuestionNode:
-            hashtuple_ = 'questionnode'
+            hashstr_ = 'questionnode'
         elif self.node_type == DiagramNodeType.TrueNode:
-            hashtuple_ = 'truenode'
+            hashstr_ = 'truenode'
         elif self.node_type == DiagramNodeType.FalseNode:
-            hashtuple_ = 'false'
+            hashstr_ = 'false'
         elif self.node_type == DiagramNodeType.Undefined:
-            hashtuple_ = tuple(list(hashtuple_) + ['undefined'])
-        #print('hk',hashtuple_)
-        #print(hash(hashtuple_))
-        self.hash_key = hash(hashtuple_)
+            hashstr_ = hashstr_ + 'undefined'
+        print('hk',hashstr_)
+        print(hash(hashstr_))
+        self.hash_key = hash(hashstr_)
 
     def __hash__(self):
         return self.hash_key
@@ -169,10 +171,12 @@ class DiagramNode:
 
 # Таблица с узлами диаграммы
 class DisjunctiveDiagram:
-    true_leaf = DiagramNode(DiagramNodeType.TrueNode)
-    #false_leaf = DiagramNode(DiagramNodeType.FalseNode)
-    question_leaf = DiagramNode(DiagramNodeType.QuestionNode)
+    # true_leaf = DiagramNode(DiagramNodeType.TrueNode)
+    # false_leaf = DiagramNode(DiagramNodeType.FalseNode)
+    # question_leaf = DiagramNode(DiagramNodeType.QuestionNode)
     def __init__(self):
+        self.true_leaf = DiagramNode(DiagramNodeType.TrueNode)
+        self.question_leaf = DiagramNode(DiagramNodeType.QuestionNode)
         self.variable_count_ = 0
         self.true_path_count_ = 0
         self.question_path_count_ = 0
@@ -188,11 +192,10 @@ class DisjunctiveDiagram:
         self.table_ = {}
         self.roots_ = set()
         self.var_set_ = set()
-        self.table_[DisjunctiveDiagram.true_leaf.hash_key] = DisjunctiveDiagram.true_leaf
-        self.table_[DisjunctiveDiagram.question_leaf.hash_key] = DisjunctiveDiagram.question_leaf
+        self.table_[self.true_leaf.hash_key] = self.true_leaf
+        self.table_[self.question_leaf.hash_key] = self.question_leaf
         self.copy_redir = 0
         self.uniq_redir = 0
-
 
     # Возвращает таблицу
     def GetTable(self):
@@ -244,15 +247,15 @@ class DisjunctiveDiagram:
 
     # Возвращает терминальный узел ?
     def GetQuestionLeaf(self):
-        return DisjunctiveDiagram.question_leaf
+        return self.question_leaf
 
     # Возвращает терминальный узел 1
     def GetTrueLeaf(self):
-        return DisjunctiveDiagram.true_leaf
+        return self.true_leaf
 
     # Возвращает терминальный узел 0
     def GetFalseLeaf(self):
-        return DisjunctiveDiagram.false_leaf
+        return self.false_leaf
 
     # Возвращается число удаленных узлов изза дупликации потомков (когда потомки совпадают по ребрам разной полярности)
     def DuplicateReducedCount(self):
@@ -267,17 +270,26 @@ class DisjunctiveDiagram:
     # Возвращает размер диаграммы в байтах
     def DiagramSize(self):
         size = 0
-        for node in self.table_:
+        for node in self.table_.values():
             size += node.Size()
         return size
 
-    def PrintCurrentTable(self):
-        for node in self.table_.values():
-            print("Node", node.vertex_id,
-                  "var", node.Value(),
-                  node.node_type,
-                  "hc:", [(x.vertex_id,x.Value()) for x in node.high_childs],
-                  "lc:", [(x.vertex_id,x.Value()) for x in node.low_childs])
+    def PrintCurrentTable(self, preambule=''):
+        print('\n', preambule)
+        if len(self.table_) > 0:
+            sorted_nodes = LitLessSortNodeswrtOrderAndVertex(self.order_, self.table_.values())
+            for node in sorted_nodes:
+                node.PrintNode()
+
+
+def LitLessSortNodeswrtOrderAndVertex(order, nodes):
+    nodes = list(nodes)
+    sorted_nodes = sorted(nodes, key=lambda x: (order.index(x.Value()), -x.vertex_id))
+    return sorted_nodes
+
+
+def myhash(string):
+    pass
 
 
 # Функция по элементу ищет в множестве такой же и возвращает его (проверять наличие нужно отдельно)
@@ -305,3 +317,6 @@ class Options:
         self.redir_paths = False
         self.djd_prep = False
         self.lock_vars = False
+        self.test_bdd_convert = False
+        self.separate_construction = False
+        self.numproc = 1

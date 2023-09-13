@@ -11,7 +11,7 @@ def ReadProblem(options):
     print('Highest variable number:'.ljust(30,' '), max_var_num)
     if options.order_type == 'activity':
         print('Order:'.ljust(30,' '), 'activity')
-        if order == None:
+        if order is None:
             raise RuntimeError('No activity order in DIMACS file')
     elif options.order_type == 'frequency':
         print('Order:'.ljust(30,' '), 'frequency')
@@ -41,15 +41,19 @@ def FrequencyOrder(problem,min_var_num, max_var_num):
     else:
         raise RuntimeError('No minimum and maximum variables found, check DIMACS file.')
 
+
 def ExtractVarSet(problem, var_set):
     pass
+
 
 def ExtractVarCounterMap(problem, var_map):
     pass
 
+
 #Минимальный и максимальный номер переменной
 def GetMinMaxVars(problem, min_var_id, max_var_id):
     pass
+
 
 #азделить путь к папке и имя файла
 def SplitFilename(path):
@@ -61,30 +65,37 @@ def SplitFilename(path):
         filename = ''.join(path.split('\\')[-1])
     return dir,filename
 
+
 #Разделить имя файла на имя и суффикс
 def SplitFileSuffix(filename):
     name = ''.join(filename.split('.')[:-1])
     suffix = ''.join(filename.split('.')[-1])
     return name,suffix
 
+
 #Проверяем существование файла
 def FileExists(options):
     return os.path.isfile(options.path)
+
 
 # Число литералов в формуле
 def GetLiteralCount(problem):
     pass
 
+
 # Размер формулы в памяти
 def GetProblemBinarySize(problem):
     pass
+
 
 # Размер выделенной памяти под формулу
 def GetProblemMemoryAlloc(problem):
     pass
 
+
 def FillVarOrder(problem, order, order_type):
     pass
+
 
 def GetProblemType(str_type):
     if str_type == 'cnf':
@@ -103,11 +114,22 @@ def WritePathsToFile(paths, filename):
         for path in paths:
             print(*path, sep=' ', file=f)
 
+
 # Отрицание формулы. Применяется для перехода от КНФ конфликтных баз к ДНФ.
 def NegateProblem(problem):
     for i in range(len(problem)):
         for j in range(len(problem[i])):
             problem[i][j] *= -1
+
+
+def DivideProblem(problem, nof_vars, order):
+    problems = [[] for x in range(nof_vars)]
+    for clause in problem:
+        clause = sorted(clause, key=lambda x: order.index(abs(x)), reverse=True)
+        problems[abs(clause[0])-1].append(clause)
+    problems = [x for x in problems if len(x) > 0]
+    return problems
+
 
 def ParseOptions(params):
     options = Options()
@@ -124,13 +146,17 @@ def ParseOptions(params):
     options.show_version = params.show_ver
     options.show_options = params.show_options
     options.bdd_convert = False if (params.bdd_convert in [False, 'False', 0, '0']) else True
+    options.test_bdd_convert = False if (params.test_bdd_convert in [False, 'False', 0, '0']) else True
+    options.separate_construction = False if (params.separate_construction in [False, 'False', 0, '0']) else True
     options.redir_paths = False if params.redirpaths in [False, 'False', 0, '0'] else True
     options.djd_prep = False if params.djd_prep in [False, 'False', 0, '0'] else True
     options.lock_vars = False if params.lockvars in [False, 'False', 0, '0'] else True
+    options.numprocess = params.numproc
     return options
 
 def PrintOptions(options):
     print('Options:')
+    print('Number of processes:', options.numprocess)
     print('Full path:', options.path)
     #print('Directory:', options.dir)
     print('Filename:', options.filename)
