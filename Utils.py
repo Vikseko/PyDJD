@@ -144,7 +144,7 @@ def ParseOptions(params):
     options.run_tests = params.runtests
     options.show_statistic = params.show_stats
     options.show_version = params.show_ver
-    options.show_options = params.show_options
+    options.show_options = False if (params.show_options in [False, 'False', 0, '0']) else True
     options.bdd_convert = False if (params.bdd_convert in [False, 'False', 0, '0']) else True
     options.test_bdd_convert = False if (params.test_bdd_convert in [False, 'False', 0, '0']) else True
     options.separate_construction = False if (params.separate_construction in [False, 'False', 0, '0']) else True

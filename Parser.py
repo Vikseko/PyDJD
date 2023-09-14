@@ -35,7 +35,7 @@ def createParser ():
     parser.add_argument('-rt', '--runtests', nargs='?', type=bool, default=False)
     parser.add_argument('-ss', '--show_stats', nargs='?', type=bool, default=False)
     parser.add_argument('-sv', '--show_ver', nargs='?', type=bool, default=False)
-    parser.add_argument ('-so', '--show_options', nargs='?', type=bool, default=False)
+    parser.add_argument ('-so', '--show_options', nargs='?', type=str, default='False')
     parser.add_argument('-bdd', '--bdd_convert', nargs='?', type=str, default='False')
     parser.add_argument('-tbdd', '--test_bdd_convert', nargs='?', type=str, default='False')
     parser.add_argument('-sc', '--separate_construction', nargs='?', type=str, default='False')

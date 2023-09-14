@@ -58,9 +58,11 @@ class DiagramNode:
             hashstr_ = 'false'
         elif self.node_type == DiagramNodeType.Undefined:
             hashstr_ = hashstr_ + 'undefined'
-        print('hk',hashstr_)
-        print(hash(hashstr_))
-        self.hash_key = hash(hashstr_)
+        # print('hk',hashstr_)
+        # print('hash', hash(hashstr_))
+        # print('hash_fnv', hash_fnv(hashstr_))
+        # self.hash_key = hash(hashstr_)
+        self.hash_key = hash_fnv(hashstr_)
 
     def __hash__(self):
         return self.hash_key
@@ -203,6 +205,7 @@ class DisjunctiveDiagram:
 
     # Возвращает множество корней
     def GetRoots(self):
+        self.roots_ = [x for x in self.table_.values() if x.node_type == DiagramNodeType.RootNode]
         return self.roots_
 
     # задаёт корни
@@ -282,14 +285,28 @@ class DisjunctiveDiagram:
                 node.PrintNode()
 
 
+# https://peps.python.org/pep-0456/#current-implementation-with-modified-fnv
+# но с отключенной рандомизацией
+def hash_fnv(p):
+    if len(p) == 0:
+        return 0
+    # bit mask, 2**32-1 or 2**64-1
+    mask = 2 * sys.maxsize + 1
+    x = 1
+    x = (x ^ (ord(p[0]) << 7)) & mask
+    for c in p:
+        x = ((1000003 * x) ^ ord(c)) & mask
+    x = (x ^ len(p)) & mask
+    x = (x ^ 2) & mask
+    if x == -1:
+        x = -2
+    return x
+
+
 def LitLessSortNodeswrtOrderAndVertex(order, nodes):
     nodes = list(nodes)
     sorted_nodes = sorted(nodes, key=lambda x: (order.index(x.Value()), -x.vertex_id))
     return sorted_nodes
-
-
-def myhash(string):
-    pass
 
 
 # Функция по элементу ищет в множестве такой же и возвращает его (проверять наличие нужно отдельно)

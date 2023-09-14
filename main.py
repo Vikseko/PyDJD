@@ -5,7 +5,6 @@ from Redirection import *
 # PYTHONHASHSEED=0 python3 main.py -f ./Tests/SumSimple1+1.cnf -o frequency -s cnf -bdd 1 -tbdd 0 -sc 1 -np 4
 
 if __name__ == '__main__':
-    print('Questionnode hash 1:', hash('questionnode'))
     start_time = time.time()
     print('Start building procedure:')
     parser = createParser()
@@ -31,12 +30,11 @@ if __name__ == '__main__':
     if options.separate_construction:
         diagrams = []
         problems = DivideProblem(problem, var_count, order)
-        p = multiprocessing.Pool(options.numproc)
+        p = multiprocessing.Pool(min(len(problems), options.numprocess))
         jobs = [p.apply_async(CreateDiagram, (var_count, problem, order, GetProblemType(options.source_type))) for
                 problem in problems]
         for job in jobs:
             diagrams.append(job.get())
-        print('Questionnode hash 2:', hash('questionnode'))
         p.close()
         p.join()
         print('Number of diagrams:'.ljust(30, ' '), len(diagrams))
@@ -113,7 +111,6 @@ if __name__ == '__main__':
         from BDD_converter import *
         from Test_diagram import *
         start_bdd_time = time.time()
-        print('Questionnode hash 3:', hash('questionnode'))
         print('Start transition to BDD.')
         if not options.separate_construction:
             bdd_diagram = DJDtoBDD(diagram)
@@ -125,8 +122,7 @@ if __name__ == '__main__':
             # bdd_diagram.PrintCurrentTable('Final BDD table:')
             # DrawDiagram(bdd_diagram)
         else:
-            print('Questionnode hash 4:', hash('questionnode'))
-            bdd_diagram = DJDtoBDD_separated(diagrams)
+            bdd_diagram = DJDtoBDD_separated(diagrams, options.numprocess)
             print('Multiprocessing transition to BDD complete.')
             if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:
                 print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())
@@ -134,14 +130,15 @@ if __name__ == '__main__':
                 print('Number of nonbinary link in diagram is', bdd_diagram.NonBinaryLinkCount())
             # bdd_diagram.PrintCurrentTable('Final BDD table:')
             # DrawDiagram(bdd_diagram)
-        paths_to_true, tmp_ = bdd_diagram.GetPathsToTrue()
-        WritePathsToFile(paths_to_true, 'Logs/' + options.name + '_bdd_convertion.true_paths')
-        sat_assigments, tmp2_ = bdd_diagram.GetSatAssignmentFromDiagram()
-        WritePathsToFile(sat_assigments, 'Logs/' + options.name + '_bdd_convertion.sat_assignments')
-        bdd_diagram.PrintCurrentTableJSON('Logs/' + options.name + '_bdd_convertion.json')
-        bdd_cnf, tmp3_ = bdd_diagram.GetCNFFromBDD()
-        bdd_cnf = CNF(from_clauses=bdd_cnf)
-        bdd_cnf.to_file('Logs/' + options.name + '_bdd_convertion.cnf', comments=problem_comments)
+        if len(bdd_diagram.table_) > 0:
+            paths_to_true, tmp_ = bdd_diagram.GetPathsToTrue()
+            WritePathsToFile(paths_to_true, 'Logs/' + options.name + '_bdd_convertion.true_paths')
+            sat_assigments, tmp2_ = bdd_diagram.GetSatAssignmentFromDiagram()
+            WritePathsToFile(sat_assigments, 'Logs/' + options.name + '_bdd_convertion.sat_assignments')
+            bdd_diagram.PrintCurrentTableJSON('Logs/' + options.name + '_bdd_convertion.json')
+            bdd_cnf, tmp3_ = bdd_diagram.GetCNFFromBDD()
+            bdd_cnf = CNF(from_clauses=bdd_cnf)
+            bdd_cnf.to_file('Logs/' + options.name + '_bdd_convertion.cnf', comments=problem_comments)
         print('Number of new nodes (during BDD-transformation):', bdd_diagram.new_nodes_)
         print('Number of deleted nodes (during BDD-transformation):', bdd_diagram.deleted_nodes_)
         print('Number of actions with links (during BDD-transformation):', bdd_diagram.actions_with_links_)
@@ -150,6 +147,10 @@ if __name__ == '__main__':
         print('DiagramNode destructors:'.ljust(30, ' '), DiagramNode.destructors_)
         convert_time = time.time() - start_bdd_time
         print('Conversion time:'.ljust(30, ' '), convert_time)
+        if len(bdd_diagram.table_) > 0:
+            if 100 >= len(sat_assigments) > 0 and options.source_type == 'cnf':
+                print('\nSAT assignments for initial CNF:')
+                print(*[sorted(x, key=lambda x: abs(x)) for x in sat_assigments], sep='\n')
         if options.test_bdd_convert:
             start_testing_time = time.time()
             print('\nStart testing BDD.')

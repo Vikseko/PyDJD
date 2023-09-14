@@ -2,7 +2,6 @@ from Utils import *
 
 
 def CreateDiagram(var_count, dnf, order, problem_type):
-    print('Questionnode hash 2_:', hash('questionnode'))
     return DisjunctiveDiagramsBuilder(var_count, dnf, order, problem_type).diagram_
 
 
@@ -248,15 +247,18 @@ class DisjunctiveDiagramsBuilder:
     def __del__(self):
         del self
 
-
     def GluingNodes(deleted_nodes, diagram):
         deleted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, deleted_nodes)
         for node in deleted_nodes:
-            node.PrintNode('Before_hash')
+            # node.PrintNode('Before_hash')
             node.HashKey()
-            node.PrintNode('After_hash')
+            # node.PrintNode('After_hash')
             if node.hash_key in diagram.table_ and diagram.table_[node.hash_key] is not node:
                 it_node = diagram.table_[node.hash_key]
+                if type(diagram) != DisjunctiveDiagram:
+                    diagram.actions_with_links_ += len(node.high_childs) + len(node.low_childs)
+                    diagram.actions_with_links_ += len(node.high_parents) + len(node.low_parents)
+                    diagram.deleted_nodes_ += 1
                 if node is it_node:
                     print('ERROR')
                 # print('Glued node',(node.Value(), node),'with node',(it_node.Value(),it_node))

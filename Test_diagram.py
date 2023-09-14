@@ -24,6 +24,7 @@ def test_bdd(bdd_diagram):
         elif result == 0:
             false_paths += 1
         print('Number of checked inputs:', counter, 'true =', true_paths, 'false =', false_paths, end='\r')
+    print()
     return nof_inputs, false_paths, true_paths
 
 
