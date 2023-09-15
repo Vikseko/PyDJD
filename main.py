@@ -46,7 +46,7 @@ if __name__ == '__main__':
         print('Build time:'.ljust(30, ' '), build_time)
         for index, diagram in enumerate(diagrams):
             # diagram.PrintProblem()
-            diagram.PrintCurrentTable('Subdiagram ' + str(index+1) + ':')
+            diagram.PrintCurrentTable('SubDJDiagram ' + str(index+1) + ':')
     else:
         diagram = CreateDiagram(var_count, problem, order, GetProblemType(options.source_type))
         print('Number of vertices:'.ljust(30, ' '), len(diagram.table_))
@@ -113,7 +113,7 @@ if __name__ == '__main__':
         start_bdd_time = time.time()
         print('Start transition to BDD.')
         if not options.separate_construction:
-            bdd_diagram = DJDtoBDD(diagram)
+            bdd_diagram, transform_time_ = DJDtoBDD(diagram)
             print('Transition to BDD complete.')
             if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:
                 print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())

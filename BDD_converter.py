@@ -10,26 +10,42 @@ import queue
 
 
 def DJDtoBDD_separated(diagrams, numproc):
-    current_diagrams = diagrams
+    current_djd_diagrams = diagrams
     counter = 0
     sys.setrecursionlimit(10000)
     iter_times = []
     conjoin_times = []
-    while len(current_diagrams) > 1:
+    subdjd_to_bdd_times = []
+    current_bdd_diagrams = []
+    # переводим каждую поддиаграмму в бдд
+    p = multiprocessing.Pool(min(numproc, len(current_djd_diagrams)))
+    jobs = [p.apply_async(DJDtoBDD, (djd_diagram,)) for djd_diagram in current_djd_diagrams]
+    for job in jobs:
+        new_bdd_diagram, transform_time = job.get()
+        subdjd_to_bdd_times.append(transform_time)
+        current_bdd_diagrams.append(new_bdd_diagram)
+    p.close()
+    p.join()
+    for index, diagram in enumerate(current_bdd_diagrams):
+        # diagram.PrintProblem()
+        diagram.PrintCurrentTable('SubBDDiagram ' + str(index + 1) + ':')
+    # попарно объединяем поддиаграммы пока не останется одна финальная диаграмма
+    while len(current_bdd_diagrams) > 1:
         iter_start_time = time.time()
         counter += 1
         next_iter_diagrams = []
-        if len(current_diagrams) % 2 == 0:
-            diagrams_pairs = list(make_pairs(current_diagrams))
+        current_nof_diagrams = len(current_bdd_diagrams)
+        if len(current_bdd_diagrams) % 2 == 0:
+            diagrams_pairs = list(make_pairs(current_bdd_diagrams))
         else:
-            next_iter_diagrams.append(current_diagrams[-1])
-            current_diagrams = current_diagrams[:-1]
-            diagrams_pairs = list(make_pairs(current_diagrams))
-
+            next_iter_diagrams.append(current_bdd_diagrams[-1])
+            current_bdd_diagrams = current_bdd_diagrams[:-1]
+            diagrams_pairs = list(make_pairs(current_bdd_diagrams))
         p = multiprocessing.Pool(min(numproc, len(diagrams_pairs)))
-        print('Current iteration:', counter)
+        print('\nCurrent iteration:', counter)
         print('Number of processes:', (min(len(diagrams_pairs), numproc)))
-        print('Number of tasks:', len(diagrams_pairs))
+        print('Number of subdiagrams:', current_nof_diagrams)
+        print('Number of tasks (pairs):', len(diagrams_pairs))
         print('Pairs:', diagrams_pairs)
         jobs = [p.apply_async(ConjoinDJDs, (pair[0], pair[1])) for pair in diagrams_pairs]
         conjoin_times_iter = []
@@ -39,20 +55,22 @@ def DJDtoBDD_separated(diagrams, numproc):
             conjoin_times_iter.append(conjoin_time)
         p.close()
         p.join()
-        current_diagrams = next_iter_diagrams
-        # diagram1 = current_diagrams.pop(0)
-        # diagram2 = current_diagrams.pop(0)
+        current_bdd_diagrams = next_iter_diagrams
+        # diagram1 = current_bdd_diagrams.pop(0)
+        # diagram2 = current_bdd_diagrams.pop(0)
         # new_diagram = ConjoinDJDs(diagram1, diagram2)
-        # current_diagrams.append(new_diagram)
+        # current_bdd_diagrams.append(new_diagram)
         iter_time = time.time() - iter_start_time
         iter_times.append(iter_time)
         conjoin_times.append(conjoin_times_iter)
-    final_diagram = current_diagrams[0]
+    final_diagram = current_bdd_diagrams[0]
     final_diagram.PrintCurrentTable('Final table:')
-    print('Times for iterations', iter_times)
-    print('Sum of times for iterations:', sum(iter_times))
-    print('Times for conjoins by iteration:', conjoin_times)
-    print('Sum of times for conjoins by iteration:', sum([sum(x) for x in conjoin_times]))
+    print('Times for initial transformations', [round(x, 3) for x in subdjd_to_bdd_times])
+    print('Sum of times for initial transformations', round(sum(subdjd_to_bdd_times), 3))
+    print('Times for iterations', [round(x, 3) for x in iter_times])
+    print('Sum of times for iterations:', round(sum(iter_times), 3))
+    print('Times for conjoins by iteration:', [[round(y, 3) for y in x] for x in conjoin_times])
+    print('Sum of times for conjoins by iteration:', round(sum([sum(x) for x in conjoin_times]), 3))
     return final_diagram
 
 
@@ -81,13 +99,16 @@ def ConjoinDJDs(diagram1, diagram2):
     DisjunctiveDiagramsBuilder.GluingNodes(sorted_nodes2, diagram1)
     del diagram2
     diagram1.roots_ = diagram1.GetRoots()
-    new_diagram = DJDtoBDD(diagram1)
+    new_diagram, transform_time_ = DJDtoBDD(diagram1)
     conjoin_time = time.time() - conjoin_start_time
     return new_diagram, conjoin_time
 
 
 def DJDtoBDD(djddiagram):
-    return BDDiagram(djddiagram)
+    start_transform_time = time.time()
+    bdd_diagram = BDDiagram(djddiagram)
+    transform_time = time.time() - start_transform_time
+    return bdd_diagram, transform_time
 
 
 class BDDiagram:
@@ -97,7 +118,7 @@ class BDDiagram:
     # changed_hash_nodes = set()
     # actions_with_links_ = 0
     def __init__(self,diagram):
-        print(type(diagram))
+        # print(type(diagram))
         if type(diagram) == DisjunctiveDiagram:
             self.new_nodes_ = 0
             self.deleted_nodes_ = 0
@@ -360,26 +381,26 @@ def BDD_convert(diagram):
     #         node[0].PrintNode('  Node in queue:')
     # сперва надо свести корни к одному. для этого берём корень с наименьшим порядковым номером (относительно order)
     # затем добавляем ему ссылки на каждый другой корень причем и в high_childs и в low_childs
-    print('Initial number of nonbinary links in diagram is', diagram.NonBinaryLinkCount())
-    print('Initial number of nonbinary nodes in diagram is', diagram.NonBinaryNodesCount())
+    # print('Initial number of nonbinary links in diagram is', diagram.NonBinaryLinkCount())
+    # print('Initial number of nonbinary nodes in diagram is', diagram.NonBinaryNodesCount())
     sorted_roots_ = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, diagram.roots_)
-    #sorted_roots2_ = DisjunctiveDiagramsBuilder.LitLessSortNodeswrtOrderAndVertex(diagram.order_, diagram.roots_)
-    print('Sorted Roots', [(x.vertex_id, x.var_id) for x in sorted_roots_])
-    #print('\nTable before roots gluing:')
-    #BDDiagram.PrintCurrentTable(diagram)
+    # sorted_roots2_ = DisjunctiveDiagramsBuilder.LitLessSortNodeswrtOrderAndVertex(diagram.order_, diagram.roots_)
+    # print('Sorted Roots', [(x.vertex_id, x.var_id) for x in sorted_roots_])
+    # print('\nTable before roots gluing:')
+    # diagram.PrintCurrentTable()
     main_root = sorted_roots_[-1]
     for i in range(len(sorted_roots_)-1):
-        print('Connect root', str(sorted_roots_[i].vertex_id) + '_' + str(sorted_roots_[i].var_id),
-              ' to root', str(sorted_roots_[i+1].vertex_id) + '_' + str(sorted_roots_[i+1].var_id))
+        # print('Connect root', str(sorted_roots_[i].vertex_id) + '_' + str(sorted_roots_[i].var_id),
+        #       ' to root', str(sorted_roots_[i+1].vertex_id) + '_' + str(sorted_roots_[i+1].var_id))
         # присоединяем нижний корень к верхнему по двум полярностям
         ConnectRoots(sorted_roots_[i+1], sorted_roots_[i],diagram)
     # теперь diagram.roots_ неправильная, потому что хэши поменялись (бтв, в table всё обновлено), но это и неважно
-    #print('Roots', [(x.vertex_id, x.var_id, x.node_type) for x in diagram.roots_])
+    # print('Roots', [(x.vertex_id, x.var_id, x.node_type) for x in diagram.roots_])
     diagram.main_root_ = main_root
-    print('Main root number:', main_root.vertex_id,'; variable:',main_root.var_id)
-    print('Current number of actions with links', diagram.actions_with_links_)
-    print('Number of nonbinary links in diagram after roots gluing is', diagram.NonBinaryLinkCount())
-    print('Number of nonbinary nodes in diagram after roots gluing is', diagram.NonBinaryNodesCount())
+    # print('Main root number:', main_root.vertex_id,'; variable:',main_root.var_id)
+    # print('Current number of actions with links', diagram.actions_with_links_)
+    # print('Number of nonbinary links in diagram after roots gluing is', diagram.NonBinaryLinkCount())
+    # print('Number of nonbinary nodes in diagram after roots gluing is', diagram.NonBinaryNodesCount())
     # diagram.PrintCurrentTable('\nTable after roots gluing:')
 
     # Теперь вся диаграмма выходит из одного корня.
@@ -387,15 +408,15 @@ def BDD_convert(diagram):
     # и идём снизу вверх. если небинарность мы опустили вниз, то можно дальше убирать её в нижнем узле
     # а не заново строить и сортировать таблицу
     # print('\nAfter roots gluing size of queue (should be 0)', len(diagram.nonbinary_queue))
-    print('Start remove nonbinary links.')
+    # print('Start remove nonbinary links.')
     while diagram.NonBinaryNodesCount() > 0:
-        print('\n\nCurrent number of nonbinary nodes in diagram', diagram.NonBinaryNodesCount())
-        print('Current number of actions with links', diagram.actions_with_links_)
+        # print('\n\nCurrent number of nonbinary nodes in diagram', diagram.NonBinaryNodesCount())
+        # print('Current number of actions with links', diagram.actions_with_links_)
         sorted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodeswrtOrderAndVertex(diagram.order_, diagram.table_.values())
-        print('Current number of nodes', len(sorted_nodes))
-        print('Current number of deleted nodes', diagram.deleted_nodes_)
+        # print('Current number of nodes', len(sorted_nodes))
+        # print('Current number of deleted nodes', diagram.deleted_nodes_)
         first_nonbinary_node, polarity = FindFirstNonbinaryNode(sorted_nodes)
-        print('First nonbinary node', first_nonbinary_node.vertex_id, 'var', first_nonbinary_node.var_id)
+        # print('First nonbinary node', first_nonbinary_node.vertex_id, 'var', first_nonbinary_node.var_id)
         if polarity == 'both':
             diagram.nonbinary_queue.append([first_nonbinary_node, 1])
             diagram.nonbinary_queue.append([first_nonbinary_node, 0])
