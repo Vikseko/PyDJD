@@ -232,6 +232,10 @@ class DisjunctiveDiagram:
     def VertexCount(self):
         return len(self.table_)
 
+    # Возвращает число вершин в диаграмме
+    def LinksCount(self):
+        return sum([len(x.low_childs) + len(x.high_childs) for x in self.table_.values()])
+
     # Возвращает число путей в 1
     def TruePathCount(self):
         return self.true_path_count_

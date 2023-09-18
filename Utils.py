@@ -35,7 +35,7 @@ def FrequencyOrder(problem,min_var_num, max_var_num):
                 counter[abs(lit)] += 1
         counter = list(enumerate(counter))
         counter.sort(key=lambda x:x[1])
-        counter.reverse()
+        # counter.reverse()
         order = [x[0] for x in counter if x[1]>0]
         return order
     else:

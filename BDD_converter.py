@@ -12,7 +12,7 @@ import queue
 def DJDtoBDD_separated(diagrams, numproc):
     current_djd_diagrams = diagrams
     counter = 0
-    sys.setrecursionlimit(10000)
+    sys.setrecursionlimit(100000)
     iter_times = []
     conjoin_times = []
     subdjd_to_bdd_times = []
@@ -42,15 +42,18 @@ def DJDtoBDD_separated(diagrams, numproc):
             current_bdd_diagrams = current_bdd_diagrams[:-1]
             diagrams_pairs = list(make_pairs(current_bdd_diagrams))
         p = multiprocessing.Pool(min(numproc, len(diagrams_pairs)))
-        print('\nCurrent iteration:', counter)
+        print('\n\nCurrent iteration:', counter)
         print('Number of processes:', (min(len(diagrams_pairs), numproc)))
         print('Number of subdiagrams:', current_nof_diagrams)
         print('Number of tasks (pairs):', len(diagrams_pairs))
-        print('Pairs:', diagrams_pairs)
+        # print('Pairs:', diagrams_pairs)
         jobs = [p.apply_async(ConjoinDJDs, (pair[0], pair[1])) for pair in diagrams_pairs]
         conjoin_times_iter = []
         for job in jobs:
             new_diagram, conjoin_time = job.get()
+            print('\n Total number of actions with links to construct new diagram:', new_diagram.actions_with_links_)
+            print(' Number of vertices in a result diagram:', new_diagram.VertexCount())
+            print(' Number of links in a result diagram:', new_diagram.LinksCount())
             next_iter_diagrams.append(new_diagram)
             conjoin_times_iter.append(conjoin_time)
         p.close()
@@ -361,10 +364,12 @@ class BDDiagram:
             size += node.Size()
         return size
 
-
     def __del__(self):
         for node in self.table_:
             del node
+
+    def LinksCount(self):
+        return sum([len(x.low_childs) + len(x.high_childs) for x in self.table_.values()])
 
 
 def EnumerateBDDiagramNodes(diagram):
