@@ -9,7 +9,7 @@ from Types import DiagramNode
 import queue
 
 
-def DJDtoBDD_separated(diagrams, numproc):
+def DJDtoBDD_separated(diagrams, numproc, order):
     current_djd_diagrams = diagrams
     counter = 0
     sys.setrecursionlimit(100000)
@@ -26,11 +26,13 @@ def DJDtoBDD_separated(diagrams, numproc):
         current_bdd_diagrams.append(new_bdd_diagram)
     p.close()
     p.join()
+    current_bdd_diagrams = sorted(current_bdd_diagrams, key=lambda x: order.index(abs(x.main_root_.Value())))
     for index, diagram in enumerate(current_bdd_diagrams):
         # diagram.PrintProblem()
         diagram.PrintCurrentTable('SubBDDiagram ' + str(index + 1) + ':')
     # попарно объединяем поддиаграммы пока не останется одна финальная диаграмма
     while len(current_bdd_diagrams) > 1:
+        current_bdd_diagrams = sorted(current_bdd_diagrams, key=lambda x: order.index(abs(x.main_root_.Value())))
         iter_start_time = time.time()
         counter += 1
         next_iter_diagrams = []

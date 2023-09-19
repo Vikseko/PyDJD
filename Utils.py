@@ -16,6 +16,9 @@ def ReadProblem(options):
     elif options.order_type == 'frequency':
         print('Order:'.ljust(30,' '), 'frequency')
         order = FrequencyOrder(problem,min_var_num,max_var_num)
+    elif options.order_type == 'revfrequency':
+        print('Order:'.ljust(30, ' '), 'reversed frequency')
+        order = ReversedFrequencyOrder(problem, min_var_num, max_var_num)
     elif options.order_type == 'direct':
         print('Order:'.ljust(30,' '), 'direct')
         if max_var_num != 0:
@@ -36,6 +39,21 @@ def FrequencyOrder(problem,min_var_num, max_var_num):
         counter = list(enumerate(counter))
         counter.sort(key=lambda x:x[1])
         # counter.reverse()
+        order = [x[0] for x in counter if x[1]>0]
+        return order
+    else:
+        raise RuntimeError('No minimum and maximum variables found, check DIMACS file.')
+
+
+def ReversedFrequencyOrder(problem,min_var_num, max_var_num):
+    if min_var_num != 0 and max_var_num != 0:
+        counter = [0 for x in range(max_var_num+1)]
+        for clause in problem:
+            for lit in clause:
+                counter[abs(lit)] += 1
+        counter = list(enumerate(counter))
+        counter.sort(key=lambda x:x[1])
+        counter.reverse()
         order = [x[0] for x in counter if x[1]>0]
         return order
     else:

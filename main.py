@@ -119,10 +119,10 @@ if __name__ == '__main__':
                 print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())
             else:
                 print('Number of nonbinary link in diagram is', bdd_diagram.NonBinaryLinkCount())
-            # bdd_diagram.PrintCurrentTable('Final BDD table:')
+            bdd_diagram.PrintCurrentTable('Final table:')
             # DrawDiagram(bdd_diagram)
         else:
-            bdd_diagram = DJDtoBDD_separated(diagrams, options.numprocess)
+            bdd_diagram = DJDtoBDD_separated(diagrams, options.numprocess, order)
             print('Multiprocessing transition to BDD complete.')
             if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:
                 print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())
