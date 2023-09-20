@@ -109,7 +109,7 @@ def ConjoinDJDs(diagram1, diagram2):
     diagram1.roots_ = diagram1.GetRoots()
     new_diagram, transform_time_ = DJDtoBDD(diagram1)
     print('\nDiagram after remove nonbinary:', new_diagram)
-    new_diagram.PrintCurrentTable('Table 4:')
+    new_diagram.PrintCurrentTable('New table:')
     conjoin_time = time.time() - conjoin_start_time
     return new_diagram, conjoin_time
 
@@ -603,7 +603,7 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
     # то мы его должны удалить, а его родителям добавить единицы по соответствующим полярностям
     # причем делать это рекурсивно
     # for x in diagram.changed_hash_nodes:
-    #     x.PrintNode('ChangedHash before:')
+    #     x.PrintNode('\nChangedHash before:')
     upper, host = CheckForTrueNodes(upper, host, diagram)
     # for x in diagram.changed_hash_nodes:
     #     x.PrintNode('ChangedHash after:')
@@ -651,16 +651,16 @@ def RemoveLinkFromHostToLower(diagram, host, lower, polarity):
                 lower.high_parents = [x for x in lower.high_parents if x is not host]
             else:
                 print('ERROR there is no high_parent link from lower to host')
-                exit()
+                raise Exception('ERROR there is no high_parent link from lower to host')
         else:
             print('ERROR polarity is 1, but there is no high_child link from host to lower')
-            exit()
+            raise Exception('ERROR polarity is 1, but there is no high_child link from host to lower')
         # if host_len_childs_before-len(host.high_childs) != 1:
         #     print('ERROR removed more than 1 link from host high childs')
-        #     exit()
+        #     raise Exception('ERROR removed more than 1 link from host high childs')
         # if lower_len_parents_before-len(lower.high_parents) != 1:
         #     print('ERROR removed more than 1 link from lower high parents')
-        #     exit()
+        #     raise Exception('ERROR removed more than 1 link from lower high parents')
     elif polarity == 0:
         if lower in host.low_childs:
             diagram.actions_with_links_ += 1
@@ -670,13 +670,13 @@ def RemoveLinkFromHostToLower(diagram, host, lower, polarity):
                 lower.low_parents = [x for x in lower.low_parents if x is not host]
             else:
                 print('ERROR there is no low_parent link from lower to host')
-                exit()
+                raise Exception('ERROR there is no low_parent link from lower to host')
         else:
             print('ERROR polarity is 0, but there is no low_child link from host to lower')
-            exit()
+            raise Exception('ERROR polarity is 0, but there is no low_child link from host to lower')
     else:
         print('ERROR Host is not None, but polarity not 0 or 1.')
-        exit()
+        raise Exception('ERROR Host is not None, but polarity not 0 or 1.')
     # print('RemoveLinkFromHostToLower after Host:', end=' ')
     # host.PrintNode()
     # print('RemoveLinkFromHostToLower after Lower:', end=' ')
@@ -693,7 +693,7 @@ def CheckNodeForUngluing(diagram, upper, host, polarity):
                 # а у второго только host
                 if host is None:
                     print('ERROR host is None, but try to ungluing')
-                    exit()
+                    raise Exception('ERROR host is None, but try to ungluing')
                 #print('Old upper')
                 #upper.PrintNode()
                 new_upper = UngluingNode(upper, host, polarity, diagram)
@@ -814,14 +814,14 @@ def CheckNonbinaryWithQuestionNode(node, diagram):
             question_leaf.high_parents = [x for x in question_leaf.high_parents if x is not node]
         else:
             print('ERROR exist high_child link "node->?", but not exist reversed parent link')
-            exit()
+            raise Exception('ERROR exist high_child link "node->?", but not exist reversed parent link')
     if len(node.low_childs) > 1 and question_leaf in node.low_childs:
         node.low_childs.remove(question_leaf)
         if node in question_leaf.low_parents:
             question_leaf.low_parents = [x for x in question_leaf.low_parents if x is not node]
         else:
             print('ERROR exist low_child link "node->?", but not exist reversed parent link')
-            exit()
+            raise Exception('ERROR exist low_child link "node->?", but not exist reversed parent link')
 
 
 def SetTrueChild(diagram, node, polarity):
@@ -848,9 +848,9 @@ def UngluingNode(original_node, host, polarity, diagram):
                            original_node.low_childs)
     # и добавляем его в родители детей
     AddNodeToParentsOfChilds(new_node, diagram)
-    if polarity == None:
+    if polarity is None:
         print('ERROR Polarity None when ungluing node')
-        exit()
+        raise Exception('ERROR Polarity None when ungluing node')
     # затем убираем upper из родителей original_node
     # и удаляем ссылку из upper на original_node
     if polarity == 1:
@@ -862,13 +862,13 @@ def UngluingNode(original_node, host, polarity, diagram):
                 host.high_childs = [x for x in host.high_childs if x is not original_node]
             else:
                 print('ERROR ungluing node 1 high (no old upper in host highchilds)')
-                exit()
+                raise Exception('ERROR ungluing node 1 high (no old upper in host highchilds)')
         else:
             print('Old upper high parents:', [(x.vertex_id, x.var_id) for x in original_node.high_parents])
             print('Host', end=' ')
             host.PrintNodeWithoutParents()
             print('ERROR ungluing node 2 high (no host in old upper highparents)')
-            exit()
+            raise Exception('ERROR ungluing node 2 high (no host in old upper highparents)')
     elif polarity == 0:
         if host in original_node.low_parents:
             diagram.actions_with_links_ += 1
@@ -878,10 +878,10 @@ def UngluingNode(original_node, host, polarity, diagram):
                 host.low_childs = [x for x in host.low_childs if x is not original_node]
             else:
                 print('ERROR ungluing node 1 low')
-                exit()
+                raise Exception('ERROR ungluing node 1 low')
         else:
             print('ERROR ungluing node 2 low')
-            exit()
+            raise Exception('ERROR ungluing node 2 low')
 
     # работаем с new_node. добавляем ему host в родители по нужной полярности
     # а host'у добавляем new_node в дети по той же полярности
@@ -895,7 +895,7 @@ def UngluingNode(original_node, host, polarity, diagram):
         host.low_childs.append(new_node)
     else:
         print('ERROR ungluing node no polarity')
-        exit()
+        raise Exception('ERROR ungluing node no polarity')
     # проверка чтобы new_node был где надо
     # print('\nRight after ungluing New node')
     # new_node.PrintNode()
@@ -937,9 +937,14 @@ def DeleteNodeWithoutParents(node, diagram):
             # node.PrintNode('DeleteNodeWithoutParents del node from diagram.changed_hash_nodes')
             # diagram.changed_hash_nodes.remove(node)
             diagram.changed_hash_nodes = set([x for x in diagram.changed_hash_nodes if x is not node])
-            if node in diagram.changed_hash_nodes:
-                print('ERROR node still in diagram.changed_hash_nodes')
-                exit()
+            # дальше идёт проверка остался ли узел в changed_hash_nodes, но она не имеет смысла,
+            # так как самого узла то там нет, а вот его копия вполне может быть
+            # if node in diagram.changed_hash_nodes:
+            #     print('ERROR node still in diagram.changed_hash_nodes')
+            #     node.PrintNode(' Deleting node')
+            #     for node_ in diagram.changed_hash_nodes:
+            #         node_.PrintNode('  Changed hash node:')
+            #     raise Exception('ERROR node still in diagram.changed_hash_nodes')
         # for x in diagram.changed_hash_nodes:
         #     x.PrintNode('ChangedHash after 2:')
         if node in [x[0] for x in diagram.nonbinary_queue]:
@@ -948,7 +953,7 @@ def DeleteNodeWithoutParents(node, diagram):
             diagram.nonbinary_queue = [x for x in diagram.nonbinary_queue if x[0] is not node]
             if node in [x[0] for x in diagram.nonbinary_queue]:
                 print('ERROR node still in diagram.nonbinary_queue')
-                exit()
+                raise Exception('ERROR node still in diagram.nonbinary_queue')
         diagram.deleted_nodes_ += 1
         del node
 
@@ -985,7 +990,7 @@ def CheckForTrueNodes(node, host, diagram):
             return 'deleted', host
         else:
             node.PrintNode('True node still has parents')
-            exit()
+            raise Exception('ERROR True node still has parents')
     else:
         return node, host
 
@@ -1100,7 +1105,10 @@ def DeleteUselessNode(node, diagram):
         diagram.changed_hash_nodes = set([x for x in diagram.changed_hash_nodes if x is not node])
         if node in diagram.changed_hash_nodes:
             print('ERROR node still in diagram.changed_hash_nodes')
-            exit()
+            node.PrintNode(' Deleting node')
+            for node_ in diagram.changed_hash_nodes:
+                node_.PrintNode('  Changed hash node:')
+            raise Exception('ERROR node still in diagram.changed_hash_nodes')
 
     # переносим связь вершины с 1-потомком 1-родителю (у родителя точно 1 потомок по 1-связи, а вот у
     # потомка может быть больше 1 родителя, если это терминальная вершина)
