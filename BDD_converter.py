@@ -951,9 +951,12 @@ def DeleteNodeWithoutParents(node, diagram):
             # опять же сюда lower попадать не должен
             # node.PrintNode('DeleteNodeWithoutParents del node from nonbinary_queue')
             diagram.nonbinary_queue = [x for x in diagram.nonbinary_queue if x[0] is not node]
-            if node in [x[0] for x in diagram.nonbinary_queue]:
-                print('ERROR node still in diagram.nonbinary_queue')
-                raise Exception('ERROR node still in diagram.nonbinary_queue')
+            for node_ in [x[0] for x in diagram.nonbinary_queue]:
+                if node_ is node:
+                    node.PrintNode(' Deleting node')
+                    for node__ in [x[0] for x in diagram.nonbinary_queue]:
+                        node__.PrintNode('  nonbinary_queue node:')
+                    raise Exception('ERROR node still in diagram.nonbinary_queue')
         diagram.deleted_nodes_ += 1
         del node
 
@@ -1103,12 +1106,12 @@ def DeleteUselessNode(node, diagram):
     # удаляем вершину из списка вершин с изменившимся хэшем
     if node in diagram.changed_hash_nodes:
         diagram.changed_hash_nodes = set([x for x in diagram.changed_hash_nodes if x is not node])
-        if node in diagram.changed_hash_nodes:
-            print('ERROR node still in diagram.changed_hash_nodes')
-            node.PrintNode(' Deleting node')
-            for node_ in diagram.changed_hash_nodes:
-                node_.PrintNode('  Changed hash node:')
-            raise Exception('ERROR node still in diagram.changed_hash_nodes')
+        # if node in diagram.changed_hash_nodes:
+        #     print('ERROR node still in diagram.changed_hash_nodes')
+        #     node.PrintNode(' Deleting node')
+        #     for node_ in diagram.changed_hash_nodes:
+        #         node_.PrintNode('  Changed hash node:')
+        #     raise Exception('ERROR node still in diagram.changed_hash_nodes')
 
     # переносим связь вершины с 1-потомком 1-родителю (у родителя точно 1 потомок по 1-связи, а вот у
     # потомка может быть больше 1 родителя, если это терминальная вершина)
