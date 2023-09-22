@@ -457,9 +457,9 @@ def RemoveNonbinaryLink(host, polarity, diagram):
                                                                                       else host.low_childs))
         lower = sorted_childs[0]
         upper = sorted_childs[1]
-        # host.PrintNode('\nCurrent host:')
-        # lower.PrintNode('Current lower:')
-        # upper.PrintNode('Current upper:')
+        host.PrintNode('\nCurrent host:')
+        lower.PrintNode('Current lower:')
+        upper.PrintNode('Current upper:')
         # diagram.PrintCurrentTable('RemoveNonbinaryLink 1 table:')
         host_upper_polarity = ConnectNodesDouble(host, polarity, lower, upper, diagram)
         if host_upper_polarity[2] == 'both':
@@ -670,6 +670,7 @@ def RemoveLinkFromHostToLower(diagram, host, lower, polarity):
                 lower.low_parents = [x for x in lower.low_parents if x is not host]
             else:
                 print('ERROR there is no low_parent link from lower to host')
+                lower.PrintNode(' ERROR lower')
                 raise Exception('ERROR there is no low_parent link from lower to host')
         else:
             print('ERROR polarity is 0, but there is no low_child link from host to lower')
