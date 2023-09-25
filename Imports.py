@@ -10,6 +10,8 @@ import itertools
 from functools import cmp_to_key
 import multiprocessing
 # from memory_profiler import profile
+from statistics import mean, median, variance
+import math
 
 # if cpython
 from sortedcontainers import SortedSet
