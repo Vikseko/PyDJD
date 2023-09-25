@@ -71,7 +71,7 @@ def DJDtoBDD_separated(diagrams, numproc, order):
         iter_times.append(iter_time)
         conjoin_times.append(conjoin_times_iter)
     final_diagram = current_bdd_diagrams[0]
-    final_diagram.EnumerateBDDiagramNodes()
+    EnumerateBDDiagramNodes(final_diagram)
     final_diagram.PrintCurrentTable('Final table:')
     print('Times for initial transformations', [round(x, 3) for x in subdjd_to_bdd_times])
     print('Sum of times for initial transformations', round(sum(subdjd_to_bdd_times), 3))
@@ -107,7 +107,6 @@ def ConjoinDJDs(diagram1, diagram2):
     DisjunctiveDiagramsBuilder.GluingNodes(sorted_nodes2, diagram1)
     # EnumerateBDDiagramNodes(diagram1)
     # print('\n\nDiagram before remove nonbinary:', diagram1)
-    # diagram1.PrintCurrentTable(' Table 3:')
     del diagram2
     diagram1.roots_ = diagram1.GetRoots()
     new_diagram, transform_time_ = DJDtoBDD(diagram1)
@@ -257,6 +256,21 @@ class BDDiagram:
             sorted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodes(self.order_, self.table_.values())
             for node in sorted_nodes:
                 node.PrintNode()
+        else:
+            print(' Empty table (all nodes are eliminated).')
+            if self.problem_type_ == ProblemType.Cnf:
+                print(' CNF is UNSAT.')
+            elif self.problem_type_ == ProblemType.Dnf:
+                print(' DNF is always SAT.')
+            elif self.problem_type_ == ProblemType.Conflict:
+                print(' Given conflict database is UNSAT.')
+        print()
+
+    def PrintCurrentTableWithKey(self, preambule=''):
+        print('\n', preambule)
+        if len(self.table_) > 0:
+            for key, node in self.table_.items():
+                node.PrintNode('  key '+str(key))
         else:
             print(' Empty table (all nodes are eliminated).')
             if self.problem_type_ == ProblemType.Cnf:
@@ -430,12 +444,14 @@ def BDD_convert(diagram):
     # print('Start remove nonbinary links.')
     while diagram.NonBinaryNodesCount() > 0:
         print('\n\nCurrent number of nonbinary nodes in diagram', diagram.NonBinaryNodesCount())
+        print('Current size of diagram:', diagram.VertexCount())
         # print('Current number of actions with links', diagram.actions_with_links_)
         sorted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodeswrtOrderAndVertex(diagram.order_, diagram.table_.values())
         # print('Current number of nodes', len(sorted_nodes))
         # print('Current number of deleted nodes', diagram.deleted_nodes_)
         first_nonbinary_node, polarity = FindFirstNonbinaryNode(sorted_nodes)
         # print('First nonbinary node', first_nonbinary_node.vertex_id, 'var', first_nonbinary_node.var_id)
+        first_nonbinary_node.PrintNode('First nonbinary node:')
         if polarity == 'both':
             diagram.nonbinary_queue.append([first_nonbinary_node, 1])
             diagram.nonbinary_queue.append([first_nonbinary_node, 0])
@@ -444,7 +460,7 @@ def BDD_convert(diagram):
             diagram.nonbinary_queue.append([first_nonbinary_node, polarity])
         # while not BDDiagram.nonbinary_queue.empty():
         while diagram.nonbinary_queue:
-            print('\nCurrent size of queue', len(diagram.nonbinary_queue))
+            # print('\nCurrent size of queue', len(diagram.nonbinary_queue))
             # diagram.PrintCurrentTable('\nCurrent table:')
             host = diagram.nonbinary_queue.pop()
             #host[0].PrintNode('Current host:')
@@ -453,7 +469,8 @@ def BDD_convert(diagram):
             RemoveNonbinaryLink(host[0], host[1], diagram)
             table_sizes.append((diagram.VertexCount()))
 
-    print('Changes of number of vertices in diagram:', table_sizes)
+    if len(table_sizes) < 1000:
+        print('Changes of number of vertices in diagram:', table_sizes)
     if len(table_sizes) > 1:
         print('Number of removed nonbinary links:', len(table_sizes) - 1)
         print('Initial size of diagram:', table_sizes[0])
@@ -504,6 +521,9 @@ def FindFirstNonbinaryNode(sorted_nodes):
 
 def ConnectRoots(upper, lower, diagram):
     # все корни просто соединяем последовательно двойными связями
+    # TODO сделал обработку ситуации "хэш lowera меняется, так как меняется тип, а их таблицы он не удалён
+    #  может быть сработает поглощение деревьев"
+    #  надо проверить
     lower.node_type = DiagramNodeType.InternalNode
     host_upper_polarity = ConnectNodesDouble(None, None, lower, upper, diagram)
 
@@ -513,24 +533,33 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
     # проверяем количество родителей у узла, в которому приклеиваем
     # если больше 1, то нужно будет его расклеивать
     # когда склеиваем корни такой ситуации вообще не должно происходить
-    # print('')
-    # if host is not None:
-    #     host.PrintNode('Current host:')
-    # lower.PrintNode('Current lower:')
-    # upper.PrintNode('Current upper:')
+    print('')
+    if host is not None:
+        host.PrintNode('Current host:')
+        host.HashKey()
+        host.PrintNode('Current host 2:')
+    lower.PrintNode('Current lower:')
+    upper.PrintNode('Current upper:')
     old_upper = upper
     upper = CheckNodeForUngluing(diagram, upper, host, polarity)
-    # if old_upper is not upper:
-    #     upper.PrintNode('New upper:')
+    if old_upper is not upper:
+        upper.PrintNode('New upper:')
 
     # diagram.PrintCurrentTable('ConnectNodesDouble 1 table:')
 
     # удаляем из таблицы всё от upper (включительно) наверх
     diagram.changed_hash_nodes.clear()
     if host is not None:
-        DeletingNodesFromTable(upper, diagram)
+        if old_upper is upper:
+            DeletingNodesFromTable(upper, diagram, False)
+        else:
+            DeletingNodesFromTable(upper, diagram, True)
     else:
-        del diagram.table_[upper.hash_key]
+        # TODO добавил обработку ловера при склейке корней, надо проверить
+        DeletingNodesFromTable(lower, diagram, False)
+        DeletingNodesFromTable(upper, diagram, False)
+        # del diagram.table_[upper.hash_key]
+        # del diagram.table_[lower.hash_key]
 
 
     # diagram.PrintCurrentTable('ConnectNodesDouble 2 table:')
@@ -629,15 +658,23 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
     # for x in diagram.changed_hash_nodes:
     #     x.PrintNode('ChangedHash after:')
 
-
     upper_del = 'deleted'
     # возвращаем всё в таблицу с проверкой на склейку
+    # for node in diagram.changed_hash_nodes:
+    #     node.PrintNode('  Changed hash node:')
     if host is not None:
+        # print('1st')
         host, upper = GluingNodes(upper, host, diagram)
     elif upper is not upper_del:
+        # print('2nd')
+        # TODO добавил обработку ловера при склейке корней, надо проверить
+        # lower.HashKey()
+        # diagram.table_[lower.hash_key] = lower
+        a_, b_ = GluingNodes(None, None, diagram)
         upper.HashKey()
         diagram.table_[upper.hash_key] = upper
-
+    else:
+        a_, b_ = GluingNodes(None, None, diagram)
 
     # diagram.PrintCurrentTable('ConnectNodesDouble 6 table:')
     if upper is not upper_del:
@@ -655,6 +692,8 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
 
     # if type(host) == DiagramNode:
     #     host.PrintNode('After changes host:')
+    #     host.HashKey()
+    #     host.PrintNode('After changes host 2:')
     # else:
     #     print('After changes host:', host)
     # if type(lower) == DiagramNode:
@@ -1056,6 +1095,8 @@ def GluingNodes(upper, host, diagram):
                 print('ERROR')
             # node.PrintNode(' Glued node')
             # node_to_which_glue.PrintNode('    with node')
+            # node_to_which_glue.HashKey()
+            # node_to_which_glue.PrintNode('    with node 2')
             if node is upper:
                 new_upper = node_to_which_glue
             elif node is host:
@@ -1072,6 +1113,7 @@ def GluingNodes(upper, host, diagram):
             diagram.table_[node.hash_key] = node
     return new_host, new_upper
 
+
 def GluingNode(node, node_to_which_glue, diagram):
     # заменяем ссылки в родителях
     ReplaceParentsLinksToNode(node, node_to_which_glue, diagram)
@@ -1079,7 +1121,7 @@ def GluingNode(node, node_to_which_glue, diagram):
     DeleteChildsLinksToNode(node, diagram)
 
 
-def ReplaceParentsLinksToNode(node,node_to_which_glue, diagram):
+def ReplaceParentsLinksToNode(node, node_to_which_glue, diagram):
     for parent in node.high_parents:
         diagram.actions_with_links_ += 1
         parent.high_childs = [x for x in parent.high_childs if x is not node and x is not node_to_which_glue]
@@ -1111,28 +1153,45 @@ def DeleteChildsLinksToNode(node, diagram):
 
 
 # Рекурсивное удаление узлов из таблицы от node наверх
-def DeletingNodesFromTable(node, diagram):
+def DeletingNodesFromTable(node, diagram, copy_flag):
     diagram.changed_hash_nodes.add(node)
-    if node.hash_key in diagram.table_ and \
+    # TODO сделал обработоку ситуации "тут копия uppera уходит во вторую ветку и её родители не удаляются из таблицы
+    #  это потому что копии аппера нет в таблице (потому что хэш у него как у оригинала)"
+    #  надо проверить
+    if ((node.hash_key in diagram.table_) or copy_flag) and \
         node is not diagram.GetTrueLeaf() and \
         node is not diagram.GetQuestionLeaf():
         if diagram.table_[node.hash_key] is node:
             # node.PrintNode('Delete from table:')
             del diagram.table_[node.hash_key]
+        # else:
+            # node.PrintNode('no Delete from table node:')
+            # diagram.table_[node.hash_key].PrintNode('no Delete from table diagram.table_[node.hash_key]:')
         for parent in set(node.high_parents + node.low_parents):
-            DeletingNodesFromTable(parent, diagram)
+            # parent.PrintNode('Delete from table parent:')
+            DeletingNodesFromTable(parent, diagram, False)
+    # else:
+    #     print(1 if node.hash_key in diagram.table_ else 0)
+    #     node.PrintNode('   node now')
+    #     print(node.HashKey_test_())
+    #     diagram.PrintCurrentTableWithKey('    table now')
+    #     print(1 if node is not diagram.GetTrueLeaf() else 0)
+    #     print(1 if node is not diagram.GetQuestionLeaf() else 0)
 
 
 def CleaningDiagram(diagram):
     sorted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodeswrtOrderAndVertex(diagram.order_, diagram.table_.values())
     for node in sorted_nodes:
+        # print(node.Value())
         if len(node.low_childs) > 0 and len(node.high_childs) > 0:
             if node.low_childs[0] is node.high_childs[0]:
                 diagram.changed_hash_nodes.clear()
                 # print('Diagram:', diagram)
                 # diagram.PrintCurrentTable('Table before deletion of useless node')
-                DeletingNodesFromTable(node, diagram)
-                # node.PrintNode('  Delete useless node:')
+                # FIXME делает ахинею с python3 main.py -f ./Tests_summators/SumLogHeight4+4_randinp_1.cnf
+                #  -o direct -s cnf -bdd 1 -tbdd 0 -sc 1 -np 1 > err_sc_np1_direct_sumLH_4+4_noclean.log
+                DeletingNodesFromTable(node, diagram, False)
+                node.PrintNode('  Delete useless node:')
                 DeleteUselessNode(node, diagram)
                 host_, upper_ = GluingNodes(None, None, diagram)
                 # diagram.PrintCurrentTable('Table after deletion of useless node')

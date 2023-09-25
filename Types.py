@@ -22,13 +22,14 @@ class DiagramNode:
     constructors_ = 0
     destructors_ = 0
     destructor_errors_ = 0
+
     def __init__(self, Type:DiagramNodeType, VarId:int = None, HighChilds = None, LowChilds = None):
         DiagramNode.constructors_ += 1
         if type(Type) == DiagramNodeType:
             self.node_type = Type
         else:
             raise Exception('Type of diagram node should be of the following: Undefined, RootNode, InternalNode, FalseNode, QuestionNode, TrueNode')
-        self.var_id = 0 if VarId == None else VarId
+        self.var_id = 0 if VarId is None else VarId
         self.markup_varid = 0
         self.vertex_id = DiagramNode.constructors_
         self.hash_key = 0
@@ -38,8 +39,10 @@ class DiagramNode:
         self.high_parents = []
         self.low_parents = []
         self.deleted = False
+        # self.PrintNode('  create node before haskkey()')
         self.HashKey()
-        #print('Node',self.Value(), [x.Value() for x in self.high_childs], [x.Value() for x in self.low_childs])
+        # self.PrintNode('  create node after haskkey()')
+        # print('Node',self.Value(), [x.Value() for x in self.high_childs], [x.Value() for x in self.low_childs])
 
     # Вычисляет хэш узла (выполняется при создании узла)
     def HashKey(self):
@@ -63,6 +66,29 @@ class DiagramNode:
         # print('hash_fnv', hash_fnv(hashstr_))
         # self.hash_key = hash(hashstr_)
         self.hash_key = hash_fnv(hashstr_)
+
+    # возвращает "реальный" хэш узла
+    def HashKey_test_(self):
+        hashstr_ = str(self.Value())
+        hashstr_ += ''.join(sorted([str(node.hash_key) for node in self.high_childs]))
+        hashstr_ += ''.join(sorted([str(node.hash_key) for node in self.low_childs]))
+        if self.node_type == DiagramNodeType.InternalNode:
+            hashstr_ = hashstr_ + 'internal'
+        elif self.node_type == DiagramNodeType.RootNode:
+            hashstr_ = hashstr_ + 'root'
+        elif self.node_type == DiagramNodeType.QuestionNode:
+            hashstr_ = 'questionnode'
+        elif self.node_type == DiagramNodeType.TrueNode:
+            hashstr_ = 'truenode'
+        elif self.node_type == DiagramNodeType.FalseNode:
+            hashstr_ = 'false'
+        elif self.node_type == DiagramNodeType.Undefined:
+            hashstr_ = hashstr_ + 'undefined'
+        # print('hk',hashstr_)
+        # print('hash', hash(hashstr_))
+        # print('hash_fnv', hash_fnv(hashstr_))
+        # self.hash_key = hash(hashstr_)
+        return hash_fnv(hashstr_)
 
     def __hash__(self):
         return self.hash_key
@@ -155,6 +181,7 @@ class DiagramNode:
               'lp:', [(x.vertex_id, x.Value()) for x in self.low_parents] if len(self.low_parents) < 10 else '...',
               self.node_type,
               self.hash_key,
+              self.HashKey_test_(),
               self)
 
     def PrintNodeWithoutParents(self):
