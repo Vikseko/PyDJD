@@ -2,7 +2,7 @@ from Pathfinder import *
 import pysat
 from pysat.solvers import MapleChrono
 from pysat.formula import CNF
-from Draw import *
+# from Draw import *
 import gc
 
 from Types import DiagramNode
