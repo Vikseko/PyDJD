@@ -123,6 +123,17 @@ if __name__ == '__main__':
             else:
                 print('Number of nonbinary link in diagram is', bdd_diagram.NonBinaryLinkCount())
             bdd_diagram.PrintCurrentTable('Final table:')
+            if len(bdd_diagram.table_sizes) < 1000:
+                print('Changes of number of vertices in diagram:', bdd_diagram.table_sizes)
+            if len(bdd_diagram.table_sizes) > 1:
+                print('Number of removed nonbinary links:', len(bdd_diagram.table_sizes) - 1)
+                print('Initial size of diagram:', bdd_diagram.table_sizes[0])
+                print('Final size of diagram:', bdd_diagram.table_sizes[-1])
+                print('Max size of diagram:', max(bdd_diagram.table_sizes))
+                print('Min size of diagram:', min(bdd_diagram.table_sizes))
+                print('Avg size of diagram:', mean(bdd_diagram.table_sizes))
+                print('Median size of diagram:', median(bdd_diagram.table_sizes))
+                print('Sd of size of diagram:', round(math.sqrt(variance(bdd_diagram.table_sizes)), 2))
             # DrawDiagram(bdd_diagram)
         else:
             bdd_diagram = DJDtoBDD_separated(diagrams, options.numprocess, order)
