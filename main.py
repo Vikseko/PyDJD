@@ -116,6 +116,7 @@ if __name__ == '__main__':
         print('Start transition to BDD.')
         if not options.separate_construction:
             bdd_diagram, transform_time_ = DJDtoBDD(diagram)
+            EnumerateBDDiagramNodes(bdd_diagram)
             print('Transition to BDD complete.')
             if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:
                 print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())
