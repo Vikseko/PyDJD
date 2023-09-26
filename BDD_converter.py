@@ -55,9 +55,6 @@ def DJDtoBDD_separated(diagrams, numproc, order):
         conjoin_times_iter = []
         for job in jobs:
             new_diagram, conjoin_time = job.get()
-            print('\n Total number of actions with links to construct new diagram:', new_diagram.actions_with_links_)
-            print(' Number of vertices in a result diagram:', new_diagram.VertexCount())
-            print(' Number of links in a result diagram:', new_diagram.LinksCount())
             next_iter_diagrams.append(new_diagram)
             conjoin_times_iter.append(conjoin_time)
         p.close()
@@ -89,13 +86,16 @@ def make_pairs(diagrams):
 
 def ConjoinDJDs(diagram1, diagram2):
     conjoin_start_time = time.time()
+    print('\n')
+    print('---------------------------------------------------------------------------------------------')
+    print('Start conjoin two diagrams.')
     # соединяем две диаграммы в одну, чтобы потом избавляться от небинарностей
     sorted_nodes2 = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram2.order_, diagram2.table_.values())
     max_vertex = len(diagram1.table_)
     current_vertex_id = max_vertex+1
-    print('\n\nDiagram 1:', diagram1)
+    # print('\n\nDiagram 1:', diagram1)
     diagram1.PrintCurrentTable('Table 1:')
-    print('\nDiagram 2:', diagram2)
+    # print('\nDiagram 2:', diagram2)
     diagram2.PrintCurrentTable('Table 2:')
     for node in sorted_nodes2:
         node.vertex_id = current_vertex_id
@@ -110,8 +110,22 @@ def ConjoinDJDs(diagram1, diagram2):
     del diagram2
     diagram1.roots_ = diagram1.GetRoots()
     new_diagram, transform_time_ = DJDtoBDD(diagram1)
-    print('\nDiagram after remove nonbinary:', new_diagram)
+    # print('\nDiagram after remove nonbinary:', new_diagram)
     new_diagram.PrintCurrentTable('New table:')
+    print('\n Total number of actions with links to construct new diagram:', new_diagram.actions_with_links_)
+    print(' Number of vertices in a result diagram:', new_diagram.VertexCount())
+    print(' Number of links in a result diagram:', new_diagram.LinksCount(), '\n')
+    if len(new_diagram.table_sizes) < 1000:
+        print('Changes of number of vertices in diagram:', new_diagram.table_sizes)
+    if len(new_diagram.table_sizes) > 1:
+        print('Number of removed nonbinary links:', len(new_diagram.table_sizes) - 1)
+        print('Initial size of diagram:', new_diagram.table_sizes[0])
+        print('Final size of diagram:', new_diagram.table_sizes[-1])
+        print('Max size of diagram:', max(new_diagram.table_sizes))
+        print('Min size of diagram:', min(new_diagram.table_sizes))
+        print('Avg size of diagram:', mean(new_diagram.table_sizes))
+        print('Median size of diagram:', median(new_diagram.table_sizes))
+        print('Sd of size of diagram:', round(math.sqrt(variance(new_diagram.table_sizes)),2))
     conjoin_time = time.time() - conjoin_start_time
     return new_diagram, conjoin_time
 
@@ -134,15 +148,14 @@ class BDDiagram:
         if type(diagram) == DisjunctiveDiagram:
             self.new_nodes_ = 0
             self.deleted_nodes_ = 0
-            self.nonbinary_queue = []
-            self.changed_hash_nodes = set()
             self.actions_with_links_ = 0
         else:
             self.new_nodes_ = diagram.new_nodes_
             self.deleted_nodes_ = diagram.deleted_nodes_
-            self.nonbinary_queue = []
-            self.changed_hash_nodes = set()
             self.actions_with_links_ = diagram.actions_with_links_
+        self.table_sizes = []
+        self.nonbinary_queue = []
+        self.changed_hash_nodes = set()
         self.variable_count_ = diagram.variable_count_
         self.true_path_count_ = diagram.true_path_count_
         self.question_path_count_ = diagram.question_path_count_
@@ -428,8 +441,7 @@ def BDD_convert(diagram):
     # теперь diagram.roots_ неправильная, потому что хэши поменялись (бтв, в table всё обновлено), но это и неважно
     # print('Roots', [(x.vertex_id, x.var_id, x.node_type) for x in diagram.roots_])
     diagram.main_root_ = main_root
-    table_sizes = []
-    table_sizes.append((diagram.VertexCount()))
+    diagram.table_sizes.append((diagram.VertexCount()))
     # print('Main root number:', main_root.vertex_id,'; variable:',main_root.var_id)
     # print('Current number of actions with links', diagram.actions_with_links_)
     # print('Number of nonbinary links in diagram after roots gluing is', diagram.NonBinaryLinkCount())
@@ -443,15 +455,15 @@ def BDD_convert(diagram):
     # print('\nAfter roots gluing size of queue (should be 0)', len(diagram.nonbinary_queue))
     # print('Start remove nonbinary links.')
     while diagram.NonBinaryNodesCount() > 0:
-        print('\n\nCurrent number of nonbinary nodes in diagram', diagram.NonBinaryNodesCount())
-        print('Current size of diagram:', diagram.VertexCount())
+        # print('\n\nCurrent number of nonbinary nodes in diagram', diagram.NonBinaryNodesCount())
+        # print('Current size of diagram:', diagram.VertexCount())
         # print('Current number of actions with links', diagram.actions_with_links_)
         sorted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodeswrtOrderAndVertex(diagram.order_, diagram.table_.values())
         # print('Current number of nodes', len(sorted_nodes))
         # print('Current number of deleted nodes', diagram.deleted_nodes_)
         first_nonbinary_node, polarity = FindFirstNonbinaryNode(sorted_nodes)
         # print('First nonbinary node', first_nonbinary_node.vertex_id, 'var', first_nonbinary_node.var_id)
-        first_nonbinary_node.PrintNode('First nonbinary node:')
+        # first_nonbinary_node.PrintNode('First nonbinary node:')
         if polarity == 'both':
             diagram.nonbinary_queue.append([first_nonbinary_node, 1])
             diagram.nonbinary_queue.append([first_nonbinary_node, 0])
@@ -467,19 +479,7 @@ def BDD_convert(diagram):
             #print('Polarity:', host[1])
             # BDDiagram.PrintCurrentQueue(diagram)
             RemoveNonbinaryLink(host[0], host[1], diagram)
-            table_sizes.append((diagram.VertexCount()))
-
-    if len(table_sizes) < 1000:
-        print('Changes of number of vertices in diagram:', table_sizes)
-    if len(table_sizes) > 1:
-        print('Number of removed nonbinary links:', len(table_sizes) - 1)
-        print('Initial size of diagram:', table_sizes[0])
-        print('Final size of diagram:', table_sizes[-1])
-        print('Max size of diagram:', max(table_sizes))
-        print('Min size of diagram:', min(table_sizes))
-        print('Avg size of diagram:', mean(table_sizes))
-        print('Median size of diagram:', median(table_sizes))
-        print('Sd of size of diagram:', round(math.sqrt(variance(table_sizes)),2))
+            diagram.table_sizes.append((diagram.VertexCount()))
     #diagram.PrintCurrentTable('Table after BDD transformation:')
     #print('\nEnd size of queue (should be 0)', len(diagram.nonbinary_queue))
 
@@ -521,9 +521,6 @@ def FindFirstNonbinaryNode(sorted_nodes):
 
 def ConnectRoots(upper, lower, diagram):
     # все корни просто соединяем последовательно двойными связями
-    # TODO сделал обработку ситуации "хэш lowera меняется, так как меняется тип, а их таблицы он не удалён
-    #  может быть сработает поглощение деревьев"
-    #  надо проверить
     lower.node_type = DiagramNodeType.InternalNode
     host_upper_polarity = ConnectNodesDouble(None, None, lower, upper, diagram)
 
@@ -533,17 +530,17 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
     # проверяем количество родителей у узла, в которому приклеиваем
     # если больше 1, то нужно будет его расклеивать
     # когда склеиваем корни такой ситуации вообще не должно происходить
-    print('')
-    if host is not None:
-        host.PrintNode('Current host:')
-        host.HashKey()
-        host.PrintNode('Current host 2:')
-    lower.PrintNode('Current lower:')
-    upper.PrintNode('Current upper:')
+    # print('')
+    # if host is not None:
+    #     host.PrintNode('Current host:')
+    #     host.HashKey()
+    #     host.PrintNode('Current host 2:')
+    # lower.PrintNode('Current lower:')
+    # upper.PrintNode('Current upper:')
     old_upper = upper
     upper = CheckNodeForUngluing(diagram, upper, host, polarity)
-    if old_upper is not upper:
-        upper.PrintNode('New upper:')
+    # if old_upper is not upper:
+    #     upper.PrintNode('New upper:')
 
     # diagram.PrintCurrentTable('ConnectNodesDouble 1 table:')
 
@@ -555,7 +552,6 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
         else:
             DeletingNodesFromTable(upper, diagram, True)
     else:
-        # TODO добавил обработку ловера при склейке корней, надо проверить
         DeletingNodesFromTable(lower, diagram, False)
         DeletingNodesFromTable(upper, diagram, False)
         # del diagram.table_[upper.hash_key]
@@ -667,7 +663,6 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
         host, upper = GluingNodes(upper, host, diagram)
     elif upper is not upper_del:
         # print('2nd')
-        # TODO добавил обработку ловера при склейке корней, надо проверить
         # lower.HashKey()
         # diagram.table_[lower.hash_key] = lower
         a_, b_ = GluingNodes(None, None, diagram)
@@ -1155,9 +1150,6 @@ def DeleteChildsLinksToNode(node, diagram):
 # Рекурсивное удаление узлов из таблицы от node наверх
 def DeletingNodesFromTable(node, diagram, copy_flag):
     diagram.changed_hash_nodes.add(node)
-    # TODO сделал обработоку ситуации "тут копия uppera уходит во вторую ветку и её родители не удаляются из таблицы
-    #  это потому что копии аппера нет в таблице (потому что хэш у него как у оригинала)"
-    #  надо проверить
     if ((node.hash_key in diagram.table_) or copy_flag) and \
         node is not diagram.GetTrueLeaf() and \
         node is not diagram.GetQuestionLeaf():
@@ -1188,10 +1180,8 @@ def CleaningDiagram(diagram):
                 diagram.changed_hash_nodes.clear()
                 # print('Diagram:', diagram)
                 # diagram.PrintCurrentTable('Table before deletion of useless node')
-                # FIXME делает ахинею с python3 main.py -f ./Tests_summators/SumLogHeight4+4_randinp_1.cnf
-                #  -o direct -s cnf -bdd 1 -tbdd 0 -sc 1 -np 1 > err_sc_np1_direct_sumLH_4+4_noclean.log
                 DeletingNodesFromTable(node, diagram, False)
-                node.PrintNode('  Delete useless node:')
+                # node.PrintNode('  Delete useless node:')
                 DeleteUselessNode(node, diagram)
                 host_, upper_ = GluingNodes(None, None, diagram)
                 # diagram.PrintCurrentTable('Table after deletion of useless node')
@@ -1208,26 +1198,34 @@ def DeleteUselessNode(node, diagram):
         #         node_.PrintNode('  Changed hash node:')
         #     raise Exception('ERROR node still in diagram.changed_hash_nodes')
 
-    # переносим связь вершины с 1-потомком 1-родителю (у родителя точно 1 потомок по 1-связи, а вот у
-    # потомка может быть больше 1 родителя, если это терминальная вершина)
-    node.high_childs[0].high_parents = [x for x in node.high_childs[0].high_parents if x is not node]
-    for hp in node.high_parents:
-        # node.high_parents[0].PrintNode('   high parent before')
-        # node.high_childs[0].PrintNode('   high child before')
-        hp.high_childs[0] = node.high_childs[0]
-        node.high_childs[0].high_parents.append(hp)
-        # node.high_parents[0].PrintNode('   high parent after')
-        # node.high_childs[0].PrintNode('   high child after')
+    # удаляем связи детей с узлом
+    child = node.high_childs[0]
+    child.high_parents = [x for x in child.high_parents if x is not node]
+    child.low_parents = [x for x in child.low_parents if x is not node]
+    if node.node_type == DiagramNodeType.RootNode:
+        DeletingNodesFromTable(child, diagram, False)
+        child.node_type = DiagramNodeType.RootNode
+        child.HashKey()
+        diagram.table_[child.hash_key] = child
+    else:
+        # переносим связь вершины с 1-потомком 1-родителю (у родителя точно 1 потомок по 1-связи, а вот у
+        # потомка может быть больше 1 родителя, если это терминальная вершина)
+        for hp in node.high_parents:
+            # node.high_parents[0].PrintNode('   high parent before')
+            # node.high_childs[0].PrintNode('   high child before')
+            hp.high_childs[0] = node.high_childs[0]
+            node.high_childs[0].high_parents.append(hp)
+            # node.high_parents[0].PrintNode('   high parent after')
+            # node.high_childs[0].PrintNode('   high child after')
 
-    # переносим связь вершины с 0-потомком 0-родителю
-    node.low_childs[0].low_parents = [x for x in node.low_childs[0].low_parents if x is not node]
-    for lp in node.low_parents:
-        # node.low_parents[0].PrintNode('   low parent before')
-        # node.low_childs[0].PrintNode('   low child before')
-        lp.low_childs[0] = node.low_childs[0]
-        node.low_childs[0].low_parents.append(lp)
-        # node.low_parents[0].PrintNode('   low parent after')
-        # node.low_childs[0].PrintNode('   low child after')
+        # переносим связь вершины с 0-потомком 0-родителю
+        for lp in node.low_parents:
+            # node.low_parents[0].PrintNode('   low parent before')
+            # node.low_childs[0].PrintNode('   low child before')
+            lp.low_childs[0] = node.low_childs[0]
+            node.low_childs[0].low_parents.append(lp)
+            # node.low_parents[0].PrintNode('   low parent after')
+            # node.low_childs[0].PrintNode('   low child after')
 
     del node
 

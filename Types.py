@@ -1,5 +1,6 @@
 from Imports import *
 
+
 # Тип узла диаграммы
 class DiagramNodeType(Enum):
     Undefined = 1

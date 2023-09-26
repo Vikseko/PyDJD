@@ -9,9 +9,9 @@ from threading import Timer
 import itertools
 from functools import cmp_to_key
 import multiprocessing
-# from memory_profiler import profile
 from statistics import mean, median, variance
 import math
+# from memory_profiler import profile
 
 # if cpython
 from sortedcontainers import SortedSet

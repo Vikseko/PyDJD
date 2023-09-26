@@ -128,7 +128,6 @@ if __name__ == '__main__':
                 print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())
             else:
                 print('Number of nonbinary link in diagram is', bdd_diagram.NonBinaryLinkCount())
-            # bdd_diagram.PrintCurrentTable('Final BDD table:')
             # DrawDiagram(bdd_diagram)
         if len(bdd_diagram.table_) > 0:
             paths_to_true, tmp_ = bdd_diagram.GetPathsToTrue()
