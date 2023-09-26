@@ -111,7 +111,7 @@ if __name__ == '__main__':
 
     if options.bdd_convert:
         from BDD_converter import *
-        from Test_diagram import *
+        # from Test_diagram import *
         start_bdd_time = time.time()
         print('Start transition to BDD.')
         if not options.separate_construction:
