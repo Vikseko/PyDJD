@@ -7,7 +7,7 @@ from Redirection import *
 if __name__ == '__main__':
     start_time = time.time()
     if not os.path.isdir('./Logs/'):
-        os.makedir('./Logs/')
+        os.mkdir('./Logs/')
     print('Start building procedure:')
     parser = createParser()
     options = ParseOptions(parser.parse_args(sys.argv[1:]))
