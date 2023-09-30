@@ -33,9 +33,11 @@ def DJDtoBDD_separated(diagrams, numproc, order):
     # попарно объединяем поддиаграммы пока не останется одна финальная диаграмма
     while len(current_bdd_diagrams) > 1:
         current_bdd_diagrams = sorted(current_bdd_diagrams, key=lambda x: order.index(abs(x.main_root_.Value())))
-        print('order:', order)
-        print('sorted diagrams by roots:', [x.main_root_.Value() for x in current_bdd_diagrams])
-        print('sizes of diagrams:', [x.DiagramSize() for x in current_bdd_diagrams])
+        # print('order:', order)
+        # print('sorted diagrams by roots:', [x.main_root_.Value() for x in current_bdd_diagrams])
+        roots_sorted_diagrams = [x.main_root_.Value() for x in current_bdd_diagrams]
+        # print('sizes of diagrams:', [x.DiagramSize() for x in current_bdd_diagrams])
+        sizes_of_diagrams = [x.DiagramSize() for x in current_bdd_diagrams]
         iter_start_time = time.time()
         counter += 1
         next_iter_diagrams = []
@@ -51,6 +53,9 @@ def DJDtoBDD_separated(diagrams, numproc, order):
         print('Number of processes:', (min(len(diagrams_pairs), numproc)))
         print('Number of subdiagrams:', current_nof_diagrams)
         print('Number of tasks (pairs):', len(diagrams_pairs))
+        print('Order:', order)
+        print('Sorted diagrams by roots:', roots_sorted_diagrams)
+        print('Sizes of diagrams:', sizes_of_diagrams)
         # print('Pairs:', diagrams_pairs)
         jobs = [p.apply_async(ConjoinDJDs, (pair[0], pair[1])) for pair in diagrams_pairs]
         conjoin_times_iter = []
