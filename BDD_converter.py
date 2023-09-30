@@ -35,6 +35,7 @@ def DJDtoBDD_separated(diagrams, numproc, order):
         current_bdd_diagrams = sorted(current_bdd_diagrams, key=lambda x: order.index(abs(x.main_root_.Value())))
         print('order:', order)
         print('sorted diagrams by roots:', [x.main_root_.Value() for x in current_bdd_diagrams])
+        print('sizes of diagrams:', [x.DiagramSize() for x in current_bdd_diagrams])
         iter_start_time = time.time()
         counter += 1
         next_iter_diagrams = []
@@ -398,10 +399,7 @@ class BDDiagram:
 
     # Возвращает размер диаграммы в байтах
     def DiagramSize(self):
-        size = 0
-        for node in self.table_:
-            size += node.Size()
-        return size
+        return len(self.table_)
 
     def __del__(self):
         for node in self.table_:

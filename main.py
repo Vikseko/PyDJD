@@ -161,10 +161,12 @@ if __name__ == '__main__':
         convert_time = time.time() - start_bdd_time
         print('Conversion time:'.ljust(30, ' '), convert_time)
         if len(bdd_diagram.table_) > 0:
-            if 100 >= len(sat_assigments) > 0 and options.source_type == 'cnf':
+            if 10000 >= len(sat_assigments) > 0 and options.source_type == 'cnf':
                 print('\nSAT assignments for initial CNF:')
-                print(*[sorted(x, key=lambda x: abs(x)) for x in sat_assigments], sep='\n')
+                for sat_assigment in sat_assigments:
+                    print('Satisfiable assignment:', sorted(sat_assigment, key=lambda x: abs(x)))
         if options.test_bdd_convert:
+            from Test_diagram import *
             start_testing_time = time.time()
             print('\nStart testing BDD.')
             nof_inputs, false_paths, true_paths = test_bdd(bdd_diagram)

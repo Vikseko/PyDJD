@@ -29,11 +29,12 @@ def test_bdd(bdd_diagram):
 
 
 def check_input(current_input, bdd_diagram):
+    # print('Current input:', current_input)
     root = bdd_diagram.main_root_
     current_node = root
     i = 0
     while i < len(current_input) + 1:
-        # print('\nCurrent node:', current_node.Value())
+        # current_node.PrintNode('Current node:')
         if current_node.Value() == '?':
             return 0
         elif current_node.Value() == 'true':
@@ -44,7 +45,12 @@ def check_input(current_input, bdd_diagram):
                 current_node = current_node.low_childs[0]
             else:
                 current_node = current_node.high_childs[0]
-            i += 1
+            i_step = 1
+            if current_node.Value() != '?' and current_node.Value() != 'true':
+                while abs(current_input[i+i_step]) != current_node.Value():
+                    # print(current_input[i+i_step], current_node.Value())
+                    i_step += 1
+            i += i_step
         else:
             print('ERROR', '\nCurrent node var:', current_node.Value(), '\nInput variable:', current_input[i])
             exit()
