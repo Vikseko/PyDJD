@@ -137,10 +137,13 @@ def ConjoinDJDs(diagram1, diagram2):
 
 
 def DJDtoBDD(djddiagram):
-    start_transform_time = time.time()
-    bdd_diagram = BDDiagram(djddiagram)
-    transform_time = time.time() - start_transform_time
-    return bdd_diagram, transform_time
+    try:
+        start_transform_time = time.time()
+        bdd_diagram = BDDiagram(djddiagram)
+        transform_time = time.time() - start_transform_time
+        return bdd_diagram, transform_time
+    except Exception as ex:
+        print('ERROR', ex)
 
 
 class BDDiagram:
