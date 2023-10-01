@@ -54,7 +54,6 @@ def DJDtoBDD_separated(diagrams, numproc, order):
             next_iter_diagrams.append(current_bdd_diagrams[-1])
             current_bdd_diagrams = current_bdd_diagrams[:-1]
             diagrams_pairs = list(make_pairs(current_bdd_diagrams))
-        p = multiprocessing.Pool(min(numproc, len(diagrams_pairs)))
         print('\n\nCurrent iteration:', counter)
         print('Number of processes:', (min(len(diagrams_pairs), numproc)))
         print('Number of subdiagrams:', current_nof_diagrams)
@@ -70,6 +69,7 @@ def DJDtoBDD_separated(diagrams, numproc, order):
                 next_iter_diagrams.append(new_diagram)
                 conjoin_times_iter.append(conjoin_time)
         else:
+            p = multiprocessing.Pool(min(numproc, len(diagrams_pairs)))
             jobs = [p.apply_async(ConjoinBDDs, (pair[0], pair[1])) for pair in diagrams_pairs]
             for job in jobs:
                 new_diagram, conjoin_time = job.get()
