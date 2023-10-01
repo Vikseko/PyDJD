@@ -112,10 +112,10 @@ def ConjoinBDDs(diagram1, diagram2):
         sorted_nodes2 = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram2.order_, diagram2.table_.values())
         max_vertex = len(diagram1.table_)
         current_vertex_id = max_vertex+1
-        # print('\n\nDiagram 1:', diagram1)
-        diagram1.PrintCurrentTable('Table 1:')
-        # print('\nDiagram 2:', diagram2)
-        diagram2.PrintCurrentTable('Table 2:')
+        print('\nSize of diagram 1:', diagram1.VertexCount())
+        print('Size of diagram 2:', diagram2.VertexCount())
+        # diagram1.PrintCurrentTable('Table 1:')
+        # diagram2.PrintCurrentTable('Table 2:')
         for node in sorted_nodes2:
             node.vertex_id = current_vertex_id
             current_vertex_id += 1
@@ -130,7 +130,8 @@ def ConjoinBDDs(diagram1, diagram2):
         diagram1.roots_ = diagram1.GetRoots()
         new_diagram, transform_time_ = DJDtoBDD(diagram1)
         # print('\nDiagram after remove nonbinary:', new_diagram)
-        new_diagram.PrintCurrentTable('New table:')
+        print('Size of result diagram:', new_diagram.VertexCount())
+        # new_diagram.PrintCurrentTable('New table:')
         print('\n Total number of actions with links to construct new diagram:', new_diagram.actions_with_links_)
         print(' Number of vertices in a result diagram:', new_diagram.VertexCount())
         print(' Number of links in a result diagram:', new_diagram.LinksCount(), '\n')
