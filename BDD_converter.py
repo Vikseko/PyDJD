@@ -149,8 +149,8 @@ def ConjoinBDDs(diagram1, diagram2):
         conjoin_time = time.time() - conjoin_start_time
         return new_diagram, conjoin_time
     except Exception as ex:
-        print('ERROR', ex)
-        raise Exception('ERROR ConjoinBDDs')
+        print('ERROR ConjoinBDDs', ex)
+        raise ex
 
 
 def DJDtoBDD(djddiagram):
@@ -160,8 +160,8 @@ def DJDtoBDD(djddiagram):
         transform_time = time.time() - start_transform_time
         return bdd_diagram, transform_time
     except Exception as ex:
-        print('ERROR', ex)
-        raise Exception('ERROR DJDtoBDD')
+        print('ERROR DJDtoBDD', ex)
+        raise ex
 
 
 class BDDiagram:
