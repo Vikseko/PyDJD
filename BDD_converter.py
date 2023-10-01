@@ -109,6 +109,10 @@ def ConjoinBDDs(diagram1, diagram2):
         conjoin_start_time = time.time()
         print('\n')
         print('---------------------------------------------------------------------------------------------')
+        if os.fork():
+            print('I\'m parent process, PID', os.getpid())
+        else:
+            print('I\'m child process, PID', os.getpid())
         print('Start conjoin two diagrams.')
         # соединяем две диаграммы в одну, чтобы потом избавляться от небинарностей
         sorted_nodes2 = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram2.order_, diagram2.table_.values())
