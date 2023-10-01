@@ -18,14 +18,20 @@ def DJDtoBDD_separated(diagrams, numproc, order):
     subdjd_to_bdd_times = []
     current_bdd_diagrams = []
     # переводим каждую поддиаграмму в бдд
-    p = multiprocessing.Pool(min(numproc, len(current_djd_diagrams)))
-    jobs = [p.apply_async(DJDtoBDD, (djd_diagram,)) for djd_diagram in current_djd_diagrams]
-    for job in jobs:
-        new_bdd_diagram, transform_time = job.get()
-        subdjd_to_bdd_times.append(transform_time)
-        current_bdd_diagrams.append(new_bdd_diagram)
-    p.close()
-    p.join()
+    if numproc == 1:
+        for djd_diagram in current_djd_diagrams:
+            new_bdd_diagram, transform_time = DJDtoBDD(djd_diagram)
+            subdjd_to_bdd_times.append(transform_time)
+            current_bdd_diagrams.append(new_bdd_diagram)
+    else:
+        p = multiprocessing.Pool(min(numproc, len(current_djd_diagrams)))
+        jobs = [p.apply_async(DJDtoBDD, (djd_diagram,)) for djd_diagram in current_djd_diagrams]
+        for job in jobs:
+            new_bdd_diagram, transform_time = job.get()
+            subdjd_to_bdd_times.append(transform_time)
+            current_bdd_diagrams.append(new_bdd_diagram)
+        p.close()
+        p.join()
     current_bdd_diagrams = sorted(current_bdd_diagrams, key=lambda x: order.index(abs(x.main_root_.Value())))
     for index, diagram in enumerate(current_bdd_diagrams):
         # diagram.PrintProblem()
@@ -57,18 +63,24 @@ def DJDtoBDD_separated(diagrams, numproc, order):
         print('Sorted diagrams by roots:', roots_sorted_diagrams)
         print('Sizes of diagrams:', sizes_of_diagrams)
         # print('Pairs:', diagrams_pairs)
-        jobs = [p.apply_async(ConjoinDJDs, (pair[0], pair[1])) for pair in diagrams_pairs]
         conjoin_times_iter = []
-        for job in jobs:
-            new_diagram, conjoin_time = job.get()
-            next_iter_diagrams.append(new_diagram)
-            conjoin_times_iter.append(conjoin_time)
-        p.close()
-        p.join()
+        if numproc == 1:
+            for pair in diagrams_pairs:
+                new_diagram, conjoin_time = ConjoinBDDs(pair[0], pair[1])
+                next_iter_diagrams.append(new_diagram)
+                conjoin_times_iter.append(conjoin_time)
+        else:
+            jobs = [p.apply_async(ConjoinBDDs, (pair[0], pair[1])) for pair in diagrams_pairs]
+            for job in jobs:
+                new_diagram, conjoin_time = job.get()
+                next_iter_diagrams.append(new_diagram)
+                conjoin_times_iter.append(conjoin_time)
+            p.close()
+            p.join()
         current_bdd_diagrams = next_iter_diagrams
         # diagram1 = current_bdd_diagrams.pop(0)
         # diagram2 = current_bdd_diagrams.pop(0)
-        # new_diagram = ConjoinDJDs(diagram1, diagram2)
+        # new_diagram = ConjoinBDDs(diagram1, diagram2)
         # current_bdd_diagrams.append(new_diagram)
         iter_time = time.time() - iter_start_time
         iter_times.append(iter_time)
@@ -90,50 +102,54 @@ def make_pairs(diagrams):
         yield tuple(diagrams[i:i + 2])
 
 
-def ConjoinDJDs(diagram1, diagram2):
-    conjoin_start_time = time.time()
-    print('\n')
-    print('---------------------------------------------------------------------------------------------')
-    print('Start conjoin two diagrams.')
-    # соединяем две диаграммы в одну, чтобы потом избавляться от небинарностей
-    sorted_nodes2 = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram2.order_, diagram2.table_.values())
-    max_vertex = len(diagram1.table_)
-    current_vertex_id = max_vertex+1
-    # print('\n\nDiagram 1:', diagram1)
-    diagram1.PrintCurrentTable('Table 1:')
-    # print('\nDiagram 2:', diagram2)
-    diagram2.PrintCurrentTable('Table 2:')
-    for node in sorted_nodes2:
-        node.vertex_id = current_vertex_id
-        current_vertex_id += 1
-    if type(diagram1) != DisjunctiveDiagram and type(diagram2) != DisjunctiveDiagram:
-        diagram1.new_nodes_ += diagram2.new_nodes_
-        diagram1.deleted_nodes_ += diagram2.deleted_nodes_
-        diagram1.actions_with_links_ += diagram2.actions_with_links_
-    DisjunctiveDiagramsBuilder.GluingNodes(sorted_nodes2, diagram1)
-    # EnumerateBDDiagramNodes(diagram1)
-    # print('\n\nDiagram before remove nonbinary:', diagram1)
-    del diagram2
-    diagram1.roots_ = diagram1.GetRoots()
-    new_diagram, transform_time_ = DJDtoBDD(diagram1)
-    # print('\nDiagram after remove nonbinary:', new_diagram)
-    new_diagram.PrintCurrentTable('New table:')
-    print('\n Total number of actions with links to construct new diagram:', new_diagram.actions_with_links_)
-    print(' Number of vertices in a result diagram:', new_diagram.VertexCount())
-    print(' Number of links in a result diagram:', new_diagram.LinksCount(), '\n')
-    if len(new_diagram.table_sizes) < 1000:
-        print('Changes of number of vertices in diagram:', new_diagram.table_sizes)
-    if len(new_diagram.table_sizes) > 1:
-        print('Number of removed nonbinary links:', len(new_diagram.table_sizes) - 1)
-        print('Initial size of diagram:', new_diagram.table_sizes[0])
-        print('Final size of diagram:', new_diagram.table_sizes[-1])
-        print('Max size of diagram:', max(new_diagram.table_sizes))
-        print('Min size of diagram:', min(new_diagram.table_sizes))
-        print('Avg size of diagram:', mean(new_diagram.table_sizes))
-        print('Median size of diagram:', median(new_diagram.table_sizes))
-        print('Sd of size of diagram:', round(math.sqrt(variance(new_diagram.table_sizes)),2))
-    conjoin_time = time.time() - conjoin_start_time
-    return new_diagram, conjoin_time
+def ConjoinBDDs(diagram1, diagram2):
+    try:
+        conjoin_start_time = time.time()
+        print('\n')
+        print('---------------------------------------------------------------------------------------------')
+        print('Start conjoin two diagrams.')
+        # соединяем две диаграммы в одну, чтобы потом избавляться от небинарностей
+        sorted_nodes2 = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram2.order_, diagram2.table_.values())
+        max_vertex = len(diagram1.table_)
+        current_vertex_id = max_vertex+1
+        # print('\n\nDiagram 1:', diagram1)
+        diagram1.PrintCurrentTable('Table 1:')
+        # print('\nDiagram 2:', diagram2)
+        diagram2.PrintCurrentTable('Table 2:')
+        for node in sorted_nodes2:
+            node.vertex_id = current_vertex_id
+            current_vertex_id += 1
+        if type(diagram1) != DisjunctiveDiagram and type(diagram2) != DisjunctiveDiagram:
+            diagram1.new_nodes_ += diagram2.new_nodes_
+            diagram1.deleted_nodes_ += diagram2.deleted_nodes_
+            diagram1.actions_with_links_ += diagram2.actions_with_links_
+        DisjunctiveDiagramsBuilder.GluingNodes(sorted_nodes2, diagram1)
+        # EnumerateBDDiagramNodes(diagram1)
+        # print('\n\nDiagram before remove nonbinary:', diagram1)
+        del diagram2
+        diagram1.roots_ = diagram1.GetRoots()
+        new_diagram, transform_time_ = DJDtoBDD(diagram1)
+        # print('\nDiagram after remove nonbinary:', new_diagram)
+        new_diagram.PrintCurrentTable('New table:')
+        print('\n Total number of actions with links to construct new diagram:', new_diagram.actions_with_links_)
+        print(' Number of vertices in a result diagram:', new_diagram.VertexCount())
+        print(' Number of links in a result diagram:', new_diagram.LinksCount(), '\n')
+        if len(new_diagram.table_sizes) < 1000:
+            print('Changes of number of vertices in diagram:', new_diagram.table_sizes)
+        if len(new_diagram.table_sizes) > 1:
+            print('Number of removed nonbinary links:', len(new_diagram.table_sizes) - 1)
+            print('Initial size of diagram:', new_diagram.table_sizes[0])
+            print('Final size of diagram:', new_diagram.table_sizes[-1])
+            print('Max size of diagram:', max(new_diagram.table_sizes))
+            print('Min size of diagram:', min(new_diagram.table_sizes))
+            print('Avg size of diagram:', mean(new_diagram.table_sizes))
+            print('Median size of diagram:', median(new_diagram.table_sizes))
+            print('Sd of size of diagram:', round(math.sqrt(variance(new_diagram.table_sizes)),2))
+        conjoin_time = time.time() - conjoin_start_time
+        return new_diagram, conjoin_time
+    except Exception as ex:
+        print('ERROR', ex)
+        raise Exception('ERROR ConjoinBDDs')
 
 
 def DJDtoBDD(djddiagram):
@@ -144,6 +160,7 @@ def DJDtoBDD(djddiagram):
         return bdd_diagram, transform_time
     except Exception as ex:
         print('ERROR', ex)
+        raise Exception('ERROR DJDtoBDD')
 
 
 class BDDiagram:
