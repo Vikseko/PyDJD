@@ -26,19 +26,16 @@ if __name__ == '__main__':
     with open('Logs/order.log', 'w') as orderf:
         print(*order, file=orderf)
     # Строим отрицание считанной формулы(КНФ= > ДНФ)
-    if (options.source_type == "conflicts" or options.source_type == "cnf"):
+    if options.source_type == "conflicts" or options.source_type == "cnf":
         NegateProblem(problem)
     start_build_time = time.time()
     if options.separate_construction:
         diagrams = []
         problems = DivideProblem(problem, var_count, order)
         with multiprocessing.Pool(min(len(problems), options.numprocess)) as p:
-            jobs = [p.apply_async(CreateDiagram, (var_count, problem, order, GetProblemType(options.source_type))) for
-                    problem in problems]
-            p.close()
-            for job in jobs:
-                diagrams.append(job.get())
-            p.join()
+            params = [(var_count, problem, order, GetProblemType(options.source_type)) for problem in problems]
+            for result in p.map(CreateDiagram, params):
+                diagrams.append(result)
         print('Number of diagrams:'.ljust(30, ' '), len(diagrams))
         print('Number of vertices:'.ljust(30, ' '), [len(diagram.table_) for diagram in diagrams])
         print('Number of roots:'.ljust(30, ' '), [len(diagram.roots_) for diagram in diagrams])
@@ -50,7 +47,7 @@ if __name__ == '__main__':
             # diagram.PrintProblem()
             diagram.PrintCurrentTable('SubDJDiagram ' + str(index+1) + ':')
     else:
-        diagram = CreateDiagram(var_count, problem, order, GetProblemType(options.source_type))
+        diagram = CreateDiagram((var_count, problem, order, GetProblemType(options.source_type)))
         print('Number of vertices:'.ljust(30, ' '), len(diagram.table_))
         print('Number of roots:'.ljust(30, ' '), len(diagram.roots_))
         print('DiagramNode constructors:'.ljust(30, ' '), DiagramNode.constructors_)

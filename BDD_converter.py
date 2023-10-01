@@ -27,13 +27,11 @@ def DJDtoBDD_separated(diagrams, numproc, order):
             current_bdd_diagrams.append(new_bdd_diagram)
     else:
         with multiprocessing.Pool(min(numproc, len(current_djd_diagrams))) as p:
-            jobs = [p.apply_async(DJDtoBDD, (djd_diagram,)) for djd_diagram in current_djd_diagrams]
-            p.close()
-            for job in jobs:
-                new_bdd_diagram, transform_time = job.get()
+            for result in p.map(DJDtoBDD, current_djd_diagrams):
+                new_bdd_diagram = result[0]
+                transform_time = result[1]
                 subdjd_to_bdd_times.append(transform_time)
                 current_bdd_diagrams.append(new_bdd_diagram)
-            p.join()
     current_bdd_diagrams = sorted(current_bdd_diagrams, key=lambda x: order.index(abs(x.main_root_.Value())))
     for index, diagram in enumerate(current_bdd_diagrams):
         # diagram.PrintProblem()
@@ -67,18 +65,17 @@ def DJDtoBDD_separated(diagrams, numproc, order):
         conjoin_times_iter = []
         if numproc == 1:
             for pair in diagrams_pairs:
-                new_diagram, conjoin_time = ConjoinBDDs(pair[0], pair[1])
+                new_diagram, conjoin_time = ConjoinBDDs((pair[0], pair[1]))
                 next_iter_diagrams.append(new_diagram)
                 conjoin_times_iter.append(conjoin_time)
         else:
             with multiprocessing.Pool(min(numproc, len(diagrams_pairs))) as p:
-                jobs = [p.apply_async(ConjoinBDDs, (pair[0], pair[1])) for pair in diagrams_pairs]
-                p.close()
-                for job in jobs:
-                    new_diagram, conjoin_time = job.get()
+                for result in p.map(ConjoinBDDs, [(pair[0], pair[1]) for pair in diagrams_pairs]):
+                    new_diagram = result[0]
+                    conjoin_time = result[1]
+                    # print('Job finished. Size of new diagram:', new_diagram.VertexCount())
                     next_iter_diagrams.append(new_diagram)
                     conjoin_times_iter.append(conjoin_time)
-                p.join()
         current_bdd_diagrams = next_iter_diagrams
         # diagram1 = current_bdd_diagrams.pop(0)
         # diagram2 = current_bdd_diagrams.pop(0)
@@ -104,15 +101,13 @@ def make_pairs(diagrams):
         yield tuple(diagrams[i:i + 2])
 
 
-def ConjoinBDDs(diagram1, diagram2):
+def ConjoinBDDs(diagrams_pair):
     try:
         conjoin_start_time = time.time()
+        diagram1 = diagrams_pair[0]
+        diagram2 = diagrams_pair[1]
         print('\n')
         print('---------------------------------------------------------------------------------------------')
-        if os.fork():
-            print('I\'m parent process, PID', os.getpid())
-        else:
-            print('I\'m child process, PID', os.getpid())
         print('Start conjoin two diagrams.')
         # соединяем две диаграммы в одну, чтобы потом избавляться от небинарностей
         sorted_nodes2 = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram2.order_, diagram2.table_.values())
@@ -164,7 +159,7 @@ def DJDtoBDD(djddiagram):
         start_transform_time = time.time()
         bdd_diagram = BDDiagram(djddiagram)
         transform_time = time.time() - start_transform_time
-        return bdd_diagram, transform_time
+        return [bdd_diagram, transform_time]
     except Exception as ex:
         print('ERROR DJDtoBDD', ex)
         raise ex

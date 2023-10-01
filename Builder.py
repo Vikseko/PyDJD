@@ -1,7 +1,11 @@
 from Utils import *
 
 
-def CreateDiagram(var_count, dnf, order, problem_type):
+def CreateDiagram(params):
+    var_count = params[0]
+    dnf = params[1]
+    order = params[2]
+    problem_type = params[3]
     return DisjunctiveDiagramsBuilder(var_count, dnf, order, problem_type).diagram_
 
 
