@@ -32,13 +32,14 @@ if __name__ == '__main__':
     if options.separate_construction:
         diagrams = []
         problems = DivideProblem(problem, var_count, order)
-        p = multiprocessing.Pool(min(len(problems), options.numprocess))
-        jobs = [p.apply_async(CreateDiagram, (var_count, problem, order, GetProblemType(options.source_type))) for
-                problem in problems]
-        for job in jobs:
-            diagrams.append(job.get())
-        p.close()
-        p.join()
+        with multiprocessing.Pool(min(len(problems), options.numprocess)) as p:
+        # p = multiprocessing.Pool(min(len(problems), options.numprocess))
+            jobs = [p.apply_async(CreateDiagram, (var_count, problem, order, GetProblemType(options.source_type))) for
+                    problem in problems]
+            p.close()
+            for job in jobs:
+                diagrams.append(job.get())
+            p.join()
         print('Number of diagrams:'.ljust(30, ' '), len(diagrams))
         print('Number of vertices:'.ljust(30, ' '), [len(diagram.table_) for diagram in diagrams])
         print('Number of roots:'.ljust(30, ' '), [len(diagram.roots_) for diagram in diagrams])

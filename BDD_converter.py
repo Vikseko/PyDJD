@@ -1,3 +1,5 @@
+import multiprocessing
+
 from Pathfinder import *
 import pysat
 from pysat.solvers import MapleChrono
@@ -24,14 +26,14 @@ def DJDtoBDD_separated(diagrams, numproc, order):
             subdjd_to_bdd_times.append(transform_time)
             current_bdd_diagrams.append(new_bdd_diagram)
     else:
-        p = multiprocessing.Pool(min(numproc, len(current_djd_diagrams)))
-        jobs = [p.apply_async(DJDtoBDD, (djd_diagram,)) for djd_diagram in current_djd_diagrams]
-        for job in jobs:
-            new_bdd_diagram, transform_time = job.get()
-            subdjd_to_bdd_times.append(transform_time)
-            current_bdd_diagrams.append(new_bdd_diagram)
-        p.close()
-        p.join()
+        with multiprocessing.Pool(min(numproc, len(current_djd_diagrams))) as p:
+            jobs = [p.apply_async(DJDtoBDD, (djd_diagram,)) for djd_diagram in current_djd_diagrams]
+            p.close()
+            for job in jobs:
+                new_bdd_diagram, transform_time = job.get()
+                subdjd_to_bdd_times.append(transform_time)
+                current_bdd_diagrams.append(new_bdd_diagram)
+            p.join()
     current_bdd_diagrams = sorted(current_bdd_diagrams, key=lambda x: order.index(abs(x.main_root_.Value())))
     for index, diagram in enumerate(current_bdd_diagrams):
         # diagram.PrintProblem()
@@ -69,14 +71,15 @@ def DJDtoBDD_separated(diagrams, numproc, order):
                 next_iter_diagrams.append(new_diagram)
                 conjoin_times_iter.append(conjoin_time)
         else:
-            p = multiprocessing.Pool(min(numproc, len(diagrams_pairs)))
-            jobs = [p.apply_async(ConjoinBDDs, (pair[0], pair[1])) for pair in diagrams_pairs]
-            for job in jobs:
-                new_diagram, conjoin_time = job.get()
-                next_iter_diagrams.append(new_diagram)
-                conjoin_times_iter.append(conjoin_time)
-            p.close()
-            p.join()
+            with multiprocessing.Pool(min(numproc, len(diagrams_pairs))) as p:
+            # p = multiprocessing.Pool(min(numproc, len(diagrams_pairs)))
+                jobs = [p.apply_async(ConjoinBDDs, (pair[0], pair[1])) for pair in diagrams_pairs]
+                p.close()
+                for job in jobs:
+                    new_diagram, conjoin_time = job.get()
+                    next_iter_diagrams.append(new_diagram)
+                    conjoin_times_iter.append(conjoin_time)
+                p.join()
         current_bdd_diagrams = next_iter_diagrams
         # diagram1 = current_bdd_diagrams.pop(0)
         # diagram2 = current_bdd_diagrams.pop(0)
