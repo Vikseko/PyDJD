@@ -33,7 +33,6 @@ if __name__ == '__main__':
         diagrams = []
         problems = DivideProblem(problem, var_count, order)
         with multiprocessing.Pool(min(len(problems), options.numprocess)) as p:
-        # p = multiprocessing.Pool(min(len(problems), options.numprocess))
             jobs = [p.apply_async(CreateDiagram, (var_count, problem, order, GetProblemType(options.source_type))) for
                     problem in problems]
             p.close()
