@@ -15,7 +15,7 @@ if __name__ == '__main__':
         print('PyDJD Version 1.0, October 2021')
     if options.show_options:
         PrintOptions(options)
-    if (not FileExists(options)):
+    if not FileExists(options):
         raise RuntimeError('File', options.filename, 'doesn\'t exist in directory', options.dir)
     print('Problem:'.ljust(30, ' '), options.filename)
     var_count, problem, order, problem_comments = ReadProblem(options)
@@ -112,6 +112,7 @@ if __name__ == '__main__':
         start_bdd_time = time.time()
         print('Start transition to BDD.')
         if not options.separate_construction:
+            initial_size_of_djd = diagram.VertexCount()
             bdd_diagram, transform_time_ = DJDtoBDD(diagram)
             EnumerateBDDiagramNodes(bdd_diagram)
             print('Transition to BDD complete.')
@@ -119,21 +120,21 @@ if __name__ == '__main__':
                 print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())
             else:
                 print('Number of nonbinary link in diagram is', bdd_diagram.NonBinaryLinkCount())
-            bdd_diagram.PrintCurrentTable('Final table:')
+            # bdd_diagram.PrintCurrentTable('Final table:')
             if len(bdd_diagram.table_sizes) < 1000:
                 print('Changes of number of vertices in diagram:', bdd_diagram.table_sizes)
             if len(bdd_diagram.table_sizes) > 1:
                 print('Number of removed nonbinary links:', len(bdd_diagram.table_sizes) - 1)
                 print('Initial size of diagram:', bdd_diagram.table_sizes[0])
-                print('Final size of diagram:', bdd_diagram.table_sizes[-1])
-                print('Max size of diagram:', max(bdd_diagram.table_sizes))
+                print('Final size of diagram:', bdd_diagram.VertexCount())
+                print('Max size of diagram:', bdd_diagram.max_size)
                 print('Min size of diagram:', min(bdd_diagram.table_sizes))
                 print('Avg size of diagram:', mean(bdd_diagram.table_sizes))
                 print('Median size of diagram:', median(bdd_diagram.table_sizes))
                 print('Sd of size of diagram:', round(math.sqrt(variance(bdd_diagram.table_sizes)), 2))
             # DrawDiagram(bdd_diagram)
         else:
-            bdd_diagram = DJDtoBDD_separated(diagrams, options.numprocess, order)
+            bdd_diagram, nof_djds, nof_link_actions_djd2bdd = DJDtoBDD_separated(diagrams, options.numprocess, order)
             print('Multiprocessing transition to BDD complete.')
             if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:
                 print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())
@@ -149,14 +150,15 @@ if __name__ == '__main__':
             bdd_cnf, tmp3_ = bdd_diagram.GetCNFFromBDD()
             bdd_cnf = CNF(from_clauses=bdd_cnf)
             bdd_cnf.to_file('Logs/' + options.name + '_bdd_convertion.cnf', comments=problem_comments)
-        print('Number of new nodes (during BDD-transformation):', bdd_diagram.new_nodes_)
-        print('Number of deleted nodes (during BDD-transformation):', bdd_diagram.deleted_nodes_)
-        print('Number of actions with links (during BDD-transformation):', bdd_diagram.actions_with_links_)
-        print('Number of vertices:'.ljust(30, ' '), len(bdd_diagram.table_))
-        print('DiagramNode constructors:'.ljust(30, ' '), DiagramNode.constructors_)
-        print('DiagramNode destructors:'.ljust(30, ' '), DiagramNode.destructors_)
+        bdd_diagram.PrintCurrentTable('Final table:')
+        if options.separate_construction:
+            print('Final. Initial number of DJDs:', nof_djds)
+            print('Final. Number of link actions to transform initial DJDs to BDDs:', nof_link_actions_djd2bdd)
+        else:
+            print('Final. Initial size of DJD:', initial_size_of_djd)
+        PrintFinalStats(bdd_diagram)
         convert_time = time.time() - start_bdd_time
-        print('Conversion time:'.ljust(30, ' '), convert_time)
+        print('Final. Conversion time:'.ljust(30, ' '), convert_time)
         if len(bdd_diagram.table_) > 0:
             if 10000 >= len(sat_assigments) > 0 and options.source_type == 'cnf':
                 print('\nSAT assignments for initial CNF:')

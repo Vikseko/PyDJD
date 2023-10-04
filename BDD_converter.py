@@ -36,6 +36,9 @@ def DJDtoBDD_separated(diagrams, numproc, order):
     for index, diagram in enumerate(current_bdd_diagrams):
         # diagram.PrintProblem()
         diagram.PrintCurrentTable('SubBDDiagram ' + str(index + 1) + ':')
+    nof_link_actions_djd2bdd = sum(x.actions_with_links_ for x in current_bdd_diagrams)
+    nof_djds = len(current_djd_diagrams)
+    print('Actions with links after subdiagrams transformations:', nof_link_actions_djd2bdd)
     # попарно объединяем поддиаграммы пока не останется одна финальная диаграмма
     while len(current_bdd_diagrams) > 1:
         current_bdd_diagrams = sorted(current_bdd_diagrams, key=lambda x: order.index(abs(x.main_root_.Value())))
@@ -65,35 +68,43 @@ def DJDtoBDD_separated(diagrams, numproc, order):
         conjoin_times_iter = []
         if numproc == 1:
             for pair in diagrams_pairs:
-                new_diagram, conjoin_time = ConjoinBDDs((pair[0], pair[1]))
+                new_diagram, conjoin_time, log_lines = ConjoinBDDs((pair[0], pair[1]))
                 next_iter_diagrams.append(new_diagram)
                 conjoin_times_iter.append(conjoin_time)
+                print(*log_lines, sep='\n')
         else:
             with multiprocessing.Pool(min(numproc, len(diagrams_pairs))) as p:
                 for result in p.map(ConjoinBDDs, [(pair[0], pair[1]) for pair in diagrams_pairs]):
                     new_diagram = result[0]
                     conjoin_time = result[1]
-                    # print('Job finished. Size of new diagram:', new_diagram.VertexCount())
+                    log_lines = result[2]
+                    print('Job finished.')
+                    print(*log_lines, sep='\n')
                     next_iter_diagrams.append(new_diagram)
                     conjoin_times_iter.append(conjoin_time)
         current_bdd_diagrams = next_iter_diagrams
-        # diagram1 = current_bdd_diagrams.pop(0)
-        # diagram2 = current_bdd_diagrams.pop(0)
-        # new_diagram = ConjoinBDDs(diagram1, diagram2)
-        # current_bdd_diagrams.append(new_diagram)
         iter_time = time.time() - iter_start_time
         iter_times.append(iter_time)
         conjoin_times.append(conjoin_times_iter)
     final_diagram = current_bdd_diagrams[0]
     EnumerateBDDiagramNodes(final_diagram)
-    final_diagram.PrintCurrentTable('Final table:')
     print('Times for initial transformations', [round(x, 3) for x in subdjd_to_bdd_times])
     print('Sum of times for initial transformations', round(sum(subdjd_to_bdd_times), 3))
     print('Times for iterations', [round(x, 3) for x in iter_times])
     print('Sum of times for iterations:', round(sum(iter_times), 3))
     print('Times for conjoins by iteration:', [[round(y, 3) for y in x] for x in conjoin_times])
     print('Sum of times for conjoins by iteration:', round(sum([sum(x) for x in conjoin_times]), 3))
-    return final_diagram
+    return final_diagram, nof_djds, nof_link_actions_djd2bdd
+
+
+def PrintFinalStats(diagram):
+    print()
+    print('Final. Total number of removed nonbinary links: ' + str(diagram.removed_nonbinaries_total))
+    print('Final. Total number of actions with links: ' + str(diagram.actions_with_links_))
+    print('Final. Max size of diagram: ' + str(diagram.max_size))
+    print('Final. Final size of diagram: ' + str(diagram.VertexCount()))
+    print('Final. Number of created nodes: ' + str(diagram.new_nodes_))
+    print('Final. Number of deleted nodes: ' + str(diagram.deleted_nodes_))
 
 
 def make_pairs(diagrams):
@@ -106,15 +117,20 @@ def ConjoinBDDs(diagrams_pair):
         conjoin_start_time = time.time()
         diagram1 = diagrams_pair[0]
         diagram2 = diagrams_pair[1]
-        print('\n')
-        print('---------------------------------------------------------------------------------------------')
-        print('Start conjoin two diagrams.')
+        log_lines = ['\n',
+                     '---------------------------------------------------------------------------------------------',
+                     'Current. Start conjoin two diagrams.']
+        # print('\n')
+        # print('---------------------------------------------------------------------------------------------')
+        # print('Start conjoin two diagrams.')
         # соединяем две диаграммы в одну, чтобы потом избавляться от небинарностей
         sorted_nodes2 = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram2.order_, diagram2.table_.values())
         max_vertex = len(diagram1.table_)
-        current_vertex_id = max_vertex+1
-        print('\nSize of diagram 1:', diagram1.VertexCount())
-        print('Size of diagram 2:', diagram2.VertexCount())
+        current_vertex_id = max_vertex + 1
+        log_lines.append('\nCurrent. Size of diagram 1: ' + str(diagram1.VertexCount()))
+        log_lines.append('Current. Size of diagram 2: ' + str(diagram2.VertexCount()))
+        # print('\nSize of diagram 1:', diagram1.VertexCount())
+        # print('Size of diagram 2:', diagram2.VertexCount())
         # diagram1.PrintCurrentTable('Table 1:')
         # diagram2.PrintCurrentTable('Table 2:')
         for node in sorted_nodes2:
@@ -124,6 +140,8 @@ def ConjoinBDDs(diagrams_pair):
             diagram1.new_nodes_ += diagram2.new_nodes_
             diagram1.deleted_nodes_ += diagram2.deleted_nodes_
             diagram1.actions_with_links_ += diagram2.actions_with_links_
+            diagram1.max_size = max(diagram1.max_size, diagram2.max_size)
+            diagram1.removed_nonbinaries_total += diagram2.removed_nonbinaries_total
         DisjunctiveDiagramsBuilder.GluingNodes(sorted_nodes2, diagram1)
         # EnumerateBDDiagramNodes(diagram1)
         # print('\n\nDiagram before remove nonbinary:', diagram1)
@@ -131,24 +149,41 @@ def ConjoinBDDs(diagrams_pair):
         diagram1.roots_ = diagram1.GetRoots()
         new_diagram, transform_time_ = DJDtoBDD(diagram1)
         # print('\nDiagram after remove nonbinary:', new_diagram)
-        print('Size of result diagram:', new_diagram.VertexCount())
+        log_lines.append('Current. Size of result diagram: ' + str(new_diagram.VertexCount()))
+        # print('Size of result diagram:', new_diagram.VertexCount())
         # new_diagram.PrintCurrentTable('New table:')
-        print('\n Total number of actions with links to construct new diagram:', new_diagram.actions_with_links_)
-        print(' Number of vertices in a result diagram:', new_diagram.VertexCount())
-        print(' Number of links in a result diagram:', new_diagram.LinksCount(), '\n')
+        log_lines.append('\nCurrent. Total number of actions with links to construct new diagram: ' +
+                         str(new_diagram.actions_with_links_))
+        log_lines.append('Current. Number of vertices in a result diagram: ' + str(new_diagram.VertexCount()))
+        log_lines.append('Current. Number of links in a result diagram: ' + str(new_diagram.LinksCount()) + '\n')
+        # print('\n Total number of actions with links to construct new diagram:', new_diagram.actions_with_links_)
+        # print(' Number of vertices in a result diagram:', new_diagram.VertexCount())
+        # print(' Number of links in a result diagram:', new_diagram.LinksCount(), '\n')
         if len(new_diagram.table_sizes) < 1000:
-            print('Changes of number of vertices in diagram:', new_diagram.table_sizes)
+            log_lines.append('Current. Changes of number of vertices in diagram: ' +
+                             ' '.join([str(x) for x in new_diagram.table_sizes]))
+            # print('Changes of number of vertices in diagram:', new_diagram.table_sizes)
         if len(new_diagram.table_sizes) > 1:
-            print('Number of removed nonbinary links:', len(new_diagram.table_sizes) - 1)
-            print('Initial size of diagram:', new_diagram.table_sizes[0])
-            print('Final size of diagram:', new_diagram.table_sizes[-1])
-            print('Max size of diagram:', max(new_diagram.table_sizes))
-            print('Min size of diagram:', min(new_diagram.table_sizes))
-            print('Avg size of diagram:', mean(new_diagram.table_sizes))
-            print('Median size of diagram:', median(new_diagram.table_sizes))
-            print('Sd of size of diagram:', round(math.sqrt(variance(new_diagram.table_sizes)),2))
+            log_lines.append('Current. Number of removed nonbinary links: ' +
+                             str(new_diagram.removed_nonbinaries_current))
+            log_lines.append('Current. Initial size of diagram: ' + str(new_diagram.table_sizes[0]))
+            log_lines.append('Current. Final size of diagram: ' + str(new_diagram.VertexCount()))
+            log_lines.append('Current. Max size of diagram: ' + str(new_diagram.max_size))
+            log_lines.append('Current. Min size of diagram: ' + str(min(new_diagram.table_sizes)))
+            log_lines.append('Current. Avg size of diagram: ' + str(mean(new_diagram.table_sizes)))
+            log_lines.append('Current. Median size of diagram: ' + str(median(new_diagram.table_sizes)))
+            log_lines.append('Current. Sd of size of diagram: ' +
+                             str(round(math.sqrt(variance(new_diagram.table_sizes)), 2)))
+            # print('Number of removed nonbinary links:', len(new_diagram.table_sizes) - 1)
+            # print('Initial size of diagram:', new_diagram.table_sizes[0])
+            # print('Final size of diagram:', new_diagram.table_sizes[-1])
+            # print('Max size of diagram:', max(new_diagram.table_sizes))
+            # print('Min size of diagram:', min(new_diagram.table_sizes))
+            # print('Avg size of diagram:', mean(new_diagram.table_sizes))
+            # print('Median size of diagram:', median(new_diagram.table_sizes))
+            # print('Sd of size of diagram:', round(math.sqrt(variance(new_diagram.table_sizes)), 2))
         conjoin_time = time.time() - conjoin_start_time
-        return new_diagram, conjoin_time
+        return new_diagram, conjoin_time, log_lines
     except Exception as ex:
         print('ERROR ConjoinBDDs', ex)
         raise ex
@@ -177,10 +212,15 @@ class BDDiagram:
             self.new_nodes_ = 0
             self.deleted_nodes_ = 0
             self.actions_with_links_ = 0
+            self.max_size = diagram.VertexCount()
+            self.removed_nonbinaries_total = 0
         else:
             self.new_nodes_ = diagram.new_nodes_
             self.deleted_nodes_ = diagram.deleted_nodes_
             self.actions_with_links_ = diagram.actions_with_links_
+            self.max_size = diagram.max_size
+            self.removed_nonbinaries_total = diagram.removed_nonbinaries_total
+        self.removed_nonbinaries_current = 0
         self.table_sizes = []
         self.nonbinary_queue = []
         self.changed_hash_nodes = set()
@@ -311,7 +351,7 @@ class BDDiagram:
         print('\n', preambule)
         if len(self.table_) > 0:
             for key, node in self.table_.items():
-                node.PrintNode('  key '+str(key))
+                node.PrintNode('  key ' + str(key))
         else:
             print(' Empty table (all nodes are eliminated).')
             if self.problem_type_ == ProblemType.Cnf:
@@ -330,15 +370,15 @@ class BDDiagram:
                 node_dict = dict()
                 node_dict['variable'] = node.Value()
                 node_dict['high_childs'] = ' '.join([(str(x.vertex_id) + '_' + str(x.Value())) for x in
-                                                               node.high_childs])
+                                                     node.high_childs])
                 node_dict['low_childs'] = ' '.join([(str(x.vertex_id) + '_' + str(x.Value())) for x in
-                                                              node.low_childs])
+                                                    node.low_childs])
                 node_dict['high_parents'] = ' '.join([(str(x.vertex_id) + '_' + str(x.Value())) for x in
-                                                                node.high_parents])
+                                                      node.high_parents])
                 node_dict['low_parents'] = ' '.join([(str(x.vertex_id) + '_' + str(x.Value())) for x in
-                                                               node.low_parents])
+                                                     node.low_parents])
                 table_dict[node.vertex_id] = node_dict
-            #json_string = json.dumps(table_dict)
+            # json_string = json.dumps(table_dict)
             with open(filename, 'w') as outfile:
                 json.dump(table_dict, outfile, indent=2)
         else:
@@ -350,20 +390,15 @@ class BDDiagram:
         node_paths = []
         true_leaf = self.GetTrueLeaf()
         for node in true_leaf.high_parents:
-            clause = []
-            clause.append(node.var_id)
-            node_path = []
-            node_path.append(node)
-            self.WritePaths(cnf, node_paths, node_path, clause)
+            clause = [node.var_id]
+            node_path = [node]
+            WritePaths(cnf, node_paths, node_path, clause)
         for node in true_leaf.low_parents:
-            clause = []
-            clause.append(-node.var_id)
-            node_path = []
-            node_path.append(node)
-            self.WritePaths(cnf, node_paths, node_path, clause)
+            clause = [-node.var_id]
+            node_path = [node]
+            WritePaths(cnf, node_paths, node_path, clause)
         NegateProblem(cnf)
         return cnf, node_paths
-
 
     # Получаем КНФ из диаграммы (все пути из корней в терминальную 'true')
     def GetPathsToTrue(self):
@@ -371,17 +406,13 @@ class BDDiagram:
         node_paths = []
         true_leaf = self.GetTrueLeaf()
         for node in true_leaf.high_parents:
-            clause = []
-            clause.append(node.var_id)
-            node_path = []
-            node_path.append(node)
-            self.WritePaths(cnf, node_paths, node_path, clause)
+            clause = [node.var_id]
+            node_path = [node]
+            WritePaths(cnf, node_paths, node_path, clause)
         for node in true_leaf.low_parents:
-            clause = []
-            clause.append(-node.var_id)
-            node_path = []
-            node_path.append(node)
-            self.WritePaths(cnf, node_paths, node_path, clause)
+            clause = [-node.var_id]
+            node_path = [node]
+            WritePaths(cnf, node_paths, node_path, clause)
         return cnf, node_paths
 
     # Получаем выполняющие наборы из диаграммы (все пути из корней в терминальную 'question')
@@ -390,39 +421,14 @@ class BDDiagram:
         node_paths = []
         question_leaf = self.GetQuestionLeaf()
         for node in question_leaf.high_parents:
-            clause = []
-            clause.append(node.var_id)
-            node_path = []
-            node_path.append(node)
-            self.WritePaths(cnf, node_paths, node_path, clause)
+            clause = [node.var_id]
+            node_path = [node]
+            WritePaths(cnf, node_paths, node_path, clause)
         for node in question_leaf.low_parents:
-            clause = []
-            clause.append(-node.var_id)
-            node_path = []
-            node_path.append(node)
-            self.WritePaths(cnf, node_paths, node_path, clause)
+            clause = [-node.var_id]
+            node_path = [node]
+            WritePaths(cnf, node_paths, node_path, clause)
         return cnf, node_paths
-
-    def WritePaths(self, problem, node_paths, node_path, clause):
-        current_node: DiagramNode = node_path[-1]
-        if current_node.IsRoot():
-            clause.reverse()
-            node_path.reverse()
-            problem.append(clause)
-            node_paths.append(node_path)
-        else:
-            for node in current_node.high_parents:
-                hclause = copy.copy(clause)
-                hnode_path = copy.copy(node_path)
-                hclause.append(node.var_id)
-                hnode_path.append(node)
-                WritePaths(problem, node_paths, hnode_path, hclause)
-            for node in current_node.low_parents:
-                lclause = copy.copy(clause)
-                lnode_path = copy.copy(node_path)
-                lclause.append(-node.var_id)
-                lnode_path.append(node)
-                WritePaths(problem, node_paths, lnode_path, lclause)
 
     # Возвращает размер диаграммы в байтах
     def DiagramSize(self):
@@ -458,11 +464,11 @@ def BDD_convert(diagram):
     # print('\nTable before roots gluing:')
     # diagram.PrintCurrentTable()
     main_root = sorted_roots_[-1]
-    for i in range(len(sorted_roots_)-1):
+    for i in range(len(sorted_roots_) - 1):
         # print('Connect root', str(sorted_roots_[i].vertex_id) + '_' + str(sorted_roots_[i].var_id),
         #       ' to root', str(sorted_roots_[i+1].vertex_id) + '_' + str(sorted_roots_[i+1].var_id))
         # присоединяем нижний корень к верхнему по двум полярностям
-        ConnectRoots(sorted_roots_[i+1], sorted_roots_[i],diagram)
+        ConnectRoots(sorted_roots_[i + 1], sorted_roots_[i], diagram)
     # теперь diagram.roots_ неправильная, потому что хэши поменялись (бтв, в table всё обновлено), но это и неважно
     # print('Roots', [(x.vertex_id, x.var_id, x.node_type) for x in diagram.roots_])
     diagram.main_root_ = main_root
@@ -483,7 +489,8 @@ def BDD_convert(diagram):
         # print('\n\nCurrent number of nonbinary nodes in diagram', diagram.NonBinaryNodesCount())
         # print('Current size of diagram:', diagram.VertexCount())
         # print('Current number of actions with links', diagram.actions_with_links_)
-        sorted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodeswrtOrderAndVertex(diagram.order_, diagram.table_.values())
+        sorted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodeswrtOrderAndVertex(diagram.order_,
+                                                                                    diagram.table_.values())
         # print('Current number of nodes', len(sorted_nodes))
         # print('Current number of deleted nodes', diagram.deleted_nodes_)
         first_nonbinary_node, polarity = FindFirstNonbinaryNode(sorted_nodes)
@@ -500,13 +507,12 @@ def BDD_convert(diagram):
             # print('\nCurrent size of queue', len(diagram.nonbinary_queue))
             # diagram.PrintCurrentTable('\nCurrent table:')
             host = diagram.nonbinary_queue.pop()
-            #host[0].PrintNode('Current host:')
-            #print('Polarity:', host[1])
+            # host[0].PrintNode('Current host:')
+            # print('Polarity:', host[1])
             # BDDiagram.PrintCurrentQueue(diagram)
             RemoveNonbinaryLink(host[0], host[1], diagram)
-            diagram.table_sizes.append((diagram.VertexCount()))
-    #diagram.PrintCurrentTable('Table after BDD transformation:')
-    #print('\nEnd size of queue (should be 0)', len(diagram.nonbinary_queue))
+    # diagram.PrintCurrentTable('Table after BDD transformation:')
+    # print('\nEnd size of queue (should be 0)', len(diagram.nonbinary_queue))
 
 
 def RemoveNonbinaryLink(host, polarity, diagram):
@@ -521,6 +527,11 @@ def RemoveNonbinaryLink(host, polarity, diagram):
         # upper.PrintNode('Current upper:')
         # diagram.PrintCurrentTable('RemoveNonbinaryLink 1 table:')
         host_upper_polarity = ConnectNodesDouble(host, polarity, lower, upper, diagram)
+        if diagram.max_size < diagram.VertexCount():
+            diagram.max_size = diagram.VertexCount()
+        diagram.removed_nonbinaries_current += 1
+        diagram.removed_nonbinaries_total += 1
+        diagram.table_sizes.append((diagram.VertexCount()))
         if host_upper_polarity[2] == 'both':
             # если через очередь, то append заменяем на put
             diagram.nonbinary_queue.append([host_upper_polarity[1], 0])
@@ -547,7 +558,7 @@ def FindFirstNonbinaryNode(sorted_nodes):
 def ConnectRoots(upper, lower, diagram):
     # все корни просто соединяем последовательно двойными связями
     lower.node_type = DiagramNodeType.InternalNode
-    host_upper_polarity = ConnectNodesDouble(None, None, lower, upper, diagram)
+    ConnectNodesDouble(None, None, lower, upper, diagram)
 
 
 def ConnectNodesDouble(host, polarity, lower, upper, diagram):
@@ -582,7 +593,6 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
         # del diagram.table_[upper.hash_key]
         # del diagram.table_[lower.hash_key]
 
-
     # diagram.PrintCurrentTable('ConnectNodesDouble 2 table:')
 
     # print('\nАfter DeletingNodesFromTable New node')
@@ -598,7 +608,6 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
     # затем, если хост есть, то удаляем связь host и lower
     if host is not None:
         RemoveLinkFromHostToLower(diagram, host, lower, polarity)
-
 
     # diagram.PrintCurrentTable('ConnectNodesDouble 3 table:')
     # print('\nАfter RemoveLinkFromHostToLower New node')
@@ -690,11 +699,11 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
         # print('2nd')
         # lower.HashKey()
         # diagram.table_[lower.hash_key] = lower
-        a_, b_ = GluingNodes(None, None, diagram)
+        GluingNodes(None, None, diagram)
         upper.HashKey()
         diagram.table_[upper.hash_key] = upper
     else:
-        a_, b_ = GluingNodes(None, None, diagram)
+        GluingNodes(None, None, diagram)
 
     # diagram.PrintCurrentTable('ConnectNodesDouble 6 table:')
     if upper is not upper_del:
@@ -734,8 +743,8 @@ def RemoveLinkFromHostToLower(diagram, host, lower, polarity):
     # print('RemoveLinkFromHostToLower before Lower:', end=' ')
     # lower.PrintNode()
     if polarity == 1:
-        host_len_childs_before = len(host.high_childs)
-        lower_len_parents_before = len(lower.high_parents)
+        # host_len_childs_before = len(host.high_childs)
+        # lower_len_parents_before = len(lower.high_parents)
         if lower in host.high_childs:
             diagram.actions_with_links_ += 1
             host.high_childs = [x for x in host.high_childs if x is not lower]
@@ -781,7 +790,7 @@ def CheckNodeForUngluing(diagram, upper, host, polarity):
     if upper.node_type != DiagramNodeType.QuestionNode:
         if upper.node_type != DiagramNodeType.TrueNode:
             if (len(upper.high_parents) + len(upper.low_parents)) > 1:
-                #print('Upper have more than 1 parent. Need ungluing.')
+                # print('Upper have more than 1 parent. Need ungluing.')
                 diagram.new_nodes_ += 1
                 # тут нам надо расклеить узел на два так, чтобы у одного были все родители, кроме host
                 # а у второго только host
@@ -882,9 +891,10 @@ def RemoveLink(parent, child, polarity):
         parent.high_childs = set([x for x in parent.high_childs if x is not child])
         child.high_parents = [x for x in child.high_parents if x is not parent]
 
+
 def CheckNonbinaryWithTrueNode(node, diagram):
-    #print('\nCheckNonbinaryWithTrueNode')
-    #node.PrintNodeWithoutParents()
+    # print('\nCheckNonbinaryWithTrueNode')
+    # node.PrintNodeWithoutParents()
     true_leaf = diagram.GetTrueLeaf()
     if len(node.high_childs) > 1 and true_leaf in node.high_childs:
         for child in node.high_childs:
@@ -899,8 +909,8 @@ def CheckNonbinaryWithTrueNode(node, diagram):
 
 
 def CheckNonbinaryWithQuestionNode(node, diagram):
-    #print('\nCheckNonbinaryWithQuestionNode')
-    #node.PrintNodeWithoutParents()
+    # print('\nCheckNonbinaryWithQuestionNode')
+    # node.PrintNodeWithoutParents()
     question_leaf = diagram.GetQuestionLeaf()
     if len(node.high_childs) > 1 and question_leaf in node.high_childs:
         node.high_childs.remove(question_leaf)
@@ -1015,15 +1025,15 @@ def DeleteNodeWithoutParents(node, diagram):
             low_child.low_parents = [x for x in low_child.low_parents if x is not node]
             DeleteNodeWithoutParents(low_child, diagram)
             # low_child.PrintNode('  Low child after:')
-        #print('High childs:')
+        # print('High childs:')
         for high_child in node.high_childs:
-            #print('High child before:', end=' ')
-            #high_child.PrintNode()
+            # print('High child before:', end=' ')
+            # high_child.PrintNode()
             diagram.actions_with_links_ += 1
             high_child.high_parents = [x for x in high_child.high_parents if x is not node]
             DeleteNodeWithoutParents(high_child, diagram)
-            #print('High child after:', end=' ')
-            #high_child.PrintNode()
+            # print('High child after:', end=' ')
+            # high_child.PrintNode()
         # for x in diagram.changed_hash_nodes:
         #     x.PrintNode('ChangedHash before 2:')
         if node in diagram.changed_hash_nodes:
@@ -1150,7 +1160,7 @@ def ReplaceParentsLinksToNode(node, node_to_which_glue, diagram):
             if tmpnode is parent:
                 break
         else:
-            #print('add as highparent ', (parent.Value(), parent), 'to node', (it_node.Value(), it_node))
+            # print('add as highparent ', (parent.Value(), parent), 'to node', (it_node.Value(), it_node))
             node_to_which_glue.high_parents.append(parent)
     for parent in node.low_parents:
         diagram.actions_with_links_ += 1
@@ -1161,7 +1171,7 @@ def ReplaceParentsLinksToNode(node, node_to_which_glue, diagram):
                 break
         else:
             node_to_which_glue.low_parents.append(parent)
-            #print('add as lowparent ', (parent.Value(), parent), 'to node', (it_node.Value(), it_node))
+            # print('add as lowparent ', (parent.Value(), parent), 'to node', (it_node.Value(), it_node))
 
 
 def DeleteChildsLinksToNode(node, diagram):
@@ -1176,14 +1186,14 @@ def DeleteChildsLinksToNode(node, diagram):
 def DeletingNodesFromTable(node, diagram, copy_flag):
     diagram.changed_hash_nodes.add(node)
     if ((node.hash_key in diagram.table_) or copy_flag) and \
-        node is not diagram.GetTrueLeaf() and \
-        node is not diagram.GetQuestionLeaf():
+            node is not diagram.GetTrueLeaf() and \
+            node is not diagram.GetQuestionLeaf():
         if diagram.table_[node.hash_key] is node:
             # node.PrintNode('Delete from table:')
             del diagram.table_[node.hash_key]
         # else:
-            # node.PrintNode('no Delete from table node:')
-            # diagram.table_[node.hash_key].PrintNode('no Delete from table diagram.table_[node.hash_key]:')
+        # node.PrintNode('no Delete from table node:')
+        # diagram.table_[node.hash_key].PrintNode('no Delete from table diagram.table_[node.hash_key]:')
         for parent in set(node.high_parents + node.low_parents):
             # parent.PrintNode('Delete from table parent:')
             DeletingNodesFromTable(parent, diagram, False)
@@ -1208,7 +1218,7 @@ def CleaningDiagram(diagram):
                 DeletingNodesFromTable(node, diagram, False)
                 # node.PrintNode('  Delete useless node:')
                 DeleteUselessNode(node, diagram)
-                host_, upper_ = GluingNodes(None, None, diagram)
+                GluingNodes(None, None, diagram)
                 # diagram.PrintCurrentTable('Table after deletion of useless node')
 
 
@@ -1254,6 +1264,29 @@ def DeleteUselessNode(node, diagram):
 
     del node
 
+
+def WritePaths(problem, node_paths, node_path, clause):
+    current_node: DiagramNode = node_path[-1]
+    if current_node.IsRoot():
+        clause.reverse()
+        node_path.reverse()
+        problem.append(clause)
+        node_paths.append(node_path)
+    else:
+        for node in current_node.high_parents:
+            hclause = copy.copy(clause)
+            hnode_path = copy.copy(node_path)
+            hclause.append(node.var_id)
+            hnode_path.append(node)
+            WritePaths(problem, node_paths, hnode_path, hclause)
+        for node in current_node.low_parents:
+            lclause = copy.copy(clause)
+            lnode_path = copy.copy(node_path)
+            lclause.append(-node.var_id)
+            lnode_path.append(node)
+            WritePaths(problem, node_paths, lnode_path, lclause)
+
+
 # def TransferChilds(from_node,upper,to_node,deleted_nodes,candidates_to_deletion,diagram):
 #     copy_flag = False
 #     print('\nTransferChilds')
@@ -1298,7 +1331,8 @@ def DeleteUselessNode(node, diagram):
 #                 from_child.high_parents.append(to_node)
 #     else:
 #         candidates_to_deletion.update(from_node.high_childs)
-#         # тут нужно какимто образом удалить потомков, если они больше не нужны нигде (нужна вот эта проверка на нужность)
+#         # тут нужно какимто образом удалить потомков, если они больше не нужны нигде
+#         # (нужна вот эта проверка на нужность)
 #     if diagram.GetTrueLeaf() not in to_node.low_childs:
 #         for from_child in from_node.low_childs:
 #             for to_child in to_node.low_childs:
@@ -1311,7 +1345,8 @@ def DeleteUselessNode(node, diagram):
 #                 from_child.low_parents.append(to_node)
 #     else:
 #         candidates_to_deletion.update(from_node.low_childs)
-#         # тут нужно какимто образом удалить потомков, если они больше не нужны нигде (нужна вот эта проверка на нужность)
+#         # тут нужно какимто образом удалить потомков, если они больше не нужны нигде
+#         # (нужна вот эта проверка на нужность)
 #     if copy_flag == True:
 #         deleted_nodes = set([x for x in deleted_nodes if x is not to_node])
 #         to_node.HashKey()
@@ -1344,18 +1379,18 @@ def DeleteUselessNode(node, diagram):
 #     for node in current_node.high_parents + current_node.low_parents:
 #         if len(node.high_childs) > 1:
 #             """
-#             print('Find nonbinary node:', (node.vertex_id, node.Value()), 'hc', "hc:", [(x.vertex_id, x.Value()) for x in
-#                                                                   node.high_childs], "lc:", [(x.vertex_id, x.Value())
-#                                                                                              for x in node.low_childs])
+#             print('Find nonbinary node:', (node.vertex_id, node.Value()), 'hc', "hc:",
+#                                               [(x.vertex_id, x.Value()) for x in node.high_childs],
+#                                               "lc:", [(x.vertex_id, x.Value()) for x in node.low_childs])
 #             """
 #             GettingRidOfNonbinary(diagram, node, 1)
 #             find_flag = True
 #             break
 #         elif len(node.low_childs) > 1:
 #             """
-#             print('Find nonbinary node:', (node.vertex_id, node.Value()), 'lc', "hc:", [(x.vertex_id, x.Value()) for x in
-#                                                                   node.high_childs], "lc:", [(x.vertex_id, x.Value())
-#                                                                                              for x in node.low_childs])
+#             print('Find nonbinary node:', (node.vertex_id, node.Value()), 'lc', "hc:",
+#                                               [(x.vertex_id, x.Value()) for x in node.high_childs],
+#                                               "lc:", [(x.vertex_id, x.Value()) for x in node.low_childs])
 #             """
 #             GettingRidOfNonbinary(diagram, node, 0)
 #             find_flag = True
@@ -1375,7 +1410,8 @@ def DeleteUselessNode(node, diagram):
 #         childs = node.low_childs
 #     deleted_nodes = set()
 #     upper_node, lower_node = FindUpperAndLowerChilds(childs, diagram.order_)
-#     print('Upper node:', (upper_node.vertex_id, upper_node.Value()),'Lower node:', (lower_node.vertex_id, lower_node.Value()))
+#     print('Upper node:', (upper_node.vertex_id, upper_node.Value()),
+#           'Lower node:', (lower_node.vertex_id, lower_node.Value()))
 #     DeletingNodesFromTable(upper_node, diagram, deleted_nodes)
 #     DeleteLinkFromNode(lower_node, node, polarity)
 #     if lower_node is not diagram.GetQuestionLeaf() \
@@ -1390,7 +1426,9 @@ def DeleteUselessNode(node, diagram):
 # # Рекурсивное удаление узлов из таблицы от node наверх
 # def DeletingNodesFromTable(node, diagram, deleted_nodes):
 #     deleted_nodes.add(node)
-#     if node.hash_key in diagram.table_ and node is not diagram.GetTrueLeaf() and node is not diagram.GetQuestionLeaf():
+#     if node.hash_key in diagram.table_ and
+#       node is not diagram.GetTrueLeaf() and
+#       node is not diagram.GetQuestionLeaf():
 #         del diagram.table_[node.hash_key]
 #         for parent in set(node.high_parents+node.low_parents):
 #             DeletingNodesFromTable(parent, diagram, deleted_nodes)
@@ -1485,17 +1523,17 @@ def DeleteUselessNode(node, diagram):
 #     find_flag = False
 #     if len(current_node.high_childs) > 1:
 #
-#         print('Find nonbinary node:', (current_node.vertex_id, current_node.Value()), 'hc', "hc:", [(x.vertex_id, x.Value()) for x in
-#                                                             current_node.high_childs], "lc:", [(x.vertex_id, x.Value())
-#                                                                                         for x in current_node.low_childs])
+#         print('Find nonbinary node:', (current_node.vertex_id, current_node.Value()), 'hc', "hc:",
+#                                           [(x.vertex_id, x.Value()) for x in current_node.high_childs],
+#                                           "lc:", [(x.vertex_id, x.Value()) for x in current_node.low_childs])
 #
 #         GettingRidOfNonbinary(diagram, current_node, 1)
 #         find_flag = True
 #     elif len(current_node.low_childs) > 1:
 #
-#         print('Find nonbinary node:', (current_node.vertex_id, current_node.Value()), 'lc', "hc:", [(x.vertex_id, x.Value()) for x in
-#                                                             current_node.high_childs], "lc:", [(x.vertex_id, x.Value())
-#                                                                                         for x in current_node.low_childs])
+#         print('Find nonbinary node:', (current_node.vertex_id, current_node.Value()), 'lc', "hc:",
+#                                          [(x.vertex_id, x.Value()) for x in current_node.high_childs],
+#                                          "lc:", [(x.vertex_id, x.Value()) for x in current_node.low_childs])
 #
 #         GettingRidOfNonbinary(diagram, current_node, 0)
 #         find_flag = True
@@ -1513,18 +1551,18 @@ def DeleteUselessNode(node, diagram):
 #         print('')
 #         print('Current number of nonbinary links is', BDDiagram.NonBinaryLinkCount(diagram))
 #         print('Current number of nonbinary nodes is', BDDiagram.NonBinaryNodesCount(diagram))
-#         print('Find nonbinary node:', (current_node.vertex_id, current_node.Value()), 'hc', "hc:", [(x.vertex_id, x.Value()) for x in
-#                                                             current_node.high_childs], "lc:", [(x.vertex_id, x.Value())
-#                                                                                         for x in current_node.low_childs])
+#         print('Find nonbinary node:', (current_node.vertex_id, current_node.Value()), 'hc', "hc:",
+#                                           [(x.vertex_id, x.Value()) for x in current_node.high_childs],
+#                                           "lc:", [(x.vertex_id, x.Value()) for x in current_node.low_childs])
 #         GettingRidOfNonbinary(diagram, current_node, 1)
 #         find_flag = True
 #     elif len(current_node.low_childs) > 1:
 #         print('')
 #         print('Current number of nonbinary links is', BDDiagram.NonBinaryLinkCount(diagram))
 #         print('Current number of nonbinary nodes is', BDDiagram.NonBinaryNodesCount(diagram))
-#         print('Find nonbinary node:', (current_node.vertex_id, current_node.Value()), 'lc', "hc:", [(x.vertex_id, x.Value()) for x in
-#                                                             current_node.high_childs], "lc:", [(x.vertex_id, x.Value())
-#                                                                                         for x in current_node.low_childs])
+#         print('Find nonbinary node:', (current_node.vertex_id, current_node.Value()), 'lc', "hc:",
+#                                           [(x.vertex_id, x.Value()) for x in current_node.high_childs],
+#                                           "lc:", [(x.vertex_id, x.Value()) for x in current_node.low_childs])
 #         GettingRidOfNonbinary(diagram, current_node, 0)
 #         find_flag = True
 #     if find_flag == True:
@@ -1581,41 +1619,41 @@ def DeleteUselessNode(node, diagram):
 #         upper = UngluingNode(upper, host)
 #         print('New upper', [upper.vertex_id, upper.Value(), upper])
 #
-    #
-    # high_glu = False
-    # candidates_to_deletion = set()
-    # if diagram.GetTrueLeaf() not in upper.high_childs:
-    #     # если нет пути в 1, то проверяем есть ли ребенок с той же переменной
-    #     for node in upper.high_childs:
-    #         if (node.Value() == lower.Value()) and (node.Value() not in ['?', 'true']):
-    #             # вот тут надо передать всех детей ловера апперу в high_childs,
-    #             # причем рекурсивно проверять условия дублирования детей
-    #             high_glu = True
-    #             TransferChilds(lower, upper, node, deleted_nodes, candidates_to_deletion, diagram)
-    #             break
-    #     else:
-    #         DeletingNodesFromTable(upper, diagram, deleted_nodes)
-    #         upper.high_childs.append(lower)
-    #         lower.high_parents.append(upper)
-    # else:
-    #     # если есть путь в 1, то ничего не делаем по этой полярности
-    #     # ставим что произошло поглощение
-    #     high_glu = True
-    # # тоже самое для 0-детей
-    # low_glu = False
-    # if diagram.GetTrueLeaf() not in upper.low_childs:
-    #     for node in upper.low_childs:
-    #         if (node.Value() == lower.Value()) and (node.Value() not in ['?', 'true']):
-    #             low_glu = True
-    #             TransferChilds(lower,upper,node,deleted_nodes,candidates_to_deletion,diagram)
-    #             break
-    #     else:
-    #         DeletingNodesFromTable(upper, diagram, deleted_nodes)
-    #         upper.low_childs.append(lower)
-    #         lower.low_parents.append(upper)
-    # else:
-    #     low_glu = True
-    # if high_glu == True and low_glu == True:
-    #     # нужно удалить сам узел, сперва проверив, что у него нет родителей и удалив его из родителей его детей,
-    #     # затем рекурсивно првоерить детей на то, что если родителей больше нет, то удаляем и эти узлы и тд
-    #     RecursiveDeletionNodesFromDiagram(lower,diagram)
+#
+# high_glu = False
+# candidates_to_deletion = set()
+# if diagram.GetTrueLeaf() not in upper.high_childs:
+#     # если нет пути в 1, то проверяем есть ли ребенок с той же переменной
+#     for node in upper.high_childs:
+#         if (node.Value() == lower.Value()) and (node.Value() not in ['?', 'true']):
+#             # вот тут надо передать всех детей ловера апперу в high_childs,
+#             # причем рекурсивно проверять условия дублирования детей
+#             high_glu = True
+#             TransferChilds(lower, upper, node, deleted_nodes, candidates_to_deletion, diagram)
+#             break
+#     else:
+#         DeletingNodesFromTable(upper, diagram, deleted_nodes)
+#         upper.high_childs.append(lower)
+#         lower.high_parents.append(upper)
+# else:
+#     # если есть путь в 1, то ничего не делаем по этой полярности
+#     # ставим что произошло поглощение
+#     high_glu = True
+# # тоже самое для 0-детей
+# low_glu = False
+# if diagram.GetTrueLeaf() not in upper.low_childs:
+#     for node in upper.low_childs:
+#         if (node.Value() == lower.Value()) and (node.Value() not in ['?', 'true']):
+#             low_glu = True
+#             TransferChilds(lower,upper,node,deleted_nodes,candidates_to_deletion,diagram)
+#             break
+#     else:
+#         DeletingNodesFromTable(upper, diagram, deleted_nodes)
+#         upper.low_childs.append(lower)
+#         lower.low_parents.append(upper)
+# else:
+#     low_glu = True
+# if high_glu == True and low_glu == True:
+#     # нужно удалить сам узел, сперва проверив, что у него нет родителей и удалив его из родителей его детей,
+#     # затем рекурсивно првоерить детей на то, что если родителей больше нет, то удаляем и эти узлы и тд
+#     RecursiveDeletionNodesFromDiagram(lower,diagram)
