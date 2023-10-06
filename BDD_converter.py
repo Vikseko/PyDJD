@@ -86,9 +86,11 @@ def DJDtoBDD_separated(diagrams, numproc, order):
 def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order):
     bdds = DJDstoBDDs(djds, numproc)
     for pbi_bdd in pbi_bdds:
+        # TODO
         # Тут нам нужен алгоритм апплай.
         # Берём наши диаграммы, приклеиваем к ним алгоритмом апплай интервалы (к первой к примеру),
         # к каждой второй к примеру, потом склеиваем попарно как раньше
+        # Второй вариант: приклеиваем их по алгоритму избавления от небинарностей
         pass
 
 
