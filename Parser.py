@@ -49,6 +49,7 @@ def createParser ():
     parser.add_argument('-avl', '--analyze_var_limit', nargs='?', type=int, default=20)
     parser.add_argument('-avf', '--analyze_var_fraction', nargs='?', type=float, default=0.5)
     parser.add_argument('-np', '--numproc', nargs='?', type=int, default=1)
+    parser.add_argument('-pbi', '--pbintervals', nargs='?', type=int, default=1)
     return parser
 
 

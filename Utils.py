@@ -3,26 +3,26 @@ from DimacsParser import *
 
 
 def ReadProblem(options):
-    lines = open(options.path,'r').readlines()
+    lines = open(options.path, 'r').readlines()
     problem, order, comments, var_count, lit_count, min_var_num, max_var_num = DimacsParser(lines)
-    print('Lit count:'.ljust(30,' '), lit_count)
-    print('Variables:'.ljust(30,' '), var_count)
-    print('Lowest variable number:'.ljust(30,' '), min_var_num)
-    print('Highest variable number:'.ljust(30,' '), max_var_num)
+    print('Lit count:'.ljust(30, ' '), lit_count)
+    print('Variables:'.ljust(30, ' '), var_count)
+    print('Lowest variable number:'.ljust(30, ' '), min_var_num)
+    print('Highest variable number:'.ljust(30, ' '), max_var_num)
     if options.order_type == 'activity':
-        print('Order:'.ljust(30,' '), 'activity')
+        print('Order:'.ljust(30, ' '), 'activity')
         if order is None:
             raise RuntimeError('No activity order in DIMACS file')
     elif options.order_type == 'frequency':
-        print('Order:'.ljust(30,' '), 'frequency')
-        order = FrequencyOrder(problem,min_var_num,max_var_num)
+        print('Order:'.ljust(30, ' '), 'frequency')
+        order = FrequencyOrder(problem, min_var_num, max_var_num)
     elif options.order_type == 'revfrequency':
         print('Order:'.ljust(30, ' '), 'reversed frequency')
         order = ReversedFrequencyOrder(problem, min_var_num, max_var_num)
     elif options.order_type == 'direct':
-        print('Order:'.ljust(30,' '), 'direct')
+        print('Order:'.ljust(30, ' '), 'direct')
         if max_var_num != 0:
-            order = [x for x in reversed(range(1,max_var_num+1))]
+            order = [x for x in reversed(range(1, max_var_num+1))]
         else:
             raise RuntimeError('No maximum variable found, check DIMACS file.')
     order.insert(0, 'true')
@@ -30,31 +30,31 @@ def ReadProblem(options):
     return var_count, problem, order, comments
 
 
-def FrequencyOrder(problem,min_var_num, max_var_num):
+def FrequencyOrder(problem, min_var_num, max_var_num):
     if min_var_num != 0 and max_var_num != 0:
         counter = [0 for x in range(max_var_num+1)]
         for clause in problem:
             for lit in clause:
                 counter[abs(lit)] += 1
         counter = list(enumerate(counter))
-        counter.sort(key=lambda x:x[1])
+        counter.sort(key=lambda x: x[1])
         # counter.reverse()
-        order = [x[0] for x in counter if x[1]>0]
+        order = [x[0] for x in counter if x[1] > 0]
         return order
     else:
         raise RuntimeError('No minimum and maximum variables found, check DIMACS file.')
 
 
-def ReversedFrequencyOrder(problem,min_var_num, max_var_num):
+def ReversedFrequencyOrder(problem, min_var_num, max_var_num):
     if min_var_num != 0 and max_var_num != 0:
         counter = [0 for x in range(max_var_num+1)]
         for clause in problem:
             for lit in clause:
                 counter[abs(lit)] += 1
         counter = list(enumerate(counter))
-        counter.sort(key=lambda x:x[1])
+        counter.sort(key=lambda x: x[1])
         counter.reverse()
-        order = [x[0] for x in counter if x[1]>0]
+        order = [x[0] for x in counter if x[1] > 0]
         return order
     else:
         raise RuntimeError('No minimum and maximum variables found, check DIMACS file.')
@@ -68,12 +68,12 @@ def ExtractVarCounterMap(problem, var_map):
     pass
 
 
-#Минимальный и максимальный номер переменной
+# Минимальный и максимальный номер переменной
 def GetMinMaxVars(problem, min_var_id, max_var_id):
     pass
 
 
-#азделить путь к папке и имя файла
+# Разделить путь к папке и имя файла
 def SplitFilename(path):
     if '\\' not in path:
         dir = ''.join(path.split('/')[:-1])
@@ -81,17 +81,17 @@ def SplitFilename(path):
     else:
         dir = ''.join(path.split('\\')[:-1])
         filename = ''.join(path.split('\\')[-1])
-    return dir,filename
+    return dir, filename
 
 
-#Разделить имя файла на имя и суффикс
+# Разделить имя файла на имя и суффикс
 def SplitFileSuffix(filename):
     name = ''.join(filename.split('.')[:-1])
     suffix = ''.join(filename.split('.')[-1])
-    return name,suffix
+    return name, suffix
 
 
-#Проверяем существование файла
+# Проверяем существование файла
 def FileExists(options):
     return os.path.isfile(options.path)
 
@@ -117,14 +117,14 @@ def FillVarOrder(problem, order, order_type):
 
 def GetProblemType(str_type):
     if str_type == 'cnf':
-        type = ProblemType.Cnf
+        ptype = ProblemType.Cnf
     elif str_type == 'dnf':
-        type = ProblemType.Dnf
+        ptype = ProblemType.Dnf
     elif str_type == 'conflict':
-        type = ProblemType.Conflict
+        ptype = ProblemType.Conflict
     else:
         raise RuntimeError('Unknown type of problem')
-    return type
+    return ptype
 
 
 def WritePathsToFile(paths, filename):
@@ -170,21 +170,23 @@ def ParseOptions(params):
     options.djd_prep = False if params.djd_prep in [False, 'False', 0, '0'] else True
     options.lock_vars = False if params.lockvars in [False, 'False', 0, '0'] else True
     options.numprocess = params.numproc
+    options.pbintervals = params.pbintervals
     return options
+
 
 def PrintOptions(options):
     print('Options:')
     print('Number of processes:', options.numprocess)
     print('Full path:', options.path)
-    #print('Directory:', options.dir)
+    # print('Directory:', options.dir)
     print('Filename:', options.filename)
-    #print('Name only:', options.name)
-    #print('Suffix:', options.suffix)
+    # print('Name only:', options.name)
+    # print('Suffix:', options.suffix)
     print('Source type:', options.source_type)
     print('Order:', options.order_type)
-    #print('Analyze log:', options.analyze_log)
-    #print('Analyze var limit:', options.analyze_var_limit)
-    #print('Analyze var fraction:', options.analyze_var_fraction)
+    # print('Analyze log:', options.analyze_log)
+    # print('Analyze var limit:', options.analyze_var_limit)
+    # print('Analyze var fraction:', options.analyze_var_fraction)
     print('Run tests:', options.run_tests)
     print('Show statistics:', options.show_statistic)
     print('Show version:', options.show_version)
@@ -193,5 +195,7 @@ def PrintOptions(options):
     print('Redirecting pathes:', options.redir_paths)
     print('DJD preprocessing:', options.djd_prep)
     print('Lock variables:', options.lock_vars)
+    if options.pbintervals > 1:
+        print('Number of Pseudo-Boolean Intervals:', options.pbintervals)
     print()
 

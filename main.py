@@ -29,16 +29,14 @@ if __name__ == '__main__':
     if options.source_type == "conflicts" or options.source_type == "cnf":
         NegateProblem(problem)
     start_build_time = time.time()
+    ptype = GetProblemType(options.source_type)
     if options.separate_construction:
-        diagrams = []
         problems = DivideProblem(problem, var_count, order)
-        with multiprocessing.Pool(min(len(problems), options.numprocess)) as p:
-            params = [(var_count, problem, order, GetProblemType(options.source_type)) for problem in problems]
-            for result in p.map(CreateDiagram, params):
-                diagrams.append(result)
-        print('Number of diagrams:'.ljust(30, ' '), len(diagrams))
-        print('Number of vertices:'.ljust(30, ' '), [len(diagram.table_) for diagram in diagrams])
-        print('Number of roots:'.ljust(30, ' '), [len(diagram.roots_) for diagram in diagrams])
+        diagrams = CreateDiagrams(var_count, problems, order, ptype, options.numprocess)
+        nof_djds = len(diagrams)
+        print('Number of DJDs:'.ljust(30, ' '), nof_djds)
+        print('Total number of vertices:'.ljust(30, ' '), [len(diagram.table_) for diagram in diagrams])
+        print('Total number of roots:'.ljust(30, ' '), [len(diagram.roots_) for diagram in diagrams])
         print('DiagramNode constructors:'.ljust(30, ' '), DiagramNode.constructors_)
         print('DiagramNode destructors:'.ljust(30, ' '), DiagramNode.destructors_)
         build_time = time.time() - start_build_time
@@ -47,7 +45,7 @@ if __name__ == '__main__':
             # diagram.PrintProblem()
             diagram.PrintCurrentTable('SubDJDiagram ' + str(index+1) + ':')
     else:
-        diagram = CreateDiagram((var_count, problem, order, GetProblemType(options.source_type)))
+        diagram = CreateDiagram((var_count, problem, order, ptype))
         print('Number of vertices:'.ljust(30, ' '), len(diagram.table_))
         print('Number of roots:'.ljust(30, ' '), len(diagram.roots_))
         print('DiagramNode constructors:'.ljust(30, ' '), DiagramNode.constructors_)
@@ -134,7 +132,15 @@ if __name__ == '__main__':
                 print('Sd of size of diagram:', round(math.sqrt(variance(bdd_diagram.table_sizes)), 2))
             # DrawDiagram(bdd_diagram)
         else:
-            bdd_diagram, nof_djds, nof_link_actions_djd2bdd = DJDtoBDD_separated(diagrams, options.numprocess, order)
+            if options.pbintervals > 1:
+                from Intervals import *
+                pbi_djds = CreateIntervalsDJDs(problem_comments, options.pbintervals, var_count, order, ptype,
+                                               options.numprocess)
+                pbi_bdds, pbi_subdjd_to_bdd_times = DJDstoBDDs(pbi_djds, options.numprocess)
+                bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_pbi_separated(diagrams, pbi_bdds, options.numprocess,
+                                                                               order)
+            else:
+                bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_separated(diagrams, options.numprocess, order)
             print('Multiprocessing transition to BDD complete.')
             if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:
                 print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())

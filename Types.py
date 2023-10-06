@@ -369,3 +369,4 @@ class Options:
         self.test_bdd_convert = False
         self.separate_construction = False
         self.numproc = 1
+        self.pbintervals = 1

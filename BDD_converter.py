@@ -17,27 +17,13 @@ def DJDtoBDD_separated(diagrams, numproc, order):
     sys.setrecursionlimit(100000)
     iter_times = []
     conjoin_times = []
-    subdjd_to_bdd_times = []
-    current_bdd_diagrams = []
     # переводим каждую поддиаграмму в бдд
-    if numproc == 1:
-        for djd_diagram in current_djd_diagrams:
-            new_bdd_diagram, transform_time = DJDtoBDD(djd_diagram)
-            subdjd_to_bdd_times.append(transform_time)
-            current_bdd_diagrams.append(new_bdd_diagram)
-    else:
-        with multiprocessing.Pool(min(numproc, len(current_djd_diagrams))) as p:
-            for result in p.map(DJDtoBDD, current_djd_diagrams):
-                new_bdd_diagram = result[0]
-                transform_time = result[1]
-                subdjd_to_bdd_times.append(transform_time)
-                current_bdd_diagrams.append(new_bdd_diagram)
+    current_bdd_diagrams, subdjd_to_bdd_times = DJDstoBDDs(diagrams, numproc)
     current_bdd_diagrams = sorted(current_bdd_diagrams, key=lambda x: order.index(abs(x.main_root_.Value())))
     for index, diagram in enumerate(current_bdd_diagrams):
         # diagram.PrintProblem()
         diagram.PrintCurrentTable('SubBDDiagram ' + str(index + 1) + ':')
     nof_link_actions_djd2bdd = sum(x.actions_with_links_ for x in current_bdd_diagrams)
-    nof_djds = len(current_djd_diagrams)
     print('Actions with links after subdiagrams transformations:', nof_link_actions_djd2bdd)
     # попарно объединяем поддиаграммы пока не останется одна финальная диаграмма
     while len(current_bdd_diagrams) > 1:
@@ -94,8 +80,39 @@ def DJDtoBDD_separated(diagrams, numproc, order):
     print('Sum of times for iterations:', round(sum(iter_times), 3))
     print('Times for conjoins by iteration:', [[round(y, 3) for y in x] for x in conjoin_times])
     print('Sum of times for conjoins by iteration:', round(sum([sum(x) for x in conjoin_times]), 3))
-    return final_diagram, nof_djds, nof_link_actions_djd2bdd
+    return final_diagram, nof_link_actions_djd2bdd
 
+
+def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order):
+    bdds = DJDstoBDDs(djds, numproc)
+    for pbi_bdd in pbi_bdds:
+        # Тут нам нужен алгоритм апплай.
+        # Берём наши диаграммы, приклеиваем к ним алгоритмом апплай интервалы (к первой к примеру),
+        # к каждой второй к примеру, потом склеиваем попарно как раньше
+        pass
+
+
+def DJDstoBDDs(djds, numproc):
+    try:
+        # переводим каждую поддиаграмму в бдд
+        subdjd_to_bdd_times = []
+        bdds = []
+        if numproc == 1:
+            for djd_diagram in djds:
+                new_bdd_diagram, transform_time = DJDtoBDD(djd_diagram)
+                subdjd_to_bdd_times.append(transform_time)
+                bdds.append(new_bdd_diagram)
+        else:
+            with multiprocessing.Pool(min(numproc, len(djds))) as p:
+                for result in p.map(DJDtoBDD, djds):
+                    new_bdd_diagram = result[0]
+                    transform_time = result[1]
+                    subdjd_to_bdd_times.append(transform_time)
+                    bdds.append(new_bdd_diagram)
+        return bdds, subdjd_to_bdd_times
+    except Exception as ex:
+        print('ERROR DJDstoBDDs', ex)
+        raise ex
 
 def PrintFinalStats(diagram):
     print()
