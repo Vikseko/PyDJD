@@ -35,8 +35,8 @@ def DJDtoBDD_separated(diagrams, numproc, order):
         # print('order:', order)
         # print('sorted diagrams by roots:', [x.main_root_.Value() for x in current_bdd_diagrams])
         roots_sorted_diagrams = [x.main_root_.Value() for x in current_bdd_diagrams]
-        # print('sizes of diagrams:', [x.DiagramSize() for x in current_bdd_diagrams])
-        sizes_of_diagrams = [x.DiagramSize() for x in current_bdd_diagrams]
+        # print('sizes of diagrams:', [x.VertexCount() for x in current_bdd_diagrams])
+        sizes_of_diagrams = [x.VertexCount() for x in current_bdd_diagrams]
         iter_start_time = time.time()
         counter += 1
         next_iter_diagrams = []
