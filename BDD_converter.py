@@ -17,16 +17,20 @@ def DJDtoBDD_separated(diagrams, numproc, order):
     sys.setrecursionlimit(100000)
     iter_times = []
     conjoin_times = []
+    unsat_flag = False
     # переводим каждую поддиаграмму в бдд
     current_bdd_diagrams, subdjd_to_bdd_times = DJDstoBDDs(diagrams, numproc)
     current_bdd_diagrams = sorted(current_bdd_diagrams, key=lambda x: order.index(abs(x.main_root_.Value())))
     for index, diagram in enumerate(current_bdd_diagrams):
         # diagram.PrintProblem()
         diagram.PrintCurrentTable('SubBDDiagram ' + str(index + 1) + ':')
+        if diagram.VertexCount() == 0:
+            print('Empty BDD is obtained. Initial CNF in unsatisfiable.')
+            unsat_flag = True
     nof_link_actions_djd2bdd = sum(x.actions_with_links_ for x in current_bdd_diagrams)
     print('Actions with links after subdiagrams transformations:', nof_link_actions_djd2bdd)
     # попарно объединяем поддиаграммы пока не останется одна финальная диаграмма
-    while len(current_bdd_diagrams) > 1:
+    while len(current_bdd_diagrams) > 1 and not unsat_flag:
         current_bdd_diagrams = sorted(current_bdd_diagrams, key=lambda x: order.index(abs(x.main_root_.Value())))
         # print('order:', order)
         # print('sorted diagrams by roots:', [x.main_root_.Value() for x in current_bdd_diagrams])
@@ -58,6 +62,10 @@ def DJDtoBDD_separated(diagrams, numproc, order):
                 next_iter_diagrams.append(new_diagram)
                 conjoin_times_iter.append(conjoin_time)
                 print(*log_lines, sep='\n')
+                if new_diagram.VertexCount() == 0:
+                    print('Empty diagram obtained. Initial CNF in unsatisfiable.')
+                    unsat_flag = True
+                    break
         else:
             with multiprocessing.Pool(min(numproc, len(diagrams_pairs))) as p:
                 for result in p.map(ConjoinBDDs, [(pair[0], pair[1]) for pair in diagrams_pairs]):
@@ -68,10 +76,16 @@ def DJDtoBDD_separated(diagrams, numproc, order):
                     print(*log_lines, sep='\n')
                     next_iter_diagrams.append(new_diagram)
                     conjoin_times_iter.append(conjoin_time)
-        current_bdd_diagrams = next_iter_diagrams
+                    if new_diagram.VertexCount() == 0:
+                        print('Empty diagram obtained. Initial CNF in unsatisfiable.')
+                        unsat_flag = True
         iter_time = time.time() - iter_start_time
         iter_times.append(iter_time)
         conjoin_times.append(conjoin_times_iter)
+        if not unsat_flag:
+            current_bdd_diagrams = next_iter_diagrams
+        else:
+            current_bdd_diagrams = [x for x in next_iter_diagrams if x.VertexCount() == 0]
     final_diagram = current_bdd_diagrams[0]
     EnumerateBDDiagramNodes(final_diagram)
     print('Times for initial transformations', [round(x, 3) for x in subdjd_to_bdd_times])
@@ -115,6 +129,7 @@ def DJDstoBDDs(djds, numproc):
     except Exception as ex:
         print('ERROR DJDstoBDDs', ex)
         raise ex
+
 
 def PrintFinalStats(diagram):
     print()
@@ -524,7 +539,7 @@ def BDD_convert(diagram):
         # while not BDDiagram.nonbinary_queue.empty():
         while diagram.nonbinary_queue:
             # print('\nCurrent size of queue', len(diagram.nonbinary_queue))
-            # diagram.PrintCurrentTable('\nCurrent table:')
+            # diagram.PrintCurrentTable('\n-----------------------------------\nCurrent table:')
             host = diagram.nonbinary_queue.pop()
             # host[0].PrintNode('Current host:')
             # print('Polarity:', host[1])
@@ -595,7 +610,7 @@ def ConnectNodesDouble(host, polarity, lower, upper, diagram):
     old_upper = upper
     upper = CheckNodeForUngluing(diagram, upper, host, polarity)
     # if old_upper is not upper:
-    #     upper.PrintNode('New upper:')
+    # upper.PrintNode('New upper:')
 
     # diagram.PrintCurrentTable('ConnectNodesDouble 1 table:')
 
@@ -952,6 +967,7 @@ def SetTrueChild(diagram, node, polarity):
         for child in node.high_childs:
             diagram.actions_with_links_ += 1
             child.high_parents = [x for x in child.high_parents if x is not node]
+            DeleteNodeWithoutParents(child, diagram)
         diagram.actions_with_links_ += 1
         node.high_childs = [diagram.GetTrueLeaf()]
         diagram.GetTrueLeaf().high_parents.append(node)
@@ -959,6 +975,7 @@ def SetTrueChild(diagram, node, polarity):
         for child in node.low_childs:
             diagram.actions_with_links_ += 1
             child.low_parents = [x for x in child.low_parents if x is not node]
+            DeleteNodeWithoutParents(child, diagram)
         diagram.actions_with_links_ += 1
         node.low_childs = [diagram.GetTrueLeaf()]
         diagram.GetTrueLeaf().low_parents.append(node)
@@ -1087,7 +1104,7 @@ def DeleteNodeWithoutParents(node, diagram):
 def CheckForTrueNodes(node, host, diagram):
     if diagram.GetTrueLeaf() in node.low_childs and \
             diagram.GetTrueLeaf() in node.high_childs:
-        # node.PrintNode('\nDouble True child deleting node:')
+        # node.PrintNode('Double True child deleting node:')
         # for parent in node.high_parents:
         #     parent.PrintNode('    High parent:')
         # for parent in node.low_parents:
@@ -1141,7 +1158,8 @@ def GluingNodes(upper, host, diagram):
         if node.hash_key in diagram.table_ and diagram.table_[node.hash_key] is not node:
             node_to_which_glue = diagram.table_[node.hash_key]
             if node is node_to_which_glue:
-                print('ERROR')
+                print('ERROR node is node_to_which_glue')
+                raise Exception('ERROR node is node_to_which_glue')
             # node.PrintNode(' Glued node')
             # node_to_which_glue.PrintNode('    with node')
             # node_to_which_glue.HashKey()
@@ -1304,7 +1322,6 @@ def WritePaths(problem, node_paths, node_path, clause):
             lclause.append(-node.var_id)
             lnode_path.append(node)
             WritePaths(problem, node_paths, lnode_path, lclause)
-
 
 # def TransferChilds(from_node,upper,to_node,deleted_nodes,candidates_to_deletion,diagram):
 #     copy_flag = False

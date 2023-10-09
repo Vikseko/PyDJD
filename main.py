@@ -113,7 +113,7 @@ if __name__ == '__main__':
             initial_size_of_djd = diagram.VertexCount()
             bdd_diagram, transform_time_ = DJDtoBDD(diagram)
             EnumerateBDDiagramNodes(bdd_diagram)
-            print('Transition to BDD complete.')
+            print('\nDirect transition to BDD complete.')
             if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:
                 print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())
             else:
@@ -141,7 +141,7 @@ if __name__ == '__main__':
                                                                                order)
             else:
                 bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_separated(diagrams, options.numprocess, order)
-            print('Multiprocessing transition to BDD complete.')
+            print('\nSeparated transition to BDD complete.')
             if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:
                 print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())
             else:
