@@ -163,6 +163,10 @@ if __name__ == '__main__':
         else:
             print('Final. Initial size of DJD:', initial_size_of_djd)
         PrintFinalStats(bdd_diagram)
+        # print('JSON')
+        # print(bdd_diagram.DumpCurrentTableJSON_ddformat())
+        # with open("sample.json", "w") as outfile:
+        #     json.dump(bdd_diagram.DumpCurrentTableJSON_ddformat(), outfile)
         convert_time = time.time() - start_bdd_time
         print('Final. Conversion time:'.ljust(30, ' '), convert_time)
         if len(bdd_diagram.table_) > 0:

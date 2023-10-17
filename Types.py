@@ -24,7 +24,7 @@ class DiagramNode:
     destructors_ = 0
     destructor_errors_ = 0
 
-    def __init__(self, Type:DiagramNodeType, VarId:int = None, HighChilds = None, LowChilds = None):
+    def __init__(self, Type:DiagramNodeType, VarId:int = None, HighChilds = None, LowChilds = None, level=None):
         DiagramNode.constructors_ += 1
         if type(Type) == DiagramNodeType:
             self.node_type = Type
@@ -35,6 +35,7 @@ class DiagramNode:
         self.vertex_id = DiagramNode.constructors_
         self.hash_key = 0
         self.visited = False
+        self.level = 0 if level is None else level
         self.high_childs = [] if HighChilds is None else sorted(copy.copy(HighChilds), key=lambda x: (x.var_id, x.vertex_id))
         self.low_childs = [] if LowChilds is None else sorted(copy.copy(LowChilds), key=lambda x: (x.var_id, x.vertex_id))
         self.high_parents = []
@@ -160,6 +161,12 @@ class DiagramNode:
                         self.node_type == DiagramNodeType.QuestionNode or
                         self.node_type == DiagramNodeType.FalseNode) else False
 
+    def IsTrueLeaf(self):
+        return True if self.node_type == DiagramNodeType.TrueNode else False
+
+    def IsQuestionLeaf(self):
+        return True if self.node_type == DiagramNodeType.QuestionNode else False
+
     # Проверяет является ли узел корневым
     def IsRoot(self):
         return True if (self.node_type == DiagramNodeType.RootNode) else False
@@ -167,6 +174,18 @@ class DiagramNode:
     # Првоеряет является ли узел внутренним
     def IsInternal(self):
         return True if (self.node_type == DiagramNodeType.InternalNode) else False
+
+    def IsNotTerminal(self):
+        return True if (self.node_type == DiagramNodeType.InternalNode or
+                        self.node_type == DiagramNodeType.RootNode) else False
+
+    def FirstHighChild(self):
+        assert self.high_childs, 'No high childs'
+        return self.high_childs[0]
+
+    def FirstLowChild(self):
+        assert self.low_childs, 'No low childs'
+        return self.low_childs[0]
 
     def SortChilds(self):
         self.high_childs = sorted(self.high_childs, key=lambda x: (x.var_id, x.vertex_id))
