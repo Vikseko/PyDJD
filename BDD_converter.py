@@ -1428,11 +1428,15 @@ def WritePaths(problem, node_paths, node_path, clause):
 
 def mybdd2ddbdd_highlevel(mybdd: BDDiagram, order: list):
     vars_names = [str(x) for x in order if ((x != '?') and (x != 'true'))]
-    # FIXME тут надо создавать файл, дампить таблицу,
-    #  при этом тупой парсер dd игнорирует заданные в json уровни переменных, надо чето с этим сделать
-    bdd_json = mybdd.DumpCurrentTableJSON_ddformat()
-
-    roots = other_bdd.load(bdd_json)
+    # TODO для начала общий вид такой: создаем подджд, из них делаем подбдд,
+    #  затем всё это переводим в формат dd и работаем дальше только с апплаем
+    # находим среди поддиаграмм ту, в которой наибольшее пересечение с переменными входа,
+    # склеиваем её с первым интервалом, затем со второй подбдд, с третьей и тд, пока не схлопнется (на леках)
+    # после этого берём второй интервал и повторяем и тд.
+    filename = 'current_bdd.json'
+    bdd_json = mybdd.DumpTableJSON_ddformat(filename)
+    subbdd_dd = BDD()
+    roots = subbdd_dd.load(filename)
 
 
 def create_and_expr(vars):
