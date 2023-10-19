@@ -164,9 +164,8 @@ if __name__ == '__main__':
             print('Final. Initial size of DJD:', initial_size_of_djd)
         PrintFinalStats(bdd_diagram)
         # print('JSON')
-        # print(bdd_diagram.DumpCurrentTableJSON_ddformat())
-        # with open("sample.json", "w") as outfile:
-        #     json.dump(bdd_diagram.DumpCurrentTableJSON_ddformat(), outfile)
+        # print(bdd_diagram.DumpTableJSON_ddformat())
+        bdd_diagram.DumpTableJSON_ddformat('sample_freq_with_comp_edges.json')
         convert_time = time.time() - start_bdd_time
         print('Final. Conversion time:'.ljust(30, ' '), convert_time)
         if len(bdd_diagram.table_) > 0:
@@ -180,7 +179,9 @@ if __name__ == '__main__':
             print('\nStart testing BDD.')
             nof_inputs, false_paths, true_paths = test_bdd(bdd_diagram)
             print('Total checked inputs:', nof_inputs)
-            print('Number of paths to 1-vertex:', true_paths)
-            print('Number of paths to 0-vertex:', false_paths)
+            print('Number of paths to 1-vertex:', len(true_paths))
+            print(*true_paths, sep='\n')
+            print('Number of paths to 0-vertex:', len(false_paths))
+            print(*false_paths, sep='\n')
             testing_time = time.time() - start_testing_time
             print('Testing time:'.ljust(30, ' '), testing_time)

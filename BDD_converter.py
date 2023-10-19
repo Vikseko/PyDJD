@@ -431,33 +431,94 @@ class BDDiagram:
         else:
             print('Cannot dump diagram to json-file, because table is empty.')
 
-    def DumpCurrentTableJSON_ddformat(self):
+    def DumpTableJSON_ddformat(self, filename):
         assert len(self.table_) > 0, 'Cannot dump diagram to json-file, because table is empty.'
-        table_dict = dict()
         sorted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodes(self.order_, self.table_.values())
         rev_order = list(reversed(self.order_))
         for node in sorted_nodes:
             node.level = rev_order.index(node.Value())
-        table_dict['level_of_var'] = dict([('x' + str(node.Value()), node.level) for node in sorted_nodes if
-                                           node.IsNotTerminal()])
-        table_dict['roots'] = [self.main_root_.vertex_id]
-        for node in sorted_nodes:
-            if node.IsNotTerminal():
-                if node.FirstLowChild().IsTrueLeaf():
-                    low = 'T'
-                elif node.FirstLowChild().IsQuestionLeaf():
-                    low = 'F'
+        sorted_vars_with_levels = sorted([('x' + str(node.Value()), node.level) for node in sorted_nodes if
+                                          node.IsNotTerminal()], key=lambda x: x[1])
+        negated_nodes = set()
+        with open(filename, 'w') as f:
+            print('{', file=f)
+            print('\"level_of_var\": {', end='', file=f)
+            for index, pair in enumerate(sorted_vars_with_levels):
+                if index < len(sorted_vars_with_levels)-1:
+                    print('\"'+pair[0]+'\": ', pair[1], sep='', end=', ', file=f)
                 else:
-                    low = node.FirstLowChild().vertex_id
-                if node.FirstHighChild().IsTrueLeaf():
-                    high = 'T'
-                elif node.FirstHighChild().IsQuestionLeaf():
-                    high = 'F'
-                else:
-                    high = node.FirstHighChild().vertex_id
-                table_dict[str(node.vertex_id)] = [node.level, low, high]
-        # return json.dumps(table_dict)
-        return table_dict
+                    print('\"' + pair[0] + '\": ', pair[1], sep='', end='},\n', file=f)
+            print('\"roots\": ', [self.main_root_.vertex_id], ',', sep='', file=f)
+            for index, node in enumerate(sorted_nodes):
+                if node.IsNotTerminal():
+                    negated_node = False
+                    if node.FirstLowChild().IsTrueLeaf():
+                        low = 'T'
+                    elif node.FirstLowChild().IsQuestionLeaf():
+                        low = 'F'
+                    else:
+                        if node.FirstLowChild().vertex_id in negated_nodes:
+                            low = -node.FirstLowChild().vertex_id
+                        else:
+                            low = node.FirstLowChild().vertex_id
+                    if node.FirstHighChild().IsTrueLeaf():
+                        high = 'T'
+                    elif node.FirstHighChild().IsQuestionLeaf():
+                        negated_node = True
+                        negated_nodes.add(node.vertex_id)
+                        high = 'F'
+                    else:
+                        if node.FirstHighChild().vertex_id in negated_nodes:
+                            high = -node.FirstHighChild().vertex_id
+                        else:
+                            high = node.FirstHighChild().vertex_id
+                    if negated_node:
+                        if low == 'T':
+                            low = 'F'
+                        elif low == 'F':
+                            low = 'T'
+                        else:
+                            low = -low
+                        if high == 'T':
+                            high = 'F'
+                        elif high == 'F':
+                            high = 'T'
+                        else:
+                            high = -low
+                    if index < len(sorted_nodes)-1:
+                        # print('\"' + str(node.vertex_id) + '\": ', [node.level, low, high], ',', sep='', file=f)
+                        print('\"' + str(node.vertex_id) + '\":', sep='', end=' ', file=f)
+                        print('[', node.level, sep='', end=', ', file=f)
+                        print('\"'+low+'\"' if type(low) == str else low, sep='', end=', ', file=f)
+                        print('\"'+high+'\"' if type(high) == str else high, sep='', end='],\n', file=f)
+                    else:
+                        # print('\"' + str(node.vertex_id) + '\": ', [node.level, low, high], ',', sep='', file=f)
+                        print('\"' + str(node.vertex_id) + '\":', sep='', end=' ', file=f)
+                        print('[', node.level, sep='', end=', ', file=f)
+                        print('\"'+low+'\"' if type(low) == str else low, sep='', end=', ', file=f)
+                        print('\"'+high+'\"' if type(high) == str else high, sep='', end=']\n', file=f)
+            print('}', file=f)
+        # table_dict = dict()
+        # table_dict['level_of_var'] = dict(sorted([('x' + str(node.Value()), node.level) for node in sorted_nodes if
+        #                                           node.IsNotTerminal()], key=lambda x: x[1]))
+        # table_dict['roots'] = [self.main_root_.vertex_id]
+        # for node in sorted_nodes:
+        #     if node.IsNotTerminal():
+        #         if node.FirstLowChild().IsTrueLeaf():
+        #             low = 'T'
+        #         elif node.FirstLowChild().IsQuestionLeaf():
+        #             low = 'F'
+        #         else:
+        #             low = node.FirstLowChild().vertex_id
+        #         if node.FirstHighChild().IsTrueLeaf():
+        #             high = 'T'
+        #         elif node.FirstHighChild().IsQuestionLeaf():
+        #             high = 'F'
+        #         else:
+        #             high = node.FirstHighChild().vertex_id
+        #         table_dict[str(node.vertex_id)] = [node.level, low, high]
+        # return json.dumps(table_dict, indent=4)
+        # return table_dict
 
     # Получаем КНФ из диаграммы (все пути из корней в терминальную 'true')
     def GetCNFFromBDD(self):
@@ -1370,6 +1431,7 @@ def mybdd2ddbdd_highlevel(mybdd: BDDiagram, order: list):
     # FIXME тут надо создавать файл, дампить таблицу,
     #  при этом тупой парсер dd игнорирует заданные в json уровни переменных, надо чето с этим сделать
     bdd_json = mybdd.DumpCurrentTableJSON_ddformat()
+
     roots = other_bdd.load(bdd_json)
 
 

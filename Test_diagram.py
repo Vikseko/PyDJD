@@ -7,8 +7,8 @@ def test_bdd(bdd_diagram):
     # inputs = make_inputs(vars)
     nof_inputs = 2**len(vars)
     print('Total possible inputs:', nof_inputs)
-    true_paths = 0
-    false_paths = 0
+    true_paths = []
+    false_paths = []
     # print(*inputs, sep='\n')
     counter = 0
     binary_vectors = itertools.product([0, 1], repeat=len(vars))
@@ -20,11 +20,17 @@ def test_bdd(bdd_diagram):
         result = check_input(current_input, bdd_diagram)
         # print(result)
         if result == 1:
-            true_paths += 1
+            true_paths.append(current_input)
         elif result == 0:
-            false_paths += 1
-        print('Number of checked inputs:', counter, 'true =', true_paths, 'false =', false_paths, end='\r')
+            false_paths.append(current_input)
+        print('Number of checked inputs:', counter, 'true =', len(true_paths), 'false =', len(false_paths), end='\r')
     print()
+    for path in true_paths:
+        path.sort(key=lambda x: abs(x))
+    true_paths.sort()
+    for path in false_paths:
+        path.sort(key=lambda x: abs(x))
+    false_paths.sort()
     return nof_inputs, false_paths, true_paths
 
 
