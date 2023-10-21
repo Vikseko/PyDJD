@@ -1,4 +1,5 @@
 import multiprocessing
+import pprint
 
 from Pathfinder import *
 import pysat
@@ -103,22 +104,44 @@ def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order):
     iter_times = []
     conjoin_times = []
     unsat_flag = False
-    bdds = DJDstoBDDs(djds, numproc)
-    alg_ver = False
-    if alg_ver:
-        # Версия, использующая реализацию apply для нашего формата диаграмм
-        for pbi_bdd in pbi_bdds:
-            # TODO
-            # Тут нам нужен алгоритм апплай.
-            # Берём наши диаграммы, приклеиваем к ним алгоритмом апплай интервалы (к первой к примеру),
-            # к каждой второй к примеру, потом склеиваем попарно как раньше
-            # Второй вариант: приклеиваем их по алгоритму избавления от небинарностей
-            pass
-    else:
-        # Версия, использующая пакет dd
-        from dd.autoref import BDD
-        for pbi_bdd in pbi_bdds:
-            pbi_bdd_dd = mybdd2ddbdd_highlevel(pbi_bdd, order)
+    fun_bdds, subdjd_to_bdd_times = DJDstoBDDs(djds, numproc)
+    for index, diagram in enumerate(fun_bdds):
+        # diagram.PrintProblem()
+        diagram.PrintCurrentTable('SubBDDiagram ' + str(index + 1) + ':')
+        if diagram.VertexCount() == 0:
+            print('Empty BDD is obtained. Initial CNF in unsatisfiable.')
+            unsat_flag = True
+    if not unsat_flag:
+        alg_ver = False
+        if alg_ver:
+            # Версия, использующая реализацию apply для нашего формата диаграмм
+            for pbi_bdd in pbi_bdds:
+                # TODO
+                # Тут нам нужен алгоритм апплай.
+                # Берём наши диаграммы, приклеиваем к ним алгоритмом апплай интервалы (к первой к примеру),
+                # к каждой второй к примеру, потом склеиваем попарно как раньше
+                # Второй вариант: приклеиваем их по алгоритму избавления от небинарностей
+                pass
+        else:
+            # Версия, использующая пакет dd
+            pbi_dd_bdds = []
+            pbi_dd_bdds = mybdds2ddbdds(pbi_bdds, order, 'pbibdd')
+            print('Nof dd PBI bdds', len(pbi_dd_bdds))
+            fun_bdds = mybdds2ddbdds(fun_bdds, order, 'funbdd')
+            print('Nof dd functions\'s bdds', len(fun_bdds))
+            # TODO надо сделать чтобы был общий порядок, т.е. надо задать порядок для интервальной бдд со всеми переменными
+            for index, pbi_bdd_with_root in enumerate(pbi_dd_bdds):
+                print('\nStart applying interval', index)
+                current_bdd = pbi_bdd_with_root[0]  # здесь бдд интервала используется как основная,
+                current_root = pbi_bdd_with_root[1]  # к которой апплаим бддшки
+                for bdd_with_root in fun_bdds:
+                    print('Size of current BDD:', len(current_bdd))
+                    fun_bdd = bdd_with_root[0]
+                    print('Size of BDD to apply:', len(fun_bdd))
+                    fun_root = bdd_with_root[1]
+                    current_root = current_bdd.apply('&', fun_root)
+                    print('Size of current BDD after apply:', len(current_bdd))
+            exit()
 
 
 def DJDstoBDDs(djds, numproc):
@@ -129,6 +152,7 @@ def DJDstoBDDs(djds, numproc):
         if numproc == 1:
             for djd_diagram in djds:
                 new_bdd_diagram, transform_time = DJDtoBDD(djd_diagram)
+                new_bdd_diagram.EnumerateBDDiagramNodes()
                 subdjd_to_bdd_times.append(transform_time)
                 bdds.append(new_bdd_diagram)
         else:
@@ -294,7 +318,7 @@ class BDDiagram:
         # self.PrintCurrentTable('Diagram after remove nonbinary')
         # print('Number of actions with links', self.actions_with_links_, 'after conversion')
         CleaningDiagram(self)
-        # EnumerateBDDiagramNodes(self)
+        EnumerateBDDiagramNodes(self)
         # print('finish')
 
     # Возвращает таблицу
@@ -431,7 +455,7 @@ class BDDiagram:
         else:
             print('Cannot dump diagram to json-file, because table is empty.')
 
-    def DumpTableJSON_ddformat(self, filename):
+    def DumpTableJSON_ddformat_manually(self, filename):
         assert len(self.table_) > 0, 'Cannot dump diagram to json-file, because table is empty.'
         sorted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodes(self.order_, self.table_.values())
         rev_order = list(reversed(self.order_))
@@ -448,43 +472,43 @@ class BDDiagram:
                     print('\"'+pair[0]+'\": ', pair[1], sep='', end=', ', file=f)
                 else:
                     print('\"' + pair[0] + '\": ', pair[1], sep='', end='},\n', file=f)
-            print('\"roots\": ', [self.main_root_.vertex_id], ',', sep='', file=f)
             for index, node in enumerate(sorted_nodes):
                 if node.IsNotTerminal():
                     negated_node = False
                     if node.FirstLowChild().IsTrueLeaf():
-                        low = 'T'
+                        low = "T"
                     elif node.FirstLowChild().IsQuestionLeaf():
-                        low = 'F'
+                        low = "F"
                     else:
                         if node.FirstLowChild().vertex_id in negated_nodes:
                             low = -node.FirstLowChild().vertex_id
                         else:
                             low = node.FirstLowChild().vertex_id
                     if node.FirstHighChild().IsTrueLeaf():
-                        high = 'T'
+                        high = "T"
                     elif node.FirstHighChild().IsQuestionLeaf():
                         negated_node = True
                         negated_nodes.add(node.vertex_id)
-                        high = 'F'
+                        high = "F"
                     else:
                         if node.FirstHighChild().vertex_id in negated_nodes:
+                            negated_node = True
                             high = -node.FirstHighChild().vertex_id
                         else:
                             high = node.FirstHighChild().vertex_id
                     if negated_node:
-                        if low == 'T':
-                            low = 'F'
-                        elif low == 'F':
-                            low = 'T'
+                        if low == "T":
+                            low = "F"
+                        elif low == "F":
+                            low = "T"
                         else:
                             low = -low
-                        if high == 'T':
-                            high = 'F'
-                        elif high == 'F':
-                            high = 'T'
+                        if high == "T":
+                            high = "F"
+                        elif high == "F":
+                            high = "T"
                         else:
-                            high = -low
+                            high = -high
                     if index < len(sorted_nodes)-1:
                         # print('\"' + str(node.vertex_id) + '\": ', [node.level, low, high], ',', sep='', file=f)
                         print('\"' + str(node.vertex_id) + '\":', sep='', end=' ', file=f)
@@ -497,28 +521,80 @@ class BDDiagram:
                         print('[', node.level, sep='', end=', ', file=f)
                         print('\"'+low+'\"' if type(low) == str else low, sep='', end=', ', file=f)
                         print('\"'+high+'\"' if type(high) == str else high, sep='', end=']\n', file=f)
+            print('\"roots\": ', [self.main_root_.vertex_id if self.main_root_.vertex_id not in negated_nodes else -self.main_root_.vertex_id], ',', sep='', file=f)
             print('}', file=f)
-        # table_dict = dict()
-        # table_dict['level_of_var'] = dict(sorted([('x' + str(node.Value()), node.level) for node in sorted_nodes if
-        #                                           node.IsNotTerminal()], key=lambda x: x[1]))
-        # table_dict['roots'] = [self.main_root_.vertex_id]
-        # for node in sorted_nodes:
-        #     if node.IsNotTerminal():
-        #         if node.FirstLowChild().IsTrueLeaf():
-        #             low = 'T'
-        #         elif node.FirstLowChild().IsQuestionLeaf():
-        #             low = 'F'
-        #         else:
-        #             low = node.FirstLowChild().vertex_id
-        #         if node.FirstHighChild().IsTrueLeaf():
-        #             high = 'T'
-        #         elif node.FirstHighChild().IsQuestionLeaf():
-        #             high = 'F'
-        #         else:
-        #             high = node.FirstHighChild().vertex_id
-        #         table_dict[str(node.vertex_id)] = [node.level, low, high]
-        # return json.dumps(table_dict, indent=4)
-        # return table_dict
+
+    def DumpTableJSON_ddformat(self, filename):
+        assert len(self.table_) > 0, 'Cannot dump diagram to json-file, because table is empty.'
+        sorted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodes(self.order_, self.table_.values())
+        rev_order = list(reversed(self.order_))
+        for node in sorted_nodes:
+            node.level = rev_order.index(node.Value())
+        sorted_vars_with_levels = sorted([("x" + str(node.Value()), node.level) for node in sorted_nodes if
+                                          node.IsNotTerminal()], key=lambda x: x[1])
+        negated_nodes = set()
+        root = self.main_root_.vertex_id
+        bdd_dict = dict()
+        bdd_dict["level_of_var"] = dict()
+        for pair in sorted_vars_with_levels:
+            bdd_dict["level_of_var"][pair[0]] = pair[1]
+        for node in sorted_nodes:
+            negated_node = False
+            if node.IsNotTerminal():
+                if node.FirstLowChild().IsTrueLeaf():
+                    low = "T"
+                elif node.FirstLowChild().IsQuestionLeaf():
+                    low = "F"
+                else:
+                    if node.FirstLowChild().vertex_id in negated_nodes:
+                        low = -node.FirstLowChild().vertex_id
+                    else:
+                        low = node.FirstLowChild().vertex_id
+                if node.FirstHighChild().IsTrueLeaf():
+                    high = "T"
+                elif node.FirstHighChild().IsQuestionLeaf():
+                    negated_node = True
+                    negated_nodes.add(node.vertex_id)
+                    high = "F"
+                else:
+                    if node.FirstHighChild().vertex_id in negated_nodes:
+                        negated_node = True
+                        negated_nodes.add(node.vertex_id)
+                        high = -node.FirstHighChild().vertex_id
+                    else:
+                        high = node.FirstHighChild().vertex_id
+                # print('\nBefore negated', node.vertex_id, [node.level, low, high])
+                if negated_node:
+                    if low == "T":
+                        low = "F"
+                    elif low == "F":
+                        low = "T"
+                    else:
+                        low = -low
+                    if high == "T":
+                        high = "F"
+                    elif high == "F":
+                        high = "T"
+                    else:
+                        high = -high
+                bdd_dict[str(node.vertex_id)] = [node.level, low, high]
+                # print('Negated flag', negated_node)
+                # print('Negated nodes', negated_nodes)
+                # print('After negated', node.vertex_id, [node.level, low, high])
+        bdd_dict["roots"] = [root] if root not in negated_nodes else [-root]
+        outfile_lines = '{\n'
+        outfile_lines += '"level_of_var": ' + json.dumps(bdd_dict["level_of_var"]) + ',\n'
+        outfile_lines += '"roots": ' + json.dumps(bdd_dict["roots"])
+        for key in bdd_dict.keys():
+            if key != 'roots' and key != 'level_of_var':
+                node_str = '"{k}": '.format(k=key) + json.dumps(bdd_dict[key])
+                outfile_lines += ',\n' + node_str
+        outfile_lines += '\n}'
+        # pprint.pprint(bdd_dict)
+        # bdd_dict_json_str = json.dumps(bdd_dict)
+        with open(filename, 'w') as f:
+            print(outfile_lines, file=f)
+        # json.dump(bdd_dict, open(filename, 'w'))
 
     # Получаем КНФ из диаграммы (все пути из корней в терминальную 'true')
     def GetCNFFromBDD(self):
@@ -565,6 +641,12 @@ class BDDiagram:
             node_path = [node]
             WritePaths(cnf, node_paths, node_path, clause)
         return cnf, node_paths
+
+    def EnumerateBDDiagramNodes(self):
+        vertex_id = 0
+        for node in sorted(self.table_.values(), key=lambda x: self.order_.index(x.Value())):
+            node.vertex_id = vertex_id
+            vertex_id += 1
 
     # Возвращает размер диаграммы в байтах
     def DiagramSize(self):
@@ -1426,17 +1508,36 @@ def WritePaths(problem, node_paths, node_path, clause):
             WritePaths(problem, node_paths, lnode_path, lclause)
 
 
-def mybdd2ddbdd_highlevel(mybdd: BDDiagram, order: list):
+def mybdds2ddbdds(mybdds, order, preambule):
+    dd_bdds = []
+    for index, bdd in enumerate(mybdds):
+        curr_preambule = preambule + str(index)
+        pbi_bdd_dd, roots = mybdd2ddbdd(bdd, order, curr_preambule)
+        dd_bdds.append([pbi_bdd_dd, roots])
+    return dd_bdds
+
+
+def mybdd2ddbdd(mybdd: BDDiagram, order: list, preambule=''):
     vars_names = [str(x) for x in order if ((x != '?') and (x != 'true'))]
     # TODO для начала общий вид такой: создаем подджд, из них делаем подбдд,
     #  затем всё это переводим в формат dd и работаем дальше только с апплаем
     # находим среди поддиаграмм ту, в которой наибольшее пересечение с переменными входа,
     # склеиваем её с первым интервалом, затем со второй подбдд, с третьей и тд, пока не схлопнется (на леках)
     # после этого берём второй интервал и повторяем и тд.
-    filename = 'current_bdd.json'
-    bdd_json = mybdd.DumpTableJSON_ddformat(filename)
+    assert type(mybdd) == BDDiagram, 'ERROR mybdd2ddbdd. Expect BDDiagram, got ' + str(type(mybdd))
+    assert type(order) == list, 'ERROR mybdd2ddbdd. Expect order as list, got ' + str(type(order))
+    filename = preambule + '_tmp.json'
+    mybdd.DumpTableJSON_ddformat(filename)
     subbdd_dd = BDD()
     roots = subbdd_dd.load(filename)
+    subbdd_dd.collect_garbage()
+    # os.remove(filename)
+    subbdd_dd.dump('_' + filename, roots=roots)
+    subbdd_dd.dump('_' + filename+'.pdf')
+    # print(str(subbdd_dd))
+    assert mybdd.VertexCount()-1 == len(subbdd_dd), 'ERROR mybdd2ddbdd. Size was ' + str(mybdd.VertexCount()) + \
+                                                  '. but now ' + str(len(subbdd_dd))
+    return subbdd_dd, roots
 
 
 def create_and_expr(vars):

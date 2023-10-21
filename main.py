@@ -163,9 +163,6 @@ if __name__ == '__main__':
         else:
             print('Final. Initial size of DJD:', initial_size_of_djd)
         PrintFinalStats(bdd_diagram)
-        # print('JSON')
-        # print(bdd_diagram.DumpTableJSON_ddformat())
-        bdd_diagram.DumpTableJSON_ddformat('sample_freq_with_comp_edges.json')
         convert_time = time.time() - start_bdd_time
         print('Final. Conversion time:'.ljust(30, ' '), convert_time)
         if len(bdd_diagram.table_) > 0:

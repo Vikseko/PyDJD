@@ -12,6 +12,7 @@ import multiprocessing
 from statistics import mean, median, variance
 import math
 # from memory_profiler import profile
+from dd.autoref import BDD
 
 # if cpython
 from sortedcontainers import SortedSet
