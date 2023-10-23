@@ -143,6 +143,10 @@ def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order):
                     fun_root = bdd_with_root[1]
                     current_root = current_bdd.apply('&', fun_root)
                     print('Size of current BDD after apply:', len(current_bdd))
+                    if len(current_bdd) == 0:
+                        unsat_flag = True
+                        print('Proved UNSAT for', index, 'interval.')
+                        break
             exit()
 
 
@@ -1510,6 +1514,7 @@ def WritePaths(problem, node_paths, node_path, clause):
             WritePaths(problem, node_paths, lnode_path, lclause)
 
 
+# переводим через файл мои диаграммы в формат пакета dd, задавая порядок
 def mybdds2ddbdds(mybdds, vars_for_declare, preambule):
     dd_bdds = []
     for index, bdd in enumerate(mybdds):
@@ -1519,12 +1524,8 @@ def mybdds2ddbdds(mybdds, vars_for_declare, preambule):
     return dd_bdds
 
 
+# переводим через файл мою диаграмму в формат пакета dd, задавая порядок
 def mybdd2ddbdd(mybdd: BDDiagram, vars_for_declare: list, preambule=''):
-    # TODO для начала общий вид такой: создаем подджд, из них делаем подбдд,
-    #  затем всё это переводим в формат dd и работаем дальше только с апплаем
-    # находим среди поддиаграмм ту, в которой наибольшее пересечение с переменными входа,
-    # склеиваем её с первым интервалом, затем со второй подбдд, с третьей и тд, пока не схлопнется (на леках)
-    # после этого берём второй интервал и повторяем и тд.
     assert type(mybdd) == BDDiagram, 'ERROR mybdd2ddbdd. Expect BDDiagram, got ' + str(type(mybdd))
     assert type(vars_for_declare) == list, 'ERROR mybdd2ddbdd. Expect vars_names as list, got ' + str(type(vars_for_declare))
     filename = preambule + '_tmp.json'
@@ -1532,8 +1533,6 @@ def mybdd2ddbdd(mybdd: BDDiagram, vars_for_declare: list, preambule=''):
     subbdd_dd = BDD()
     print('vars for declare:', vars_for_declare)
     subbdd_dd.declare(*vars_for_declare)
-
-    subbdd_dd.declare()
     roots = subbdd_dd.load(filename)
     subbdd_dd.collect_garbage()
     os.remove(filename)
