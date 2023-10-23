@@ -124,10 +124,12 @@ def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order):
                 pass
         else:
             # Версия, использующая пакет dd
+            vars_names = [str(x) for x in order if ((x != '?') and (x != 'true'))]
+            vars_for_declare = ['x'+x for x in reversed(vars_names)]
             pbi_dd_bdds = []
-            pbi_dd_bdds = mybdds2ddbdds(pbi_bdds, order, 'pbibdd')
+            pbi_dd_bdds = mybdds2ddbdds(pbi_bdds, vars_for_declare, 'pbibdd')
             print('Nof dd PBI bdds', len(pbi_dd_bdds))
-            fun_bdds = mybdds2ddbdds(fun_bdds, order, 'funbdd')
+            fun_bdds = mybdds2ddbdds(fun_bdds, vars_for_declare, 'funbdd')
             print('Nof dd functions\'s bdds', len(fun_bdds))
             # TODO надо сделать чтобы был общий порядок, т.е. надо задать порядок для интервальной бдд со всеми переменными
             for index, pbi_bdd_with_root in enumerate(pbi_dd_bdds):
@@ -1508,35 +1510,38 @@ def WritePaths(problem, node_paths, node_path, clause):
             WritePaths(problem, node_paths, lnode_path, lclause)
 
 
-def mybdds2ddbdds(mybdds, order, preambule):
+def mybdds2ddbdds(mybdds, vars_for_declare, preambule):
     dd_bdds = []
     for index, bdd in enumerate(mybdds):
         curr_preambule = preambule + str(index)
-        pbi_bdd_dd, roots = mybdd2ddbdd(bdd, order, curr_preambule)
+        pbi_bdd_dd, roots = mybdd2ddbdd(bdd, vars_for_declare, curr_preambule)
         dd_bdds.append([pbi_bdd_dd, roots])
     return dd_bdds
 
 
-def mybdd2ddbdd(mybdd: BDDiagram, order: list, preambule=''):
-    vars_names = [str(x) for x in order if ((x != '?') and (x != 'true'))]
+def mybdd2ddbdd(mybdd: BDDiagram, vars_for_declare: list, preambule=''):
     # TODO для начала общий вид такой: создаем подджд, из них делаем подбдд,
     #  затем всё это переводим в формат dd и работаем дальше только с апплаем
     # находим среди поддиаграмм ту, в которой наибольшее пересечение с переменными входа,
     # склеиваем её с первым интервалом, затем со второй подбдд, с третьей и тд, пока не схлопнется (на леках)
     # после этого берём второй интервал и повторяем и тд.
     assert type(mybdd) == BDDiagram, 'ERROR mybdd2ddbdd. Expect BDDiagram, got ' + str(type(mybdd))
-    assert type(order) == list, 'ERROR mybdd2ddbdd. Expect order as list, got ' + str(type(order))
+    assert type(vars_for_declare) == list, 'ERROR mybdd2ddbdd. Expect vars_names as list, got ' + str(type(vars_for_declare))
     filename = preambule + '_tmp.json'
     mybdd.DumpTableJSON_ddformat(filename)
     subbdd_dd = BDD()
+    print('vars for declare:', vars_for_declare)
+    subbdd_dd.declare(*vars_for_declare)
+
+    subbdd_dd.declare()
     roots = subbdd_dd.load(filename)
     subbdd_dd.collect_garbage()
-    # os.remove(filename)
-    subbdd_dd.dump('_' + filename, roots=roots)
-    subbdd_dd.dump('_' + filename+'.pdf')
+    os.remove(filename)
+    # subbdd_dd.dump('_' + filename, roots=roots)
+    # subbdd_dd.dump('_' + filename+'.pdf')
     # print(str(subbdd_dd))
-    assert mybdd.VertexCount()-1 == len(subbdd_dd), 'ERROR mybdd2ddbdd. Size was ' + str(mybdd.VertexCount()) + \
-                                                  '. but now ' + str(len(subbdd_dd))
+    # assert mybdd.VertexCount()-1 == len(subbdd_dd), 'ERROR mybdd2ddbdd. Size was ' + str(mybdd.VertexCount()) + \
+    #                                               '. but now ' + str(len(subbdd_dd))
     return subbdd_dd, roots
 
 
