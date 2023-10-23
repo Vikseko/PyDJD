@@ -131,7 +131,6 @@ def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order):
             print('Nof dd PBI bdds', len(pbi_dd_bdds))
             fun_bdds = mybdds2ddbdds(fun_bdds, vars_for_declare, 'funbdd')
             print('Nof dd functions\'s bdds', len(fun_bdds))
-            # TODO надо сделать чтобы был общий порядок, т.е. надо задать порядок для интервальной бдд со всеми переменными
             for index, pbi_bdd_with_root in enumerate(pbi_dd_bdds):
                 print('\nStart applying interval', index)
                 current_bdd = pbi_bdd_with_root[0]  # здесь бдд интервала используется как основная,
