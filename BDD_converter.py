@@ -104,6 +104,8 @@ def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order):
     iter_times = []
     conjoin_times = []
     unsat_flag = False
+    if not os.path.isdir('./tmp_/'):
+        os.mkdir('./tmp_/')
     fun_bdds, subdjd_to_bdd_times = DJDstoBDDs(djds, numproc)
     for index, diagram in enumerate(fun_bdds):
         # diagram.PrintProblem()
@@ -126,29 +128,57 @@ def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order):
             # Версия, использующая пакет dd
             vars_names = [str(x) for x in order if ((x != '?') and (x != 'true'))]
             vars_for_declare = ['x'+x for x in reversed(vars_names)]
-            pbi_dd_bdds = []
-            pbi_dd_bdds = mybdds2ddbdds(pbi_bdds, vars_for_declare, 'pbibdd')
+            times_for_pbi = []
+            times_for_fun = []
+            bdd_manager = BDD()
+            final_root = None
+            bdd_manager.declare(*vars_for_declare)
+            pbi_dd_bdds = mybdds2ddbdds(pbi_bdds, bdd_manager, 'pbibdd')
             print('Nof dd PBI bdds', len(pbi_dd_bdds))
-            fun_bdds = mybdds2ddbdds(fun_bdds, vars_for_declare, 'funbdd')
+            fun_bdds = mybdds2ddbdds(fun_bdds, bdd_manager, 'funbdd')
             print('Nof dd functions\'s bdds', len(fun_bdds))
-            for index, pbi_bdd_with_root in enumerate(pbi_dd_bdds):
+            for index, pbi_root in enumerate(pbi_dd_bdds):
+                pbi_start_time = time.time()
+                times_for_currentfun = []
                 print('\nStart applying interval', index)
-                current_bdd = pbi_bdd_with_root[0]  # здесь бдд интервала используется как основная,
-                current_root = pbi_bdd_with_root[1]  # к которой апплаим бддшки
-                for bdd_with_root in fun_bdds:
-                    print('Size of current BDD:', len(current_bdd))
-                    fun_bdd = bdd_with_root[0]
-                    print('Size of BDD to apply:', len(fun_bdd))
-                    fun_root = bdd_with_root[1][0]
-                    print(fun_root)
-                    print(current_bdd.vars)
-                    current_root = current_bdd.apply('&', fun_root)
-                    print('Size of current BDD after apply:', len(current_bdd))
-                    if len(current_bdd) == 0:
+                pbi_subbdds_roots = []
+                current_root = pbi_root
+                for fun_root in fun_bdds:
+                    fun_start_time = time.time()
+                    print('AND. Size of current BDD before apply:', current_root.dag_size)
+                    print('AND. Size of function BDD to apply:', fun_root.dag_size)
+                    pbi_fun_subbdd_root = bdd_manager.apply('and', pbi_root, fun_root)
+                    bdd_manager.collect_garbage()
+                    print('AND. Size of current BDD after apply:', current_root.dag_size)
+                    fun_end_time = time.time()
+                    times_for_currentfun.append(fun_end_time - fun_start_time)
+                    if pbi_fun_subbdd_root.dag_size == 1:
                         unsat_flag = True
-                        print('Proved UNSAT for', index, 'interval.')
+                        print('Proved UNSAT for', index, 'interval, while applying interval by and.')
                         break
-                exit()
+                    pbi_subbdds_roots.append(pbi_fun_subbdd_root)
+                current_root = pbi_subbdds_roots[0]
+                curr_index = 1
+                while curr_index < len(pbi_subbdds_roots):
+                    print()
+                    print('OR. Size of current BDD before apply:', current_root.dag_size)
+                    print('OR. Size of function BDD to apply:', pbi_subbdds_roots[curr_index].dag_size)
+                    current_root = bdd_manager.apply('or', current_root, pbi_subbdds_roots[curr_index])
+                    bdd_manager.collect_garbage()
+                    print('OR. Size of current BDD after apply:', current_root.dag_size)
+                    curr_index += 1
+                    final_root = current_root
+                    if current_root.dag_size == 1:
+                        unsat_flag = True
+                        print('Proved UNSAT for', index, 'interval, while applying subbdds by or.')
+                        break
+                pbi_end_time = time.time()
+                times_for_fun.append(times_for_currentfun)
+                times_for_pbi.append(pbi_end_time - pbi_start_time)
+                bdd_manager.collect_garbage()
+                bdd_manager.dump('./tmp_/final_pbi_' + str(index) + '_bdd.json', roots=[final_root])
+                bdd_manager.dump('./tmp_/final_pbi_' + str(index) + '_bdd.pdf', roots=[final_root])
+            return bdd_manager, times_for_pbi
 
 
 def DJDstoBDDs(djds, numproc):
@@ -1516,33 +1546,26 @@ def WritePaths(problem, node_paths, node_path, clause):
 
 
 # переводим через файл мои диаграммы в формат пакета dd, задавая порядок
-def mybdds2ddbdds(mybdds, vars_for_declare, preambule):
+def mybdds2ddbdds(mybdds, bdd_manager, preambule):
     dd_bdds = []
     for index, bdd in enumerate(mybdds):
         curr_preambule = preambule + str(index)
-        pbi_bdd_dd, roots = mybdd2ddbdd(bdd, vars_for_declare, curr_preambule)
-        dd_bdds.append([pbi_bdd_dd, roots])
+        root = mybdd2ddbdd(bdd, bdd_manager, curr_preambule)
+        dd_bdds.append(root)
     return dd_bdds
 
 
 # переводим через файл мою диаграмму в формат пакета dd, задавая порядок
-def mybdd2ddbdd(mybdd: BDDiagram, vars_for_declare: list, preambule=''):
+def mybdd2ddbdd(mybdd: BDDiagram, bdd_manager, preambule=''):
     assert type(mybdd) == BDDiagram, 'ERROR mybdd2ddbdd. Expect BDDiagram, got ' + str(type(mybdd))
-    assert type(vars_for_declare) == list, 'ERROR mybdd2ddbdd. Expect vars_names as list, got ' + str(type(vars_for_declare))
     filename = preambule + '_tmp.json'
-    mybdd.DumpTableJSON_ddformat(filename)
-    subbdd_dd = BDD()
-    print('vars for declare:', vars_for_declare)
-    subbdd_dd.declare(*vars_for_declare)
-    roots = subbdd_dd.load(filename)
-    subbdd_dd.collect_garbage()
-    os.remove(filename)
-    # subbdd_dd.dump('_' + filename, roots=roots)
-    # subbdd_dd.dump('_' + filename+'.pdf')
-    # print(str(subbdd_dd))
-    # assert mybdd.VertexCount()-1 == len(subbdd_dd), 'ERROR mybdd2ddbdd. Size was ' + str(mybdd.VertexCount()) + \
-    #                                               '. but now ' + str(len(subbdd_dd))
-    return subbdd_dd, roots
+    mybdd.DumpTableJSON_ddformat('./tmp_/' + filename)
+    root = bdd_manager.load('./tmp_/' + filename)[0]
+    bdd_manager.collect_garbage()
+    # os.remove(filename)
+    # bdd_manager.dump('./tmp_/_' + filename, roots=[root])
+    # bdd_manager.dump('./tmp_/_' + filename+'.pdf')
+    return root
 
 
 def create_and_expr(vars):
