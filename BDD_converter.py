@@ -140,14 +140,16 @@ def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order):
                     print('Size of current BDD:', len(current_bdd))
                     fun_bdd = bdd_with_root[0]
                     print('Size of BDD to apply:', len(fun_bdd))
-                    fun_root = bdd_with_root[1]
+                    fun_root = bdd_with_root[1][0]
+                    print(fun_root)
+                    print(current_bdd.vars)
                     current_root = current_bdd.apply('&', fun_root)
                     print('Size of current BDD after apply:', len(current_bdd))
                     if len(current_bdd) == 0:
                         unsat_flag = True
                         print('Proved UNSAT for', index, 'interval.')
                         break
-            exit()
+                exit()
 
 
 def DJDstoBDDs(djds, numproc):
