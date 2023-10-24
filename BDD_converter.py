@@ -130,54 +130,79 @@ def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order):
             vars_for_declare = ['x'+x for x in reversed(vars_names)]
             times_for_pbi = []
             times_for_fun = []
+            max_sizes = []
+            indices_unsat = []
             bdd_manager = BDD()
             final_root = None
             bdd_manager.declare(*vars_for_declare)
-            pbi_dd_bdds = mybdds2ddbdds(pbi_bdds, bdd_manager, 'pbibdd')
+            pbi_dd_bdds = mybdds2ddbdds(pbi_bdds, bdd_manager, False, 'pbibdd')
             print('Nof dd PBI bdds', len(pbi_dd_bdds))
-            fun_bdds = mybdds2ddbdds(fun_bdds, bdd_manager, 'funbdd')
+            fun_bdds = mybdds2ddbdds(fun_bdds, bdd_manager, True, 'funbdd')
             print('Nof dd functions\'s bdds', len(fun_bdds))
+            pbi_sizes = [x.dag_size for x in pbi_dd_bdds]
+            fun_sizes = [x.dag_size for x in fun_bdds]
             for index, pbi_root in enumerate(pbi_dd_bdds):
                 pbi_start_time = time.time()
                 times_for_currentfun = []
                 print('\nStart applying interval', index)
-                pbi_subbdds_roots = []
+                # pbi_subbdds_roots = []
                 current_root = pbi_root
-                for fun_root in fun_bdds:
+                max_size = current_root.dag_size
+                for fun_index, fun_root in enumerate(fun_bdds):
                     fun_start_time = time.time()
-                    print('AND. Size of current BDD before apply:', current_root.dag_size)
-                    print('AND. Size of function BDD to apply:', fun_root.dag_size)
-                    pbi_fun_subbdd_root = bdd_manager.apply('and', pbi_root, fun_root)
+                    log_str = 'AND. PBI '+str(index)+'. SubBDD '+str(fun_index)+' of ' + str(len(fun_bdds)) + '.'
+                    print(log_str, 'Size of current BDD before apply:', current_root.dag_size)
+                    print(log_str, 'Size of function BDD to apply:', fun_root.dag_size)
+                    if fun_root.dag_size > max_size:
+                        max_size = fun_root.dag_size
+                    pbi_fun_subbdd_root = bdd_manager.apply('and', current_root, fun_root)
                     bdd_manager.collect_garbage()
-                    print('AND. Size of current BDD after apply:', current_root.dag_size)
+                    print(log_str, 'Size of current BDD after apply:', pbi_fun_subbdd_root.dag_size)
                     fun_end_time = time.time()
                     times_for_currentfun.append(fun_end_time - fun_start_time)
                     if pbi_fun_subbdd_root.dag_size == 1:
                         unsat_flag = True
+                        assert bdd_manager.to_expr(pbi_fun_subbdd_root) == 'FALSE', 'ERROR. Diagram is not FALSE.'
                         print('Proved UNSAT for', index, 'interval, while applying interval by and.')
+                        indices_unsat.append(fun_index+1)
                         break
-                    pbi_subbdds_roots.append(pbi_fun_subbdd_root)
-                current_root = pbi_subbdds_roots[0]
-                curr_index = 1
-                while curr_index < len(pbi_subbdds_roots):
-                    print()
-                    print('OR. Size of current BDD before apply:', current_root.dag_size)
-                    print('OR. Size of function BDD to apply:', pbi_subbdds_roots[curr_index].dag_size)
-                    current_root = bdd_manager.apply('or', current_root, pbi_subbdds_roots[curr_index])
-                    bdd_manager.collect_garbage()
-                    print('OR. Size of current BDD after apply:', current_root.dag_size)
-                    curr_index += 1
-                    final_root = current_root
-                    if current_root.dag_size == 1:
-                        unsat_flag = True
-                        print('Proved UNSAT for', index, 'interval, while applying subbdds by or.')
-                        break
+                    current_root = pbi_fun_subbdd_root
+                    if current_root.dag_size > max_size:
+                        max_size = current_root.dag_size
+                max_sizes.append(max_size)
+                    # pbi_subbdds_roots.append(pbi_fun_subbdd_root)
+                # current_root = pbi_subbdds_roots[0]
+                # curr_index = 1
+                # while curr_index < len(pbi_subbdds_roots):
+                #     print()
+                #     print('OR. Size of current BDD before apply:', current_root.dag_size)
+                #     print('OR. Size of function BDD to apply:', pbi_subbdds_roots[curr_index].dag_size)
+                #     current_root = bdd_manager.apply('or', current_root, pbi_subbdds_roots[curr_index])
+                #     bdd_manager.collect_garbage()
+                #     print('OR. Size of current BDD after apply:', current_root.dag_size)
+                #     curr_index += 1
+                #     final_root = current_root
+                #     if current_root.dag_size == 1:
+                #         unsat_flag = True
+                #         print('Proved UNSAT for', index, 'interval, while applying subbdds by or.')
+                #         break
                 pbi_end_time = time.time()
                 times_for_fun.append(times_for_currentfun)
                 times_for_pbi.append(pbi_end_time - pbi_start_time)
                 bdd_manager.collect_garbage()
-                bdd_manager.dump('./tmp_/final_pbi_' + str(index) + '_bdd.json', roots=[final_root])
-                bdd_manager.dump('./tmp_/final_pbi_' + str(index) + '_bdd.pdf', roots=[final_root])
+                # bdd_manager.dump('./tmp_/final_pbi_' + str(index) + '_bdd.json', roots=[final_root])
+                # bdd_manager.dump('./tmp_/final_pbi_' + str(index) + '_bdd.pdf', roots=[final_root])
+            print()
+            print('Final. Separated transition to BDD with PBI is complete.')
+            print('Final. Initial number of DJDs:', len(fun_bdds))
+            print('Final. PBI BDDs sizes:', pbi_sizes)
+            print('Final. Funstion subbdds sizes:', fun_sizes)
+            print('Final. Max sizes by intervals:', max_sizes)
+            print('Final. Absolute max size:', max(max_sizes))
+            print('Final. Funbdds indices causing graph elimination:', indices_unsat)
+            print('Final. Total time for applying:', sum(times_for_pbi))
+            # print('Final. Times for applying intervals with SubBDDs:', *times_for_fun, sep='\n')
+            print('Final. Times for check intervals:', [round(x, 4) for x in times_for_pbi])
             return bdd_manager, times_for_pbi
 
 
@@ -561,7 +586,7 @@ class BDDiagram:
             print('\"roots\": ', [self.main_root_.vertex_id if self.main_root_.vertex_id not in negated_nodes else -self.main_root_.vertex_id], ',', sep='', file=f)
             print('}', file=f)
 
-    def DumpTableJSON_ddformat(self, filename):
+    def DumpTableJSON_ddformat(self, filename, negate_flag=False):
         assert len(self.table_) > 0, 'Cannot dump diagram to json-file, because table is empty.'
         sorted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodes(self.order_, self.table_.values())
         rev_order = list(reversed(self.order_))
@@ -618,6 +643,7 @@ class BDDiagram:
                 # print('Negated flag', negated_node)
                 # print('Negated nodes', negated_nodes)
                 # print('After negated', node.vertex_id, [node.level, low, high])
+        root = -root if negate_flag else root
         bdd_dict["roots"] = [root] if root not in negated_nodes else [-root]
         outfile_lines = '{\n'
         outfile_lines += '"level_of_var": ' + json.dumps(bdd_dict["level_of_var"]) + ',\n'
@@ -1546,20 +1572,20 @@ def WritePaths(problem, node_paths, node_path, clause):
 
 
 # переводим через файл мои диаграммы в формат пакета dd, задавая порядок
-def mybdds2ddbdds(mybdds, bdd_manager, preambule):
+def mybdds2ddbdds(mybdds, bdd_manager, negate_flag, preambule):
     dd_bdds = []
     for index, bdd in enumerate(mybdds):
         curr_preambule = preambule + str(index)
-        root = mybdd2ddbdd(bdd, bdd_manager, curr_preambule)
+        root = mybdd2ddbdd(bdd, bdd_manager, negate_flag, curr_preambule)
         dd_bdds.append(root)
     return dd_bdds
 
 
 # переводим через файл мою диаграмму в формат пакета dd, задавая порядок
-def mybdd2ddbdd(mybdd: BDDiagram, bdd_manager, preambule=''):
+def mybdd2ddbdd(mybdd: BDDiagram, bdd_manager, negate_flag, preambule=''):
     assert type(mybdd) == BDDiagram, 'ERROR mybdd2ddbdd. Expect BDDiagram, got ' + str(type(mybdd))
     filename = preambule + '_tmp.json'
-    mybdd.DumpTableJSON_ddformat('./tmp_/' + filename)
+    mybdd.DumpTableJSON_ddformat('./tmp_/' + filename, negate_flag)
     root = bdd_manager.load('./tmp_/' + filename)[0]
     bdd_manager.collect_garbage()
     # os.remove(filename)

@@ -141,35 +141,36 @@ if __name__ == '__main__':
                                                                                order)
             else:
                 bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_separated(diagrams, options.numprocess, order)
-            print('\nSeparated transition to BDD complete.')
-            if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:
-                print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())
-            else:
-                print('Number of nonbinary link in diagram is', bdd_diagram.NonBinaryLinkCount())
+                if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:
+                    print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())
+                else:
+                    print('Number of nonbinary link in diagram is', bdd_diagram.NonBinaryLinkCount())
+                print('\nSeparated transition to BDD complete.')
             # DrawDiagram(bdd_diagram)
-        if len(bdd_diagram.table_) > 0:
-            paths_to_true, tmp_ = bdd_diagram.GetPathsToTrue()
-            WritePathsToFile(paths_to_true, 'Logs/' + options.name + '_bdd_convertion.true_paths')
-            sat_assigments, tmp2_ = bdd_diagram.GetSatAssignmentFromDiagram()
-            WritePathsToFile(sat_assigments, 'Logs/' + options.name + '_bdd_convertion.sat_assignments')
-            bdd_diagram.PrintCurrentTableJSON('Logs/' + options.name + '_bdd_convertion.json')
-            bdd_cnf, tmp3_ = bdd_diagram.GetCNFFromBDD()
-            bdd_cnf = CNF(from_clauses=bdd_cnf)
-            bdd_cnf.to_file('Logs/' + options.name + '_bdd_convertion.cnf', comments=problem_comments)
-        bdd_diagram.PrintCurrentTable('Final table:')
-        if options.separate_construction:
-            print('Final. Initial number of DJDs:', nof_djds)
-            print('Final. Number of link actions to transform initial DJDs to BDDs:', nof_link_actions_djd2bdd)
-        else:
-            print('Final. Initial size of DJD:', initial_size_of_djd)
-        PrintFinalStats(bdd_diagram)
+        if options.pbintervals <= 1:
+            if len(bdd_diagram.table_) > 0:
+                paths_to_true, tmp_ = bdd_diagram.GetPathsToTrue()
+                WritePathsToFile(paths_to_true, 'Logs/' + options.name + '_bdd_convertion.true_paths')
+                sat_assigments, tmp2_ = bdd_diagram.GetSatAssignmentFromDiagram()
+                WritePathsToFile(sat_assigments, 'Logs/' + options.name + '_bdd_convertion.sat_assignments')
+                bdd_diagram.PrintCurrentTableJSON('Logs/' + options.name + '_bdd_convertion.json')
+                bdd_cnf, tmp3_ = bdd_diagram.GetCNFFromBDD()
+                bdd_cnf = CNF(from_clauses=bdd_cnf)
+                bdd_cnf.to_file('Logs/' + options.name + '_bdd_convertion.cnf', comments=problem_comments)
+            bdd_diagram.PrintCurrentTable('Final table:')
+            if options.separate_construction:
+                print('Final. Initial number of DJDs:', nof_djds)
+                print('Final. Number of link actions to transform initial DJDs to BDDs:', nof_link_actions_djd2bdd)
+            else:
+                print('Final. Initial size of DJD:', initial_size_of_djd)
+            PrintFinalStats(bdd_diagram)
+            if len(bdd_diagram.table_) > 0:
+                if 10000 >= len(sat_assigments) > 0 and options.source_type == 'cnf':
+                    print('\nSAT assignments for initial CNF:')
+                    for sat_assigment in sat_assigments:
+                        print('Satisfiable assignment:', sorted(sat_assigment, key=lambda x: abs(x)))
         convert_time = time.time() - start_bdd_time
         print('Final. Conversion time:'.ljust(30, ' '), convert_time)
-        if len(bdd_diagram.table_) > 0:
-            if 10000 >= len(sat_assigments) > 0 and options.source_type == 'cnf':
-                print('\nSAT assignments for initial CNF:')
-                for sat_assigment in sat_assigments:
-                    print('Satisfiable assignment:', sorted(sat_assigment, key=lambda x: abs(x)))
         if options.test_bdd_convert:
             from Test_diagram import *
             start_testing_time = time.time()
