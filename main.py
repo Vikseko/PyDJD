@@ -132,11 +132,15 @@ if __name__ == '__main__':
                 print('Sd of size of diagram:', round(math.sqrt(variance(bdd_diagram.table_sizes)), 2))
             # DrawDiagram(bdd_diagram)
         else:
-            if options.pbintervals > 1:
+            if options.pbintervals > 0:
                 from Intervals import *
                 pbi_djds = CreateIntervalsDJDs(problem_comments, options.pbintervals, var_count, order, ptype,
                                                options.numprocess)
-                pbi_bdds, pbi_subdjd_to_bdd_times = DJDstoBDDs(pbi_djds, options.numprocess)
+                if pbi_djds is not None:
+                    pbi_bdds, pbi_subdjd_to_bdd_times = DJDstoBDDs(pbi_djds, options.numprocess)
+                else:
+                    pbi_bdds = None
+                    pbi_subdjd_to_bdd_times = None
                 bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_pbi_separated(diagrams, pbi_bdds, options.numprocess,
                                                                                order)
             else:
@@ -147,7 +151,7 @@ if __name__ == '__main__':
                     print('Number of nonbinary link in diagram is', bdd_diagram.NonBinaryLinkCount())
                 print('\nSeparated transition to BDD complete.')
             # DrawDiagram(bdd_diagram)
-        if options.pbintervals <= 1:
+        if options.pbintervals < 1:
             if len(bdd_diagram.table_) > 0:
                 paths_to_true, tmp_ = bdd_diagram.GetPathsToTrue()
                 WritePathsToFile(paths_to_true, 'Logs/' + options.name + '_bdd_convertion.true_paths')
