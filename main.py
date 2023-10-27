@@ -141,7 +141,7 @@ if __name__ == '__main__':
                 else:
                     pbi_bdds = None
                     pbi_subdjd_to_bdd_times = None
-                bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_pbi_separated(diagrams, pbi_bdds, options.numprocess,
+                bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_pbi_separated2(diagrams, pbi_bdds, options.numprocess,
                                                                                order)
             else:
                 bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_separated(diagrams, options.numprocess, order)
