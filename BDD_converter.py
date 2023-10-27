@@ -151,11 +151,10 @@ def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order):
                 pbi_start_time = time.time()
                 times_for_currentfun = []
                 print('\nStart applying interval', index)
-                # pbi_subbdds_roots = []
-                current_root = pbi_root
-                if current_root is None:
+                if pbi_root is None:
                     max_size = 0
                 else:
+                    current_root = bdd_manager.add_expr(r'!{u}'.format(u=pbi_root))
                     max_size = current_root.dag_size
                 for fun_index, fun_root in enumerate(fun_bdds):
                     if not pbi_flag and fun_index == 0:
