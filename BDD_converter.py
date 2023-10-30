@@ -1768,8 +1768,8 @@ def mybdds2ddbdds(mybdds, bdd_manager, negate_flag, preambule):
 def mybdd2ddbdd(mybdd: BDDiagram, bdd_manager, negate_flag, preambule=''):
     assert type(mybdd) == BDDiagram, 'ERROR mybdd2ddbdd. Expect BDDiagram, got ' + str(type(mybdd))
     filename = preambule + '_tmp.json'
-    mybdd.DumpTableJSON_ddformat('./tmp_/' + filename)
-    root = bdd_manager.load('./tmp_/' + filename)[0]
+    mybdd.DumpTableJSON_ddformat(filename)
+    root = bdd_manager.load(filename)[0]
     if negate_flag:
         root = bdd_manager.add_expr(r'!{u}'.format(u=root))
     bdd_manager.collect_garbage()

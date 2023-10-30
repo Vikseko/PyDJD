@@ -163,7 +163,7 @@ def CreateLogDir(options):
     timedir = os.path.join(params_dir, datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
     if not os.path.isdir(timedir):
         os.mkdir(timedir)
-    return timedir
+    return timedir + '/'
 
 
 def ParseOptions(params):
