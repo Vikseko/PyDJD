@@ -156,7 +156,7 @@ def CreateLogDir(options):
         os.mkdir(logs_dir)
     cnf_dir = os.path.join(logs_dir, options.name)
     if not os.path.isdir(cnf_dir):
-        os.mkdir(nf_dir)
+        os.mkdir(cnf_dir)
     params_dir = os.path.join(cnf_dir, str(options.order_type) + '_sc' + str(options.separate_construction) + '_np' + str(options.numprocess) + '_pbi' + str(options.pbintervals))
     if not os.path.isdir(params_dir):
         os.mkdir(params_dir)
