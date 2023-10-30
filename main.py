@@ -6,11 +6,11 @@ from Redirection import *
 
 if __name__ == '__main__':
     start_time = time.time()
-    if not os.path.isdir('./Logs/'):
-        os.mkdir('./Logs/')
     print('Start building procedure:')
     parser = createParser()
     options = ParseOptions(parser.parse_args(sys.argv[1:]))
+    logpath = CreateLogDir(options)
+    print('Logpath:', logpath)
     if options.show_version:
         print('PyDJD Version 1.0, October 2021')
     if options.show_options:
@@ -23,7 +23,7 @@ if __name__ == '__main__':
         raise RuntimeError('Order is empty')
     print('Order', order)
     # Журнализируем текущий порядок переменных
-    with open('Logs/order.log', 'w') as orderf:
+    with open(logpath+'order.log', 'w') as orderf:
         print(*order, file=orderf)
     # Строим отрицание считанной формулы(КНФ= > ДНФ)
     if options.source_type == "conflicts" or options.source_type == "cnf":
@@ -54,7 +54,7 @@ if __name__ == '__main__':
         print('Build time:'.ljust(30, ' '), build_time)
         before_cnf, tmp_ = GetCNFFromDiagram(diagram)
         before_cnf = CNF(from_clauses=SortClausesInCnf(before_cnf))
-        before_cnf.to_file('Logs/' + options.name + '_before.cnf', comments=problem_comments)
+        before_cnf.to_file(logpath + options.name + '_before.cnf', comments=problem_comments)
         diagram.PrintCurrentTable()
         # print(diagram.GetRoots())
         current_roots_ = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram.order_, diagram.roots_)
@@ -102,7 +102,7 @@ if __name__ == '__main__':
         print('Total runtime'.ljust(30, ' '), time.time() - start_time)
         after_cnf, tmp_ = GetCNFFromDiagram(diagram)
         after_cnf = CNF(from_clauses=after_cnf)
-        after_cnf.to_file('Logs/' + options.name + '_djdprep_v2.cnf', comments=problem_comments)
+        after_cnf.to_file(logpath + options.name + '_djdprep_v2.cnf', comments=problem_comments)
 
     if options.bdd_convert:
         from BDD_converter import *
@@ -132,13 +132,17 @@ if __name__ == '__main__':
                 print('Sd of size of diagram:', round(math.sqrt(variance(bdd_diagram.table_sizes)), 2))
             # DrawDiagram(bdd_diagram)
         else:
-            if options.pbintervals > 1:
+            if options.pbintervals > 0:
                 from Intervals import *
                 pbi_djds = CreateIntervalsDJDs(problem_comments, options.pbintervals, var_count, order, ptype,
                                                options.numprocess)
-                pbi_bdds, pbi_subdjd_to_bdd_times = DJDstoBDDs(pbi_djds, options.numprocess)
+                if pbi_djds is not None:
+                    pbi_bdds, pbi_subdjd_to_bdd_times = DJDstoBDDs(pbi_djds, options.numprocess)
+                else:
+                    pbi_bdds = None
+                    pbi_subdjd_to_bdd_times = None
                 bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_pbi_separated(diagrams, pbi_bdds, options.numprocess,
-                                                                               order)
+                                                                               order, logpath)
             else:
                 bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_separated(diagrams, options.numprocess, order)
                 if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:
@@ -147,16 +151,16 @@ if __name__ == '__main__':
                     print('Number of nonbinary link in diagram is', bdd_diagram.NonBinaryLinkCount())
                 print('\nSeparated transition to BDD complete.')
             # DrawDiagram(bdd_diagram)
-        if options.pbintervals <= 1:
+        if options.pbintervals < 1:
             if len(bdd_diagram.table_) > 0:
                 paths_to_true, tmp_ = bdd_diagram.GetPathsToTrue()
-                WritePathsToFile(paths_to_true, 'Logs/' + options.name + '_bdd_convertion.true_paths')
+                WritePathsToFile(paths_to_true, logpath + options.name + '_bdd_convertion.true_paths')
                 sat_assigments, tmp2_ = bdd_diagram.GetSatAssignmentFromDiagram()
-                WritePathsToFile(sat_assigments, 'Logs/' + options.name + '_bdd_convertion.sat_assignments')
-                bdd_diagram.PrintCurrentTableJSON('Logs/' + options.name + '_bdd_convertion.json')
+                WritePathsToFile(sat_assigments, logpath + options.name + '_bdd_convertion.sat_assignments')
+                bdd_diagram.PrintCurrentTableJSON(logpath + options.name + '_bdd_convertion.json')
                 bdd_cnf, tmp3_ = bdd_diagram.GetCNFFromBDD()
                 bdd_cnf = CNF(from_clauses=bdd_cnf)
-                bdd_cnf.to_file('Logs/' + options.name + '_bdd_convertion.cnf', comments=problem_comments)
+                bdd_cnf.to_file(logpath + options.name + '_bdd_convertion.cnf', comments=problem_comments)
             bdd_diagram.PrintCurrentTable('Final table:')
             if options.separate_construction:
                 print('Final. Initial number of DJDs:', nof_djds)

@@ -149,6 +149,23 @@ def DivideProblem(problem, nof_vars, order):
     return problems
 
 
+def CreateLogDir(options):
+    current_dir = os.getcwd()
+    logs_dir = os.path.join(current_dir, 'Logs')
+    if not os.path.isdir(logs_dir):
+        os.mkdir(logs_dir)
+    cnf_dir = os.path.join(logs_dir, options.name)
+    if not os.path.isdir(cnf_dir):
+        os.mkdir(nf_dir)
+    params_dir = os.path.join(cnf_dir, str(options.order_type) + '_sc' + str(options.separate_construction) + '_np' + str(options.numprocess) + '_pbi' + str(options.pbintervals))
+    if not os.path.isdir(params_dir):
+        os.mkdir(params_dir)
+    timedir = os.path.join(params_dir, datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+    if not os.path.isdir(timedir):
+        os.mkdir(timedir)
+    return timedir
+
+
 def ParseOptions(params):
     options = Options()
     options.path = params.file
