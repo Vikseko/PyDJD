@@ -98,12 +98,14 @@ def DJDtoBDD_separated(diagrams, numproc, order):
     return final_diagram, nof_link_actions_djd2bdd
 
 
-def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order, logpath):
+def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order):
     counter = 0
     sys.setrecursionlimit(100000)
     iter_times = []
     conjoin_times = []
     unsat_flag = False
+    if not os.path.isdir('./tmp_/'):
+        os.mkdir('./tmp_/')
     fun_bdds, subdjd_to_bdd_times = DJDstoBDDs(djds, numproc)
     for index, diagram in enumerate(fun_bdds):
         # diagram.PrintProblem()
@@ -127,7 +129,6 @@ def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order, logpath):
             vars_names = [str(x) for x in order if ((x != '?') and (x != 'true'))]
             vars_for_declare = ['x'+x for x in reversed(vars_names)]
             pbi_flag = True if pbi_bdds is not None else False
-            pid = os.getpid()
             times_for_pbi = []
             times_for_fun = []
             max_sizes = []
@@ -136,13 +137,13 @@ def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order, logpath):
             final_root = None
             bdd_manager.declare(*vars_for_declare)
             if pbi_flag:
-                pbi_dd_bdds = mybdds2ddbdds(pbi_bdds, bdd_manager, False, logpath+str(pid)+'pbibdd')
+                pbi_dd_bdds = mybdds2ddbdds(pbi_bdds, bdd_manager, False, 'pbibdd')
                 print('Nof dd PBI bdds', len(pbi_dd_bdds))
                 pbi_sizes = [x.dag_size for x in pbi_dd_bdds]
-                fun_bdds = mybdds2ddbdds(fun_bdds, bdd_manager, True, logpath+str(pid)+'funbdd')
+                fun_bdds = mybdds2ddbdds(fun_bdds, bdd_manager, True, 'funbdd')
             else:
                 pbi_dd_bdds = pbi_sizes = [None]
-                fun_bdds = mybdds2ddbdds(fun_bdds, bdd_manager, False, logpath+str(pid)+'funbdd')
+                fun_bdds = mybdds2ddbdds(fun_bdds, bdd_manager, False, 'funbdd')
             print('Nof dd functions\'s bdds', len(fun_bdds))
             fun_sizes = [x.dag_size for x in fun_bdds]
             final_roots = []
@@ -180,8 +181,7 @@ def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order, logpath):
                         max_size = current_root.dag_size
                     if current_root.dag_size == 1:
                         unsat_flag = True
-                        # assert bdd_manager.to_expr(current_root) == 'FALSE', 'ERROR. Diagram is not FALSE.'
-                        print(bdd_manager.to_expr(current_root))
+                        assert bdd_manager.to_expr(current_root) == 'FALSE', 'ERROR. Diagram is not FALSE.'
                         print('Proved UNSAT for', index, 'interval, while applying interval by and.')
                         indices_unsat.append(fun_index+1)
                         break
