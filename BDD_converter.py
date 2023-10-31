@@ -300,7 +300,8 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
 
 def Problems2BDD_dd_format(sortedproblems: list, bdd_manager, problem_type='DNF'):
     roots = []
-    for problem in sortedproblems:
+    for index, problem in enumerate(sortedproblems):
+        print('\nStart construction of subbdd', index)
         root = Problem2BDD_dd_format(problem, bdd_manager, problem_type)
         roots.append(root)
     return roots
@@ -311,21 +312,26 @@ def Problems2BDD_dd_format(sortedproblems: list, bdd_manager, problem_type='DNF'
 def Problem2BDD_dd_format(sortedproblem: list, bdd_manager, problem_type='DNF'):
     first_clause = sortedproblem.pop()
     current_problem_root = Clause2BDD_dd_format(first_clause, bdd_manager, problem_type)
+    print('Clause:', first_clause)
+    print('Current root expr:', current_problem_root.to_expr())
     for clause in sortedproblem:
+        print('Clause:', clause)
         current_clause_root = Clause2BDD_dd_format(clause, bdd_manager, problem_type)
         if problem_type == 'DNF':
             current_problem_root = bdd_manager.apply('or', current_problem_root, current_clause_root)
         else:
             current_problem_root = bdd_manager.apply('and', current_problem_root, current_clause_root)
+        print('Current root expr:', current_problem_root.to_expr())
     return current_problem_root
 
 
 def Clause2BDD_dd_format(clause, bdd_manager, problem_type='DNF'):
     literals = ['!x'+str(abs(x)) if x < 0 else 'x'+str(abs(x)) for x in clause]
     if problem_type == 'DNF':
-        expr_str = r' \/ '.join(literals)
-    else:
         expr_str = r' /\ '.join(literals)
+    else:
+        expr_str = r' \/ '.join(literals)
+    print('Expr:', expr_str)
     root = bdd_manager.add_expr(expr_str)
     return root
 
