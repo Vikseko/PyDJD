@@ -31,7 +31,8 @@ if __name__ == '__main__':
     start_build_time = time.time()
     ptype = GetProblemType(options.source_type)
     if options.separate_construction:
-        problems = DivideProblem(problem, var_count, order)
+        problems = DivideProblem(problem, order)
+        problems = SortProblems(problems, order)
         diagrams = CreateDiagrams(var_count, problems, order, ptype, options.numprocess)
         nof_djds = len(diagrams)
         print('Number of DJDs:'.ljust(30, ' '), nof_djds)

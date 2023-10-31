@@ -140,13 +140,37 @@ def NegateProblem(problem):
             problem[i][j] *= -1
 
 
-def DivideProblem(problem, nof_vars, order):
+def DivideProblem(problem, order):
+    nof_vars = get_max_var(problem)
     problems = [[] for x in range(nof_vars)]
     for clause in problem:
         clause = sorted(clause, key=lambda x: order.index(abs(x)), reverse=True)
         problems[abs(clause[0])-1].append(clause)
     problems = [x for x in problems if len(x) > 0]
     return problems
+
+
+def get_max_var(problem):
+    max_var = 0
+    for clause in problem:
+        for lit in clause:
+            if abs(lit) > max_var:
+                max_var = abs(lit)
+    return max_var
+
+
+def SortProblems(problems, order):
+    for i in range(len(problems)):
+        problems[i] = SortProblem(problems[i], order)
+    problems.sort(key=lambda x: order.index(abs(x[0][0])), reverse=True)
+    return problems
+
+
+def SortProblem(problem, order):
+    for i in range(len(problem)):
+        problem[i] = sorted(problem[i], key=lambda x: order.index(abs(x)), reverse=True)
+    problem.sort(key=lambda x: len(x))
+    return problem
 
 
 def CreateLogDir(options):

@@ -13,19 +13,41 @@ def CreateIntervalsDJDs(problem_comments, nof_intervals, var_count, order, ptype
         else:
             print('Comments:', problem_comments)
             raise Exception('There is no inputs list in a comments.')
-        for i in range(nof_intervals):
-            interval = make_i_interval(inputs, nof_intervals, i)
-            lower_bound = interval[0]
-            upper_bound = interval[-1]
-            new_clauses = encode_rel(inputs, 'both', tuple([lower_bound, upper_bound]))
-            intervals_problems.append(new_clauses)
-        assert len(intervals_problems) == nof_intervals
+        intervals_problems = make_intervals_problems(nof_intervals, inputs)
         intervals_djds = CreateDiagrams(var_count, intervals_problems, order, ptype, numproc)
         print('Number of intervals djds:', len(intervals_djds))
         print('Max size of intervals djd:', max([x.VertexCount() for x in intervals_djds]))
         return intervals_djds
     else:
         return None
+
+
+def CreatePBIproblems(problem_comments, nof_intervals):
+    if nof_intervals > 1:
+        inputs = None
+        intervals_problems = []
+        for comment in problem_comments:
+            if 'c inputs' in comment:
+                inputs = list(map(int, comment.split(':')[1].split()))
+                break
+        else:
+            print('Comments:', problem_comments)
+            raise Exception('There is no inputs list in a comments.')
+        intervals_problems = make_intervals_problems(nof_intervals, inputs)
+        return intervals_problems
+    else:
+        return None
+
+def make_intervals_problems(nof_intervals, inputs):
+    intervals_problems = []
+    for i in range(nof_intervals):
+        interval = make_i_interval(inputs, nof_intervals, i)
+        lower_bound = interval[0]
+        upper_bound = interval[-1]
+        new_clauses = encode_rel(inputs, 'both', tuple([lower_bound, upper_bound]))
+        intervals_problems.append(new_clauses)
+    assert len(intervals_problems) == nof_intervals
+    return intervals_problems
 
 
 def make_i_interval(input_vars, nof_ranges, i):

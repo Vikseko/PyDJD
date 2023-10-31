@@ -2,6 +2,7 @@ import multiprocessing
 import pprint
 
 from Pathfinder import *
+from Intervals import *
 import pysat
 from pysat.solvers import MapleChrono
 from pysat.formula import CNF
@@ -227,18 +228,92 @@ def gluing_sep_BDD(fun_bdds, pbi_bdds, order, logpath, alg_ver=False):
         print('Final. Max sizes by intervals:', max_sizes)
         print('Final. Absolute max size:', max(max_sizes))
         print('Final. Funbdds indices causing graph elimination:', indices_unsat)
-        print('Final. Total time for applying:', sum(times_for_pbi))
-        print('Final. Times for check intervals:', [round(x, 4) for x in times_for_pbi])
+        print('Final. Total time for applying:', round(sum(times_for_pbi), 2))
+        print('Final. Times for check intervals:', [round(x, 2) for x in times_for_pbi])
         return bdd_manager, times_for_pbi
+
+
+def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_intervals):
+    problem_type = 'DNF'
+    # создаём подпроблемы, сортируем соответвенно порядку: первой идёт диаграмма, чем корень на 0 уровне
+    # такая сортировка нужна чтобы склеивать их с интервалами, начиная с первой диаграммы
+    fun_problems = SortProblems(DivideProblem(problem, order), order)
+    pbi_problems = CreatePBIproblems(problem_comments, nof_intervals)
+    pbi_flag = True if pbi_problems is not None else False
+    vars_names = [str(x) for x in order if ((x != '?') and (x != 'true'))]
+    vars_for_declare = ['x' + x for x in reversed(vars_names)]
+    bdd_manager = BDD()
+    bdd_manager.declare(*vars_for_declare)
+    fun_bdds_roots = Problems2BDD_dd_format(fun_problems, bdd_manager, problem_type)
+    fun_bdds_sizes = [root.dag_size for root in fun_bdds_roots]
+    pbi_bdds_sizes = [None]
+    indices_unsat = []
+    bdd_max_sizes = []
+    times_for_intervals = []
+    final_roots = []
+    if pbi_flag:
+        pbi_bdds_roots = Problems2BDD_dd_format(pbi_problems, bdd_manager, 'CNF')
+        pbi_bdds_sizes = [root.dag_size for root in pbi_bdds_roots]
+        for pbi_index, pbi_root in enumerate(pbi_bdds_roots):
+            pbi_start_time = time.time()
+            print('\nStart applying interval', pbi_index, 'to subbdds.')
+            print('PBI BDD root:', pbi_root.var)
+            bdd_max_size = 0
+            unsat_flag = False
+            current_root = pbi_root
+            for fun_index, fun_root in enumerate(fun_bdds_roots):
+                if problem_type == 'DNF':
+                    log_str = 'APPLY OR. PBI ' + str(pbi_index) + '. SubBDD ' + str(fun_index) + ' of ' + str(
+                        len(fun_bdds_roots)) + '. SubBDD Root:' + str(fun_root.var) + '.'
+                    pbi_fun_subbdd_root = bdd_manager.apply('or', current_root, fun_root)
+                else:
+                    log_str = 'APPLY AND. PBI ' + str(pbi_index) + '. SubBDD ' + str(fun_index) + ' of ' + str(
+                        len(fun_bdds_roots)) + '. SubBDD Root:' + str(fun_root.var) + '.'
+                    pbi_fun_subbdd_root = bdd_manager.apply('and', current_root, fun_root)
+                bdd_manager.collect_garbage()
+                print(log_str, 'Size of current BDD after apply:', pbi_fun_subbdd_root.dag_size)
+                current_root = pbi_fun_subbdd_root
+                if current_root.dag_size > bdd_max_size:
+                    bdd_max_size = current_root.dag_size
+                if current_root.dag_size == 1:
+                    unsat_flag = True
+                    print('BDD has collapsed into one vertex, while applying interval', pbi_index, 'to subbdds.')
+                    print('Vertex:', bdd_manager.to_expr(current_root))
+                    indices_unsat.append(fun_index + 1)
+                    break
+            final_roots.append(current_root)
+            bdd_max_sizes.append(bdd_max_size)
+            times_for_intervals.append(time.time() - pbi_start_time)
+    else:
+        pass
+        # TODO сделать без интервалов
+    print()
+    print('Final. Separated BDD construction with PBI is complete.')
+    print('Final. Initial number of BDDs:', len(fun_bdds_roots))
+    print('Final. PBI BDDs sizes:', pbi_bdds_sizes)
+    print('Final. Function subbdds sizes:', fun_bdds_sizes)
+    print('Final. Max sizes by intervals:', bdd_max_sizes)
+    print('Final. Absolute max size:', max(bdd_max_sizes))
+    print('Final. Funbdds indices causing graph elimination:', indices_unsat)
+    print('Final. Total time for applying:', round(sum(times_for_intervals), 2))
+    print('Final. Times for check intervals:', [round(x, 2) for x in times_for_intervals])
+
+
+def Problems2BDD_dd_format(sortedproblems: list, bdd_manager, problem_type='DNF'):
+    roots = []
+    for problem in sortedproblems:
+        root = Problem2BDD_dd_format(problem, bdd_manager, problem_type)
+        roots.append(root)
+    return roots
 
 
 # Подразумевается, что исходная формула всегда КНФ. Если мы строим диаграмму по её отрицанию,
 # то в поле problem_type передаём 'DNF', иначе 'CNF'.
 def Problem2BDD_dd_format(sortedproblem: list, bdd_manager, problem_type='DNF'):
     first_clause = sortedproblem.pop()
-    current_problem_root = Clause2BDD_dd_format(first_clause, bdd_manager)
+    current_problem_root = Clause2BDD_dd_format(first_clause, bdd_manager, problem_type)
     for clause in sortedproblem:
-        current_clause_root = Clause2BDD_dd_format(clause, bdd_manager)
+        current_clause_root = Clause2BDD_dd_format(clause, bdd_manager, problem_type)
         if problem_type == 'DNF':
             current_problem_root = bdd_manager.apply('or', current_problem_root, current_clause_root)
         else:
@@ -248,10 +323,11 @@ def Problem2BDD_dd_format(sortedproblem: list, bdd_manager, problem_type='DNF'):
 
 def Clause2BDD_dd_format(clause, bdd_manager, problem_type='DNF'):
     literals = ['!x'+str(abs(x)) if x < 0 else 'x'+str(abs(x)) for x in clause]
-    expr_str = r' \/ '.join(literals)
-    root = bdd_manager.add_expr(expr_str)
     if problem_type == 'DNF':
-        root = bdd_manager.add_expr(r'!{u}'.format(u=root))
+        expr_str = r' \/ '.join(literals)
+    else:
+        expr_str = r' /\ '.join(literals)
+    root = bdd_manager.add_expr(expr_str)
     return root
 
 
