@@ -243,18 +243,23 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
     vars_for_declare = ['x' + x for x in reversed(vars_names)]
     bdd_manager = BDD()
     bdd_manager.declare(*vars_for_declare)
-    fun_bdds_roots = Problems2BDD_dd_format(fun_problems, bdd_manager, problem_type)
+    fun_bdds_roots, fun_bdds_max_sizes = Problems2BDD_dd_format(fun_problems, bdd_manager, problem_type)
     fun_bdds_sizes = [root.dag_size for root in fun_bdds_roots]
     pbi_bdds_sizes = [None]
+    pbi_bdds_max_sizes = [None]
     indices_unsat = []
     bdd_max_sizes = []
     times_for_intervals = []
     final_roots = []
     if pbi_flag:
-        pbi_bdds_roots = Problems2BDD_dd_format(pbi_problems, bdd_manager, 'CNF')
-        pbi_bdds_sizes = [root.dag_size for root in pbi_bdds_roots]
-        for pbi_index, pbi_root in enumerate(pbi_bdds_roots):
+        # pbi_bdds_roots = Problems2BDD_dd_format(pbi_problems, bdd_manager, 'CNF')
+        pbi_bdds_sizes = []
+        pbi_bdds_max_sizes = []
+        for pbi_index, pbi_problem in enumerate(pbi_problems):
             pbi_start_time = time.time()
+            pbi_root, pbi_bdd_max_size = Problem2BDD_dd_format(pbi_problem, bdd_manager, 'CNF')
+            pbi_bdds_max_sizes.append(pbi_bdd_max_size)
+            pbi_bdds_sizes.append(pbi_root.dag_size)
             print('\nStart applying interval', pbi_index, 'to subbdds.')
             print('PBI BDD root:', pbi_root.var)
             bdd_max_size = 0
@@ -288,9 +293,12 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
         # TODO сделать без интервалов
     print()
     print('Final. Separated BDD construction with PBI is complete.')
-    print('Final. Initial number of BDDs:', len(fun_bdds_roots))
+    print('Final. Number of PBI:', nof_intervals)
     print('Final. PBI BDDs sizes:', pbi_bdds_sizes)
+    print('Final. PBI BDDs maximum sizes during construction:', pbi_bdds_max_sizes)
+    print('Final. Initial number of BDDs:', len(fun_bdds_roots))
     print('Final. Function subbdds sizes:', fun_bdds_sizes)
+    print('Final. Function subbdds maximum sizes during construction:', fun_bdds_max_sizes)
     print('Final. Max sizes by intervals:', bdd_max_sizes)
     print('Final. Absolute max size:', max(bdd_max_sizes))
     print('Final. Funbdds indices causing graph elimination:', indices_unsat)
@@ -300,11 +308,13 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
 
 def Problems2BDD_dd_format(sortedproblems: list, bdd_manager, problem_type='DNF'):
     roots = []
+    max_sizes = []
     for index, problem in enumerate(sortedproblems):
         print('\nStart construction of subbdd', index)
-        root = Problem2BDD_dd_format(problem, bdd_manager, problem_type)
+        root, max_size = Problem2BDD_dd_format(problem, bdd_manager, problem_type)
         roots.append(root)
-    return roots
+        max_sizes.append(max_size)
+    return roots, max_sizes
 
 
 # Подразумевается, что исходная формула всегда КНФ. Если мы строим диаграмму по её отрицанию,
@@ -312,17 +322,21 @@ def Problems2BDD_dd_format(sortedproblems: list, bdd_manager, problem_type='DNF'
 def Problem2BDD_dd_format(sortedproblem: list, bdd_manager, problem_type='DNF'):
     first_clause = sortedproblem.pop()
     current_problem_root = Clause2BDD_dd_format(first_clause, bdd_manager, problem_type)
-    print('Clause:', first_clause)
-    print('Current root expr:', current_problem_root.to_expr())
+    max_size = current_problem_root.dag_size
+    # print('Clause:', first_clause)
+    # print('Current root expr:', current_problem_root.to_expr())
     for clause in sortedproblem:
-        print('Clause:', clause)
+        # print('Clause:', clause)
         current_clause_root = Clause2BDD_dd_format(clause, bdd_manager, problem_type)
         if problem_type == 'DNF':
             current_problem_root = bdd_manager.apply('or', current_problem_root, current_clause_root)
         else:
             current_problem_root = bdd_manager.apply('and', current_problem_root, current_clause_root)
-        print('Current root expr:', current_problem_root.to_expr())
-    return current_problem_root
+        # print('Current root expr:', current_problem_root.to_expr())
+        if current_problem_root.dag_size > max_size:
+            max_size = current_problem_root.dag_size
+    bdd_manager.collect_garbage()
+    return current_problem_root, max_size
 
 
 def Clause2BDD_dd_format(clause, bdd_manager, problem_type='DNF'):
@@ -331,7 +345,7 @@ def Clause2BDD_dd_format(clause, bdd_manager, problem_type='DNF'):
         expr_str = r' /\ '.join(literals)
     else:
         expr_str = r' \/ '.join(literals)
-    print('Expr:', expr_str)
+    # print('Expr:', expr_str)
     root = bdd_manager.add_expr(expr_str)
     return root
 
