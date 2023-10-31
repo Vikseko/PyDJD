@@ -29,7 +29,7 @@ if __name__ == '__main__':
         from BDD_converter import *
         DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, options.pbintervals, 'CNF')
         convert_time = time.time() - start_time
-        print('Final. Conversion time:'.ljust(30, ' '), convert_time)
+        print('Final. Conversion time:'.ljust(30, ' '), round(convert_time, 2))
     else:
         # Строим отрицание считанной формулы(КНФ= > ДНФ)
         if options.source_type == "conflicts" or options.source_type == "cnf":
@@ -181,7 +181,7 @@ if __name__ == '__main__':
                         for sat_assigment in sat_assigments:
                             print('Satisfiable assignment:', sorted(sat_assigment, key=lambda x: abs(x)))
             convert_time = time.time() - start_bdd_time
-            print('Final. Conversion time:'.ljust(30, ' '), convert_time)
+            print('Final. Conversion time:'.ljust(30, ' '), round(convert_time, 2))
             if options.test_bdd_convert:
                 from Test_diagram import *
                 start_testing_time = time.time()

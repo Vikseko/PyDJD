@@ -236,6 +236,7 @@ def gluing_sep_BDD(fun_bdds, pbi_bdds, order, logpath, alg_ver=False):
 def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_intervals, problem_type='DNF'):
     # создаём подпроблемы, сортируем соответвенно порядку: первой идёт диаграмма, чем корень на 0 уровне
     # такая сортировка нужна чтобы склеивать их с интервалами, начиная с первой диаграммы
+    start_construct_time = time.time()
     fun_problems = SortProblems(DivideProblem(problem, order), order)
     pbi_problems = CreatePBIproblems(problem_comments, nof_intervals)
     pbi_flag = True if pbi_problems is not None else False
@@ -245,6 +246,8 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
     bdd_manager.declare(*vars_for_declare)
     fun_bdds_roots, fun_bdds_max_sizes = Problems2BDD_dd_format(fun_problems, bdd_manager, problem_type)
     fun_bdds_sizes = [root.dag_size for root in fun_bdds_roots]
+    print('Number of subbdds:', len(fun_bdds_roots))
+    print('Construction time:', round(time.time() - start_construct_time, 2))
     pbi_bdds_sizes = [None]
     pbi_bdds_max_sizes = [None]
     indices_unsat = []
@@ -288,6 +291,13 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
             final_roots.append(current_root)
             bdd_max_sizes.append(bdd_max_size)
             times_for_intervals.append(time.time() - pbi_start_time)
+            if not unsat_flag:
+                print('Assignments for current root', pbi_index, end=':\n')
+                for index_assign, d in enumerate(bdd_manager.pick_iter(current_root)):
+                    print(index_assign, d)
+                    if index_assign >= 100:
+                        print('and others...')
+                        break
     else:
         pass
         # TODO сделать без интервалов
@@ -302,15 +312,15 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
     print('Final. Max sizes by intervals:', bdd_max_sizes)
     print('Final. Absolute max size:', max(bdd_max_sizes))
     print('Final. Funbdds indices causing graph elimination:', indices_unsat)
-    print('Final. Total time for applying:', round(sum(times_for_intervals), 2))
     print('Final. Times for check intervals:', [round(x, 2) for x in times_for_intervals])
+    print('Final. Total time for applying:', round(sum(times_for_intervals), 2))
 
 
 def Problems2BDD_dd_format(sortedproblems: list, bdd_manager, problem_type='DNF'):
     roots = []
     max_sizes = []
     for index, problem in enumerate(sortedproblems):
-        print('\nStart construction of subbdd', index)
+        # print('\nStart construction of subbdd', index)
         root, max_size = Problem2BDD_dd_format(problem, bdd_manager, problem_type)
         roots.append(root)
         max_sizes.append(max_size)
