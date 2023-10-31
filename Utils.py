@@ -212,6 +212,7 @@ def ParseOptions(params):
     options.lock_vars = False if params.lockvars in [False, 'False', 0, '0'] else True
     options.numprocess = params.numproc
     options.pbintervals = params.pbintervals
+    options.applyonly = params.applyonly
     return options
 
 

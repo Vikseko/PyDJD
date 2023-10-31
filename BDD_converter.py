@@ -233,8 +233,7 @@ def gluing_sep_BDD(fun_bdds, pbi_bdds, order, logpath, alg_ver=False):
         return bdd_manager, times_for_pbi
 
 
-def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_intervals):
-    problem_type = 'DNF'
+def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_intervals, problem_type='DNF'):
     # создаём подпроблемы, сортируем соответвенно порядку: первой идёт диаграмма, чем корень на 0 уровне
     # такая сортировка нужна чтобы склеивать их с интервалами, начиная с первой диаграммы
     fun_problems = SortProblems(DivideProblem(problem, order), order)

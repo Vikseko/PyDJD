@@ -389,3 +389,4 @@ class Options:
         self.separate_construction = False
         self.numproc = 1
         self.pbintervals = 1
+        self.applyonly = 0
