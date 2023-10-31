@@ -123,271 +123,136 @@ def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order, logpath):
                 # Второй вариант: приклеиваем их по алгоритму избавления от небинарностей
                 pass
         else:
-            # Версия, использующая пакет dd
-            vars_names = [str(x) for x in order if ((x != '?') and (x != 'true'))]
-            vars_for_declare = ['x'+x for x in reversed(vars_names)]
-            pbi_flag = True if pbi_bdds is not None else False
-            pid = os.getpid()
-            times_for_pbi = []
-            times_for_fun = []
-            max_sizes = []
-            indices_unsat = []
-            bdd_manager = BDD()
-            final_root = None
-            bdd_manager.declare(*vars_for_declare)
-            if pbi_flag:
-                pbi_dd_bdds = mybdds2ddbdds(pbi_bdds, bdd_manager, False, logpath+str(pid)+'pbibdd')
-                print('Nof dd PBI bdds', len(pbi_dd_bdds))
-                pbi_sizes = [x.dag_size for x in pbi_dd_bdds]
-                fun_bdds = mybdds2ddbdds(fun_bdds, bdd_manager, True, logpath+str(pid)+'funbdd')
-            else:
-                pbi_dd_bdds = pbi_sizes = [None]
-                fun_bdds = mybdds2ddbdds(fun_bdds, bdd_manager, False, logpath+str(pid)+'funbdd')
-            print('Nof dd functions\'s bdds', len(fun_bdds))
-            fun_sizes = [x.dag_size for x in fun_bdds]
-            final_roots = []
-            for index, pbi_root in enumerate(pbi_dd_bdds):
-                pbi_start_time = time.time()
-                times_for_currentfun = []
-                print('\nStart applying interval', index)
-                if pbi_root is None:
-                    max_size = 0
-                else:
-                    current_root = bdd_manager.add_expr(r'!{u}'.format(u=pbi_root))
-                    max_size = current_root.dag_size
-                for fun_index, fun_root in enumerate(fun_bdds):
-                    if not pbi_flag and fun_index == 0:
-                        current_root = fun_root
-                        max_size = current_root.dag_size
-                        continue
-                    fun_start_time = time.time()
-                    log_str = 'AND. PBI '+str(index)+'. SubBDD '+str(fun_index)+' of ' + str(len(fun_bdds)) + '.'
-                    print(log_str, 'Size of current BDD before apply:', current_root.dag_size)
-                    print(log_str, 'Size of function BDD to apply:', fun_root.dag_size)
-                    if fun_root.dag_size > max_size:
-                        max_size = fun_root.dag_size
-                    if pbi_flag:
-                        pbi_fun_subbdd_root = bdd_manager.apply('and', current_root, fun_root)
-                    else:
-                        pbi_fun_subbdd_root = bdd_manager.apply('or', current_root, fun_root)
-                    bdd_manager.collect_garbage()
-                    print(log_str, 'Size of current BDD after apply:', pbi_fun_subbdd_root.dag_size)
-                    fun_end_time = time.time()
-                    times_for_currentfun.append(fun_end_time - fun_start_time)
-                    current_root = pbi_fun_subbdd_root
-                    # print(current_root)
-                    if current_root.dag_size > max_size:
-                        max_size = current_root.dag_size
-                    if current_root.dag_size == 1:
-                        unsat_flag = True
-                        # assert bdd_manager.to_expr(current_root) == 'FALSE', 'ERROR. Diagram is not FALSE.'
-                        print(bdd_manager.to_expr(current_root))
-                        print('Proved UNSAT for', index, 'interval, while applying interval by and.')
-                        indices_unsat.append(fun_index+1)
-                        break
-                print('Assignments for negated root (SAT assignments for initial CNF)', index, end=':\n')
-                if pbi_flag:
-                    current_root_neg = current_root
-                else:
-                    current_root_neg = bdd_manager.add_expr(r'!{u}'.format(u=current_root))
-                print(current_root_neg)
-                bdd_manager.collect_garbage()
-                for index_assign, d in enumerate(bdd_manager.pick_iter(current_root_neg)):
-                    print(index_assign, d)
-                    if index_assign >= 100:
-                        print('and others...')
-                        break
-                print('Number of significant vertices:', current_root.dag_size)
-                final_roots.append(current_root)
-                max_sizes.append(max_size)
-                # pbi_subbdds_roots.append(pbi_fun_subbdd_root)
-                # current_root = pbi_subbdds_roots[0]
-                # curr_index = 1
-                # while curr_index < len(pbi_subbdds_roots):
-                #     print()
-                #     print('OR. Size of current BDD before apply:', current_root.dag_size)
-                #     print('OR. Size of function BDD to apply:', pbi_subbdds_roots[curr_index].dag_size)
-                #     current_root = bdd_manager.apply('or', current_root, pbi_subbdds_roots[curr_index])
-                #     bdd_manager.collect_garbage()
-                #     print('OR. Size of current BDD after apply:', current_root.dag_size)
-                #     curr_index += 1
-                #     final_root = current_root
-                #     if current_root.dag_size == 1:
-                #         unsat_flag = True
-                #         print('Proved UNSAT for', index, 'interval, while applying subbdds by or.')
-                #         break
-                pbi_end_time = time.time()
-                times_for_fun.append(times_for_currentfun)
-                times_for_pbi.append(pbi_end_time - pbi_start_time)
-                bdd_manager.collect_garbage()
-                # bdd_manager.dump('./tmp_/final_pbi_' + str(index) + '_bdd.json', roots=[final_root])
-                # bdd_manager.dump('./tmp_/final_pbi_' + str(index) + '_bdd.pdf', roots=[final_root])
-            print()
-            print('Final. Separated transition to BDD with PBI is complete.')
-            print('Final. Initial number of DJDs:', len(fun_bdds))
-            print('Final. PBI BDDs sizes:', pbi_sizes)
-            print('Final. Funstion subbdds sizes:', fun_sizes)
-            print('Final. Max sizes by intervals:', max_sizes)
-            print('Final. Absolute max size:', max(max_sizes))
-            print('Final. Funbdds indices causing graph elimination:', indices_unsat)
-            print('Final. Total time for applying:', sum(times_for_pbi))
-            # print('Final. Times for applying intervals with SubBDDs:', *times_for_fun, sep='\n')
-            print('Final. Times for check intervals:', [round(x, 4) for x in times_for_pbi])
+            bdd_manager, times_for_pbi = gluing_sep_BDD(fun_bdds, pbi_bdds, order, logpath)
             return bdd_manager, times_for_pbi
 
 
-def DJDtoBDD_pbi_separated2(djds, pbi_bdds, numproc, order):
-    counter = 0
-    sys.setrecursionlimit(100000)
-    iter_times = []
-    conjoin_times = []
-    unsat_flag = False
-    if not os.path.isdir('./tmp_/'):
-        os.mkdir('./tmp_/')
-    fun_bdds, subdjd_to_bdd_times = DJDstoBDDs(djds, numproc)
-    for index, diagram in enumerate(fun_bdds):
-        # diagram.PrintProblem()
-        diagram.PrintCurrentTable('SubBDDiagram ' + str(index + 1) + ':')
-        if diagram.VertexCount() == 0:
-            print('Empty BDD is obtained. Initial CNF in unsatisfiable.')
-            unsat_flag = True
-    if not unsat_flag:
-        alg_ver = False
-        if alg_ver:
-            # Версия, использующая реализацию apply для нашего формата диаграмм
-            for pbi_bdd in pbi_bdds:
-                # TODO
-                # Тут нам нужен алгоритм апплай.
-                # Берём наши диаграммы, приклеиваем к ним алгоритмом апплай интервалы (к первой к примеру),
-                # к каждой второй к примеру, потом склеиваем попарно как раньше
-                # Второй вариант: приклеиваем их по алгоритму избавления от небинарностей
-                pass
+def gluing_sep_BDD(fun_bdds, pbi_bdds, order, logpath, alg_ver=False):
+    if alg_ver:
+        # Версия, использующая реализацию apply для нашего формата диаграмм
+        for pbi_bdd in pbi_bdds:
+            # TODO
+            # Тут нам нужен алгоритм апплай.
+            # Берём наши диаграммы, приклеиваем к ним алгоритмом апплай интервалы (к первой к примеру),
+            # к каждой второй к примеру, потом склеиваем попарно как раньше
+            # Второй вариант: приклеиваем их по алгоритму избавления от небинарностей
+            pass
+    else:
+        # Версия, использующая пакет dd
+        vars_names = [str(x) for x in order if ((x != '?') and (x != 'true'))]
+        vars_for_declare = ['x' + x for x in reversed(vars_names)]
+        bdd_manager = BDD()
+        bdd_manager.declare(*vars_for_declare)
+        pbi_flag = True if pbi_bdds is not None else False
+        pid = os.getpid()
+        times_for_pbi = []
+        times_for_fun = []
+        max_sizes = []
+        indices_unsat = []
+        final_root = None
+        if pbi_flag:
+            pbi_dd_bdds = mybdds2ddbdds(pbi_bdds, bdd_manager, False, logpath + str(pid) + 'pbibdd')
+            print('Nof dd PBI bdds', len(pbi_dd_bdds))
+            pbi_sizes = [x.dag_size for x in pbi_dd_bdds]
+            fun_bdds = mybdds2ddbdds(fun_bdds, bdd_manager, True, logpath + str(pid) + 'funbdd')
         else:
-            # Версия, использующая пакет dd
-            vars_names = [str(x) for x in order if ((x != '?') and (x != 'true'))]
-            vars_for_declare = ['x'+x for x in reversed(vars_names)]
-            pbi_flag = True if pbi_bdds is not None else False
-            times_for_pbi = []
-            times_for_fun = []
-            max_sizes = []
-            indices_unsat = []
-            pbi_sizes = []
-            fun_sizes = []
-            # bdd_manager = BDD()
-            # final_root = None
-            # bdd_manager.declare(*vars_for_declare)
-            # if pbi_flag:
-            #     pbi_dd_bdds = mybdds2ddbdds(pbi_bdds, bdd_manager, False, 'pbibdd')
-            #     print('Nof dd PBI bdds', len(pbi_dd_bdds))
-            #     pbi_sizes = [x.dag_size for x in pbi_dd_bdds]
-            #     fun_bdds = mybdds2ddbdds(fun_bdds, bdd_manager, True, 'funbdd')
-            # else:
-            #     pbi_dd_bdds = pbi_sizes = [None]
-            #     fun_bdds = mybdds2ddbdds(fun_bdds, bdd_manager, False, 'funbdd')
-            # print('Nof dd functions\'s bdds', len(fun_bdds))
-            # fun_sizes = [x.dag_size for x in fun_bdds]
-            if not pbi_flag:
-                pbi_bdds = pbi_sizes = [None]
-            final_roots = []
-            for pbi_index, pbi_bdd in enumerate(pbi_bdds):
-                pbi_start_time = time.time()
-                bdd_mngr_for_pbi = BDD()
-                bdd_mngr_for_pbi.declare(*vars_for_declare)
-                if pbi_flag:
-                    pbi_root = mybdd2ddbdd(pbi_bdd, bdd_mngr_for_pbi, False, 'pbibdd'+str(pbi_index))
-                    pbi_root = bdd_mngr_for_pbi.add_expr(r'!{u}'.format(u=pbi_root))
-                    pbi_sizes.append(pbi_root.dag_size)
-                    current_root = pbi_root
-                else:
-                    current_root = None
-                times_for_currentfun = []
-                print('\nStart applying interval', pbi_index)
-                # pbi_subbdds_roots = []
-                if current_root is None:
-                    max_size = 0
-                else:
+            pbi_dd_bdds = pbi_sizes = [None]
+            fun_bdds = mybdds2ddbdds(fun_bdds, bdd_manager, False, logpath + str(pid) + 'funbdd')
+        print('Nof dd functions\'s bdds', len(fun_bdds))
+        fun_sizes = [x.dag_size for x in fun_bdds]
+        final_roots = []
+        for index, pbi_root in enumerate(pbi_dd_bdds):
+            pbi_start_time = time.time()
+            times_for_currentfun = []
+            print('\nStart applying interval', index)
+            if pbi_root is None:
+                max_size = 0
+            else:
+                current_root = bdd_manager.add_expr(r'!{u}'.format(u=pbi_root))
+                max_size = current_root.dag_size
+            for fun_index, fun_root in enumerate(fun_bdds):
+                if not pbi_flag and fun_index == 0:
+                    current_root = fun_root
                     max_size = current_root.dag_size
-                for fun_index, fun_bdd in enumerate(fun_bdds):
-                    fun_root = mybdd2ddbdd(fun_bdd, bdd_mngr_for_pbi, False, 'funbdd'+str(fun_index))
-                    fun_sizes.append(fun_root.dag_size)
-                    if not pbi_flag and fun_index == 0:
-                        current_root = fun_root
-                        max_size = current_root.dag_size
-                        continue
-                    fun_start_time = time.time()
-                    log_str = 'AND. PBI '+str(pbi_index)+'. SubBDD '+str(fun_index)+' of ' + str(len(fun_bdds)) + '.'
-                    print(log_str, 'Size of current BDD before apply:', current_root.dag_size)
-                    print(log_str, 'Size of function BDD to apply:', fun_root.dag_size)
-                    if fun_root.dag_size > max_size:
-                        max_size = fun_root.dag_size
-                    if pbi_flag:
-                        fun_root = bdd_mngr_for_pbi.add_expr(r'!{u}'.format(u=fun_root))
-                        pbi_fun_subbdd_root = bdd_mngr_for_pbi.apply('and', current_root, fun_root)
-                    else:
-                        pbi_fun_subbdd_root = bdd_mngr_for_pbi.apply('or', current_root, fun_root)
-                    bdd_mngr_for_pbi.collect_garbage()
-                    print(log_str, 'Size of current BDD after apply:', pbi_fun_subbdd_root.dag_size)
-                    fun_end_time = time.time()
-                    times_for_currentfun.append(fun_end_time - fun_start_time)
-                    current_root = pbi_fun_subbdd_root
-                    # print(current_root)
-                    if current_root.dag_size > max_size:
-                        max_size = current_root.dag_size
-                    if current_root.dag_size == 1:
-                        unsat_flag = True
-                        assert bdd_mngr_for_pbi.to_expr(current_root) == 'FALSE', 'ERROR. Diagram is not FALSE.'
-                        print('Remain vertex:', bdd_mngr_for_pbi.to_expr(current_root))
-                        print('Proved UNSAT for', pbi_index, 'interval, while applying interval by and.')
-                        indices_unsat.append(fun_index+1)
-                        break
-                print('Assignments for negated root (SAT assignments for initial CNF)', pbi_index, end=':\n')
+                    continue
+                fun_start_time = time.time()
+                log_str = 'AND. PBI ' + str(index) + '. SubBDD ' + str(fun_index) + ' of ' + str(len(fun_bdds)) + '.'
+                print(log_str, 'Size of current BDD before apply:', current_root.dag_size)
+                print(log_str, 'Size of function BDD to apply:', fun_root.dag_size)
+                if fun_root.dag_size > max_size:
+                    max_size = fun_root.dag_size
                 if pbi_flag:
-                    current_root_neg = current_root
+                    pbi_fun_subbdd_root = bdd_manager.apply('and', current_root, fun_root)
                 else:
-                    current_root_neg = bdd_mngr_for_pbi.add_expr(r'!{u}'.format(u=current_root))
-                print(current_root_neg)
-                bdd_mngr_for_pbi.collect_garbage()
-                for index_assign, d in enumerate(bdd_mngr_for_pbi.pick_iter(current_root_neg)):
-                    print(index_assign, d)
-                    if index_assign >= 100:
-                        print('and others...')
-                        break
-                print('Number of significant vertices:', current_root_neg.dag_size)
-                final_roots.append([bdd_mngr_for_pbi, current_root_neg])
-                max_sizes.append(max_size)
-                # pbi_subbdds_roots.append(pbi_fun_subbdd_root)
-                # current_root = pbi_subbdds_roots[0]
-                # curr_index = 1
-                # while curr_index < len(pbi_subbdds_roots):
-                #     print()
-                #     print('OR. Size of current BDD before apply:', current_root.dag_size)
-                #     print('OR. Size of function BDD to apply:', pbi_subbdds_roots[curr_index].dag_size)
-                #     current_root = bdd_manager.apply('or', current_root, pbi_subbdds_roots[curr_index])
-                #     bdd_manager.collect_garbage()
-                #     print('OR. Size of current BDD after apply:', current_root.dag_size)
-                #     curr_index += 1
-                #     final_root = current_root
-                #     if current_root.dag_size == 1:
-                #         unsat_flag = True
-                #         print('Proved UNSAT for', index, 'interval, while applying subbdds by or.')
-                #         break
-                pbi_end_time = time.time()
-                times_for_fun.append(times_for_currentfun)
-                times_for_pbi.append(pbi_end_time - pbi_start_time)
-                # bdd_manager.dump('./tmp_/final_pbi_' + str(index) + '_bdd.json', roots=[final_root])
-                # bdd_manager.dump('./tmp_/final_pbi_' + str(index) + '_bdd.pdf', roots=[final_root])
-            print()
-            print('Final. Separated transition to BDD with PBI is complete.')
-            print('Final. Initial number of DJDs:', len(fun_bdds))
-            print('Final. PBI BDDs sizes:', pbi_sizes)
-            print('Final. Funstion subbdds sizes:', fun_sizes)
-            print('Final. Max sizes by intervals:', max_sizes)
-            print('Final. Absolute max size:', max(max_sizes))
-            print('Final. Funbdds indices causing graph elimination:', indices_unsat)
-            print('Final. Total time for applying:', sum(times_for_pbi))
-            # print('Final. Times for applying intervals with SubBDDs:', *times_for_fun, sep='\n')
-            print('Final. Times for check intervals:', [round(x, 4) for x in times_for_pbi])
-            return final_roots, times_for_pbi
+                    pbi_fun_subbdd_root = bdd_manager.apply('or', current_root, fun_root)
+                bdd_manager.collect_garbage()
+                print(log_str, 'Size of current BDD after apply:', pbi_fun_subbdd_root.dag_size)
+                fun_end_time = time.time()
+                times_for_currentfun.append(fun_end_time - fun_start_time)
+                current_root = pbi_fun_subbdd_root
+                # print(current_root)
+                if current_root.dag_size > max_size:
+                    max_size = current_root.dag_size
+                if current_root.dag_size == 1:
+                    unsat_flag = True
+                    # assert bdd_manager.to_expr(current_root) == 'FALSE', 'ERROR. Diagram is not FALSE.'
+                    print(bdd_manager.to_expr(current_root))
+                    print('Proved UNSAT for', index, 'interval, while applying interval by and.')
+                    indices_unsat.append(fun_index + 1)
+                    break
+            print('Assignments for negated root (SAT assignments for initial CNF)', index, end=':\n')
+            if pbi_flag:
+                current_root_neg = current_root
+            else:
+                current_root_neg = bdd_manager.add_expr(r'!{u}'.format(u=current_root))
+            print(current_root_neg)
+            bdd_manager.collect_garbage()
+            for index_assign, d in enumerate(bdd_manager.pick_iter(current_root_neg)):
+                print(index_assign, d)
+                if index_assign >= 100:
+                    print('and others...')
+                    break
+            print('Number of significant vertices:', current_root.dag_size)
+            final_roots.append(current_root)
+            max_sizes.append(max_size)
+            pbi_end_time = time.time()
+            times_for_fun.append(times_for_currentfun)
+            times_for_pbi.append(pbi_end_time - pbi_start_time)
+            bdd_manager.collect_garbage()
+        print()
+        print('Final. Separated transition to BDD with PBI is complete.')
+        print('Final. Initial number of DJDs:', len(fun_bdds))
+        print('Final. PBI BDDs sizes:', pbi_sizes)
+        print('Final. Function subbdds sizes:', fun_sizes)
+        print('Final. Max sizes by intervals:', max_sizes)
+        print('Final. Absolute max size:', max(max_sizes))
+        print('Final. Funbdds indices causing graph elimination:', indices_unsat)
+        print('Final. Total time for applying:', sum(times_for_pbi))
+        print('Final. Times for check intervals:', [round(x, 4) for x in times_for_pbi])
+        return bdd_manager, times_for_pbi
+
+
+# Подразумевается, что исходная формула всегда КНФ. Если мы строим диаграмму по её отрицанию,
+# то в поле problem_type передаём 'DNF', иначе 'CNF'.
+def Problem2BDD_dd_format(sortedproblem: list, bdd_manager, problem_type='DNF'):
+    first_clause = sortedproblem.pop()
+    current_problem_root = Clause2BDD_dd_format(first_clause, bdd_manager)
+    for clause in sortedproblem:
+        current_clause_root = Clause2BDD_dd_format(clause, bdd_manager)
+        if problem_type == 'DNF':
+            current_problem_root = bdd_manager.apply('or', current_problem_root, current_clause_root)
+        else:
+            current_problem_root = bdd_manager.apply('and', current_problem_root, current_clause_root)
+    return current_problem_root
+
+
+def Clause2BDD_dd_format(clause, bdd_manager, problem_type='DNF'):
+    literals = ['!x'+str(abs(x)) if x < 0 else 'x'+str(abs(x)) for x in clause]
+    expr_str = r' \/ '.join(literals)
+    root = bdd_manager.add_expr(expr_str)
+    if problem_type == 'DNF':
+        root = bdd_manager.add_expr(r'!{u}'.format(u=root))
+    return root
 
 
 def DJDstoBDDs(djds, numproc):
