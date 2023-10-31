@@ -237,6 +237,7 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
     # создаём подпроблемы, сортируем соответвенно порядку: первой идёт диаграмма, чем корень на 0 уровне
     # такая сортировка нужна чтобы склеивать их с интервалами, начиная с первой диаграммы
     start_construct_time = time.time()
+    sys.setrecursionlimit(100000)
     fun_problems = SortProblems(DivideProblem(problem, order), order)
     pbi_problems = CreatePBIproblems(problem_comments, nof_intervals)
     pbi_flag = True if pbi_problems is not None else False
