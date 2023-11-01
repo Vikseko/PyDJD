@@ -268,8 +268,7 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
             pbi_bdds_sizes.append(pbi_root.dag_size)
             print('\nStart applying interval', pbi_index, 'to subbdds.')
             print('Interval:', interval)
-            print('Problem:')
-            print(*pbi_problem, sep='\n')
+            print('PBI clauses:', pbi_problem)
             print('PBI BDD root:', pbi_root.var)
             print('Models:')
             for model_index, d in enumerate(list(bdd_manager.pick_iter(pbi_root))):
