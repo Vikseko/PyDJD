@@ -37,10 +37,10 @@ def make_intervals_problems(nof_intervals, inputs):
 def make_i_interval(input_vars, nof_ranges, i):
     l_border = 0
     r_border = 2 ** len(input_vars)
-    l = range(l_border, r_border)
     n = r_border - l_border
     k = nof_ranges
-    return l[i * (n // k) + min(i, n % k):((i + 1) * (n // k) + min(i + 1, n % k))-1]
+    return [i * (n // k) + min(i, n % k), ((i + 1) * (n // k) + min(i + 1, n % k))-1]
+    # return l[i * (n // k) + min(i, n % k):((i + 1) * (n // k) + min(i + 1, n % k))-1]
 
 
 ######################################################################################################
