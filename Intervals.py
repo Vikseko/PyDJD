@@ -25,6 +25,7 @@ def make_intervals_problems(nof_intervals, inputs):
     intervals_problems = []
     for i in range(nof_intervals):
         interval = make_i_interval(inputs, nof_intervals, i)
+        print(interval)
         lower_bound = interval[0]
         upper_bound = interval[-1]
         new_clauses = encode_rel(inputs, 'both', tuple([lower_bound, upper_bound]))
