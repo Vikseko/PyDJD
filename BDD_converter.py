@@ -239,7 +239,8 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
     start_construct_time = time.time()
     sys.setrecursionlimit(100000)
     fun_problems = SortProblems(DivideProblem(problem, order), order)
-    pbi_problems = CreatePBIproblems(problem_comments, nof_intervals)
+    inputs = GetInputs(problem_comments)
+    pbi_problems = CreatePBIproblems(inputs, nof_intervals)
     pbi_flag = True if pbi_problems is not None else False
     vars_names = [str(x) for x in order if ((x != '?') and (x != 'true'))]
     vars_for_declare = ['x' + x for x in reversed(vars_names)]
@@ -265,7 +266,15 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
             pbi_bdds_max_sizes.append(pbi_bdd_max_size)
             pbi_bdds_sizes.append(pbi_root.dag_size)
             print('\nStart applying interval', pbi_index, 'to subbdds.')
+            print('Problem:')
+            print(*pbi_problem, sep='\n')
             print('PBI BDD root:', pbi_root.var)
+            print('Models:')
+            for model_index, d in enumerate(list(bdd_manager.pick_iter(pbi_root))):
+                print(model_index, d)
+                if model_index >= 100:
+                    print('and others...')
+                    break
             bdd_max_size = 0
             unsat_flag = False
             current_root = pbi_root

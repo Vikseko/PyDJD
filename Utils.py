@@ -150,6 +150,17 @@ def DivideProblem(problem, order):
     return problems
 
 
+def GetInputs(problem_comments):
+    for comment in problem_comments:
+        if 'c inputs' in comment:
+            inputs = list(map(int, comment.split(':')[1].split()))
+            break
+    else:
+        print('Comments:', problem_comments)
+        raise Exception('There is no inputs list in a comments.')
+    return inputs
+
+
 def get_max_var(problem):
     max_var = 0
     for clause in problem:

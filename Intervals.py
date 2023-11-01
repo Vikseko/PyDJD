@@ -2,17 +2,8 @@ from Imports import *
 from Builder import *
 
 
-def CreateIntervalsDJDs(problem_comments, nof_intervals, var_count, order, ptype, numproc):
+def CreateIntervalsDJDs(inputs, nof_intervals, var_count, order, ptype, numproc):
     if nof_intervals > 1:
-        inputs = None
-        intervals_problems = []
-        for comment in problem_comments:
-            if 'c inputs' in comment:
-                inputs = list(map(int, comment.split(':')[1].split()))
-                break
-        else:
-            print('Comments:', problem_comments)
-            raise Exception('There is no inputs list in a comments.')
         intervals_problems = make_intervals_problems(nof_intervals, inputs)
         intervals_djds = CreateDiagrams(var_count, intervals_problems, order, ptype, numproc)
         print('Number of intervals djds:', len(intervals_djds))
@@ -22,21 +13,14 @@ def CreateIntervalsDJDs(problem_comments, nof_intervals, var_count, order, ptype
         return None
 
 
-def CreatePBIproblems(problem_comments, nof_intervals):
+def CreatePBIproblems(inputs, nof_intervals):
     if nof_intervals > 1:
-        inputs = None
         intervals_problems = []
-        for comment in problem_comments:
-            if 'c inputs' in comment:
-                inputs = list(map(int, comment.split(':')[1].split()))
-                break
-        else:
-            print('Comments:', problem_comments)
-            raise Exception('There is no inputs list in a comments.')
         intervals_problems = make_intervals_problems(nof_intervals, inputs)
         return intervals_problems
     else:
         return None
+
 
 def make_intervals_problems(nof_intervals, inputs):
     intervals_problems = []
