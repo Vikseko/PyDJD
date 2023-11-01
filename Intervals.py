@@ -36,9 +36,11 @@ def make_intervals_problems(nof_intervals, inputs):
 
 def make_i_pbi(inputs, nof_intervals, i):
     interval = make_i_interval(inputs, nof_intervals, i)
-    lower_bound = interval[0]
-    upper_bound = interval[-1]
-    i_pbi_clauses = encode_rel(inputs, 'both', tuple([lower_bound, upper_bound]))
+    # lower_bound = interval[0]
+    # upper_bound = interval[-1]
+    print('Interval:', interval)
+    i_pbi_clauses = encode_rel(inputs, 'both', tuple(interval))
+    print('PBI clauses:', i_pbi_clauses)
     return interval, i_pbi_clauses
 
 
