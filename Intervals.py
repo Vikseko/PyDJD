@@ -15,7 +15,6 @@ def CreateIntervalsDJDs(inputs, nof_intervals, var_count, order, ptype, numproc)
 
 def CreatePBIproblems(inputs, nof_intervals):
     if nof_intervals > 1:
-        intervals_problems = []
         intervals_problems = make_intervals_problems(nof_intervals, inputs)
         return intervals_problems
     else:
@@ -40,7 +39,7 @@ def make_i_interval(input_vars, nof_ranges, i):
     l = range(l_border, r_border)
     n = r_border - l_border
     k = nof_ranges
-    return l[i * (n // k) + min(i, n % k):(i + 1) * (n // k) + min(i + 1, n % k)]
+    return l[i * (n // k) + min(i, n % k):((i + 1) * (n // k) + min(i + 1, n % k))-1]
 
 
 ######################################################################################################
@@ -74,10 +73,8 @@ def bits2num(bits):
 
 def _encode_geq(x, a):
     assert len(x) == len(a)
-
     if len(x) == 0:
         return []
-
     clauses = []
     assert isinstance(a[0], bool)
     if a[0]:
@@ -92,10 +89,8 @@ def _encode_geq(x, a):
 
 def _encode_leq(x, b):
     assert len(x) == len(b)
-
     if len(x) == 0:
         return []
-
     clauses = []
     assert isinstance(b[0], bool)
     if not b[0]:
@@ -111,10 +106,8 @@ def _encode_leq(x, b):
 def _encode_both(x, a, b):
     assert len(x) == len(a)
     assert len(x) == len(b)
-
     if len(x) == 0:
         return []
-
     clauses = []
     assert isinstance(a[0], bool)
     assert isinstance(b[0], bool)
@@ -148,7 +141,6 @@ def encode_rel(lits, mode, bound):
     - `rel` is either `>=` (`mode='geq'`) or `<=` (`mode='leq'`),
     - `lits` are the bits of `x` (note: `lits[0]` is MSB).
     """
-
     n = len(lits)
     # print(f"=== Encoding '{mode}' for n = {n}, bound = {bound}")
     if mode == "geq":

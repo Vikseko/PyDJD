@@ -366,7 +366,7 @@ def Clause2BDD_dd_format(clause, bdd_manager, problem_type='DNF'):
         expr_str = r' /\ '.join(literals)
     else:
         expr_str = r' \/ '.join(literals)
-    # print('Expr:', expr_str)
+    print('Expr:', expr_str)
     root = bdd_manager.add_expr(expr_str)
     return root
 
