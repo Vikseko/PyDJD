@@ -341,21 +341,22 @@ def Problems2BDD_dd_format(sortedproblems: list, bdd_manager, problem_type='DNF'
 # Подразумевается, что исходная формула всегда КНФ. Если мы строим диаграмму по её отрицанию,
 # то в поле problem_type передаём 'DNF', иначе 'CNF'.
 def Problem2BDD_dd_format(sortedproblem: list, bdd_manager, problem_type='DNF'):
-    first_clause = sortedproblem.pop()
+    first_clause = sortedproblem[0]
     current_problem_root = Clause2BDD_dd_format(first_clause, bdd_manager, problem_type)
     max_size = current_problem_root.dag_size
     # print('Clause:', first_clause)
     # print('Current root expr:', current_problem_root.to_expr())
-    for clause in sortedproblem:
-        # print('Clause:', clause)
-        current_clause_root = Clause2BDD_dd_format(clause, bdd_manager, problem_type)
-        if problem_type == 'DNF':
-            current_problem_root = bdd_manager.apply('or', current_problem_root, current_clause_root)
-        else:
-            current_problem_root = bdd_manager.apply('and', current_problem_root, current_clause_root)
-        # print('Current root expr:', current_problem_root.to_expr())
-        if current_problem_root.dag_size > max_size:
-            max_size = current_problem_root.dag_size
+    for index, clause in enumerate(sortedproblem):
+        if index > 0:
+            # print('Clause:', clause)
+            current_clause_root = Clause2BDD_dd_format(clause, bdd_manager, problem_type)
+            if problem_type == 'DNF':
+                current_problem_root = bdd_manager.apply('or', current_problem_root, current_clause_root)
+            else:
+                current_problem_root = bdd_manager.apply('and', current_problem_root, current_clause_root)
+            # print('Current root expr:', current_problem_root.to_expr())
+            if current_problem_root.dag_size > max_size:
+                max_size = current_problem_root.dag_size
     bdd_manager.collect_garbage()
     return current_problem_root, max_size
 
