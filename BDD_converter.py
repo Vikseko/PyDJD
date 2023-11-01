@@ -241,7 +241,7 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
     fun_problems = SortProblems(DivideProblem(problem, order), order)
     inputs = GetInputs(problem_comments)
     # pbi_problems = CreatePBIproblems(inputs, nof_intervals)
-    pbi_flag = True if nof_intervals > 1 is not None else False
+    pbi_flag = True if nof_intervals > 1 else False
     vars_names = [str(x) for x in order if ((x != '?') and (x != 'true'))]
     vars_for_declare = ['x' + x for x in reversed(vars_names)]
     bdd_manager = BDD()
