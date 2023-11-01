@@ -266,6 +266,7 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
             pbi_bdds_max_sizes.append(pbi_bdd_max_size)
             pbi_bdds_sizes.append(pbi_root.dag_size)
             print('\nStart applying interval', pbi_index, 'to subbdds.')
+            print('Interval:', make_i_interval(inputs, nof_intervals, pbi_index))
             print('Problem:')
             print(*pbi_problem, sep='\n')
             print('PBI BDD root:', pbi_root.var)
