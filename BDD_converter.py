@@ -271,7 +271,7 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
             print('PBI BDD root:', pbi_root.var)
             print('Models:')
             for model_index, d in enumerate(list(bdd_manager.pick_iter(pbi_root))):
-                print(model_index, d)
+                print('Model', model_index, ':', d)
                 if model_index >= 100:
                     print('and others...')
                     break
