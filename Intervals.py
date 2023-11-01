@@ -25,13 +25,21 @@ def make_intervals_problems(nof_intervals, inputs):
     intervals_problems = []
     for i in range(nof_intervals):
         interval = make_i_interval(inputs, nof_intervals, i)
-        print(interval)
+        # print(interval)
         lower_bound = interval[0]
         upper_bound = interval[-1]
         new_clauses = encode_rel(inputs, 'both', tuple([lower_bound, upper_bound]))
         intervals_problems.append(new_clauses)
     assert len(intervals_problems) == nof_intervals
     return intervals_problems
+
+
+def make_i_pbi(inputs, nof_intervals, i):
+    interval = make_i_interval(inputs, nof_intervals, i)
+    lower_bound = interval[0]
+    upper_bound = interval[-1]
+    i_pbi_clauses = encode_rel(inputs, 'both', tuple([lower_bound, upper_bound]))
+    return i_pbi_clauses
 
 
 def make_i_interval(input_vars, nof_ranges, i):

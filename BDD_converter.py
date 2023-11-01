@@ -240,8 +240,8 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
     sys.setrecursionlimit(100000)
     fun_problems = SortProblems(DivideProblem(problem, order), order)
     inputs = GetInputs(problem_comments)
-    pbi_problems = CreatePBIproblems(inputs, nof_intervals)
-    pbi_flag = True if pbi_problems is not None else False
+    # pbi_problems = CreatePBIproblems(inputs, nof_intervals)
+    pbi_flag = True if nof_intervals > 1 is not None else False
     vars_names = [str(x) for x in order if ((x != '?') and (x != 'true'))]
     vars_for_declare = ['x' + x for x in reversed(vars_names)]
     bdd_manager = BDD()
@@ -260,8 +260,9 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
         # pbi_bdds_roots = Problems2BDD_dd_format(pbi_problems, bdd_manager, 'CNF')
         pbi_bdds_sizes = []
         pbi_bdds_max_sizes = []
-        for pbi_index, pbi_problem in enumerate(pbi_problems):
+        for pbi_index in range(nof_intervals):
             pbi_start_time = time.time()
+            pbi_problem = make_i_pbi(inputs, nof_intervals, pbi_index)
             pbi_root, pbi_bdd_max_size = Problem2BDD_dd_format(pbi_problem, bdd_manager, 'CNF')
             pbi_bdds_max_sizes.append(pbi_bdd_max_size)
             pbi_bdds_sizes.append(pbi_root.dag_size)
@@ -366,7 +367,7 @@ def Clause2BDD_dd_format(clause, bdd_manager, problem_type='DNF'):
         expr_str = r' /\ '.join(literals)
     else:
         expr_str = r' \/ '.join(literals)
-    print('Expr:', expr_str)
+    # print('Expr:', expr_str)
     root = bdd_manager.add_expr(expr_str)
     return root
 
