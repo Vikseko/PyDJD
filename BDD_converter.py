@@ -310,6 +310,9 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
                 print('Vertex:', bdd_manager.to_expr(current_root))
                 indices_unsat.append(fun_index + 1)
                 break
+            elif current_root.dag_size > 60000000:
+                print('STOP. BDD is too big. PBI index:', pbi_index)
+                exit()
         final_roots.append(current_root)
         bdd_max_sizes.append(bdd_max_size)
         times_for_intervals.append(time.time() - pbi_start_time)
