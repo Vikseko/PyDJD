@@ -223,6 +223,7 @@ def gluing_sep_BDD(fun_bdds, pbi_bdds, order, logpath, alg_ver=False):
             print('Number of significant vertices:', current_root.dag_size)
             final_roots.append(current_root)
             max_sizes.append(max_size)
+            print('Max size:', max_size)
             pbi_end_time = time.time()
             times_for_fun.append(times_for_currentfun)
             times_for_pbi.append(pbi_end_time - pbi_start_time)
@@ -318,6 +319,7 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
                 exit()
         final_roots.append(current_root)
         bdd_max_sizes.append(bdd_max_size)
+        print('Max size:', bdd_max_size)
         times_for_intervals.append(time.time() - pbi_start_time)
         if not unsat_flag:
             print('Assignments for current root', pbi_index, end=':\n')
