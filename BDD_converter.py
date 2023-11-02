@@ -162,10 +162,10 @@ def gluing_sep_BDD(fun_bdds, pbi_bdds, order, logpath, alg_ver=False):
         print('Nof dd functions\'s bdds', len(fun_bdds))
         fun_sizes = [x.dag_size for x in fun_bdds]
         final_roots = []
-        for index, pbi_root in enumerate(pbi_dd_bdds):
+        for pbi_index, pbi_root in enumerate(pbi_dd_bdds):
             pbi_start_time = time.time()
             times_for_currentfun = []
-            print('\nStart applying interval', index)
+            print('\nStart applying interval', pbi_index)
             if pbi_root is None:
                 max_size = 0
             else:
@@ -177,17 +177,22 @@ def gluing_sep_BDD(fun_bdds, pbi_bdds, order, logpath, alg_ver=False):
                     max_size = current_root.dag_size
                     continue
                 fun_start_time = time.time()
-                log_str = 'AND. PBI ' + str(index) + '. SubBDD ' + str(fun_index) + ' of ' + str(len(fun_bdds)) + '.'
-                print(log_str, 'Size of current BDD before apply:', current_root.dag_size)
-                print(log_str, 'Size of function BDD to apply:', fun_root.dag_size)
+                # log_str = 'AND. PBI ' + str(pbi_index) + '. SubBDD ' + str(fun_index) + ' of ' + str(len(fun_bdds)) + '.'
+                # print(log_str, 'Size of current BDD before apply:', current_root.dag_size)
+                # print(log_str, 'Size of function BDD to apply:', fun_root.dag_size)
                 if fun_root.dag_size > max_size:
                     max_size = fun_root.dag_size
                 if pbi_flag:
                     pbi_fun_subbdd_root = bdd_manager.apply('and', current_root, fun_root)
+                    log_str = 'APPLY AND. PBI ' + str(pbi_index) + '. SubBDD ' + str(fun_index) + ' of ' + str(
+                        len(pbi_dd_bdds)) + '. SubBDD Root: ' + str(fun_root.var) + '.'
                 else:
                     pbi_fun_subbdd_root = bdd_manager.apply('or', current_root, fun_root)
+                    log_str = 'APPLY AND. PBI ' + str(pbi_index) + '. SubBDD ' + str(fun_index) + ' of ' + str(
+                        len(pbi_dd_bdds)) + '. SubBDD Root: ' + str(fun_root.var) + '.'
                 bdd_manager.collect_garbage()
-                print(log_str, 'Size of current BDD after apply:', pbi_fun_subbdd_root.dag_size)
+                print(log_str, 'Size of current BDD after apply:', pbi_fun_subbdd_root.dag_size,
+                      'Time:', round(time.time() - pbi_start_time, 2))
                 fun_end_time = time.time()
                 times_for_currentfun.append(fun_end_time - fun_start_time)
                 current_root = pbi_fun_subbdd_root
@@ -196,12 +201,11 @@ def gluing_sep_BDD(fun_bdds, pbi_bdds, order, logpath, alg_ver=False):
                     max_size = current_root.dag_size
                 if current_root.dag_size == 1:
                     unsat_flag = True
-                    # assert bdd_manager.to_expr(current_root) == 'FALSE', 'ERROR. Diagram is not FALSE.'
-                    print(bdd_manager.to_expr(current_root))
-                    print('Proved UNSAT for', index, 'interval, while applying interval by and.')
+                    print('BDD has collapsed into one vertex, while applying interval', pbi_index, 'to subbdds.')
+                    print('Vertex:', bdd_manager.to_expr(current_root))
                     indices_unsat.append(fun_index + 1)
                     break
-            print('Assignments for negated root (SAT assignments for initial CNF)', index, end=':\n')
+            print('Assignments for negated root (SAT assignments for initial CNF)', pbi_index, end=':\n')
             if pbi_flag:
                 current_root_neg = current_root
             else:
@@ -239,7 +243,7 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
     start_construct_time = time.time()
     sys.setrecursionlimit(100000)
     fun_problems = SortProblems(DivideProblem(problem, order), order)
-    inputs = GetInputs(problem_comments)
+    inputs = GetInputs(problem_comments, nof_intervals)
     # pbi_problems = CreatePBIproblems(inputs, nof_intervals)
     pbi_flag = True if nof_intervals > 1 else False
     vars_names = [str(x) for x in order if ((x != '?') and (x != 'true'))]
@@ -256,17 +260,17 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
     bdd_max_sizes = []
     times_for_intervals = []
     final_roots = []
-    if pbi_flag:
-        # pbi_bdds_roots = Problems2BDD_dd_format(pbi_problems, bdd_manager, 'CNF')
-        pbi_bdds_sizes = []
-        pbi_bdds_max_sizes = []
-        for pbi_index in range(nof_intervals):
-            pbi_start_time = time.time()
+    # pbi_bdds_roots = Problems2BDD_dd_format(pbi_problems, bdd_manager, 'CNF')
+    pbi_bdds_sizes = []
+    pbi_bdds_max_sizes = []
+    for pbi_index in range(nof_intervals):
+        pbi_start_time = time.time()
+        print('\nStart applying interval', pbi_index, 'to subbdds.')
+        if pbi_flag:
             interval, pbi_problem = make_i_pbi(inputs, nof_intervals, pbi_index)
             pbi_root, pbi_bdd_max_size = Problem2BDD_dd_format(pbi_problem, bdd_manager, 'CNF')
             pbi_bdds_max_sizes.append(pbi_bdd_max_size)
             pbi_bdds_sizes.append(pbi_root.dag_size)
-            print('\nStart applying interval', pbi_index, 'to subbdds.')
             print('Interval:', interval)
             print('PBI clauses:', pbi_problem)
             print('PBI BDD root:', pbi_root.var)
@@ -276,42 +280,46 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
                 if model_index >= 100:
                     print('and others...')
                     break
-            bdd_max_size = 0
-            unsat_flag = False
             current_root = pbi_root
-            for fun_index, fun_root in enumerate(fun_bdds_roots):
-                if problem_type == 'DNF':
-                    log_str = 'APPLY OR. PBI ' + str(pbi_index) + '. SubBDD ' + str(fun_index) + ' of ' + str(
-                        len(fun_bdds_roots)) + '. SubBDD Root:' + str(fun_root.var) + '.'
-                    pbi_fun_subbdd_root = bdd_manager.apply('or', current_root, fun_root)
-                else:
-                    log_str = 'APPLY AND. PBI ' + str(pbi_index) + '. SubBDD ' + str(fun_index) + ' of ' + str(
-                        len(fun_bdds_roots)) + '. SubBDD Root:' + str(fun_root.var) + '.'
-                    pbi_fun_subbdd_root = bdd_manager.apply('and', current_root, fun_root)
-                bdd_manager.collect_garbage()
-                print(log_str, 'Size of current BDD after apply:', pbi_fun_subbdd_root.dag_size)
-                current_root = pbi_fun_subbdd_root
-                if current_root.dag_size > bdd_max_size:
-                    bdd_max_size = current_root.dag_size
-                if current_root.dag_size == 1:
-                    unsat_flag = True
-                    print('BDD has collapsed into one vertex, while applying interval', pbi_index, 'to subbdds.')
-                    print('Vertex:', bdd_manager.to_expr(current_root))
-                    indices_unsat.append(fun_index + 1)
+        bdd_max_size = 0
+        unsat_flag = False
+        for fun_index, fun_root in enumerate(fun_bdds_roots):
+            if not pbi_flag and fun_index == 0:
+                current_root = fun_root
+                max_size = current_root.dag_size
+                print('Since only 1 interval is specified, the first root is the root of the first subbdd.')
+                print('Current BDD size:', current_root.dag_size)
+                continue
+            if problem_type == 'DNF':
+                log_str = 'APPLY OR. PBI ' + str(pbi_index) + '. SubBDD ' + str(fun_index) + ' of ' + str(
+                    len(fun_bdds_roots)) + '. SubBDD Root: ' + str(fun_root.var) + '.'
+                pbi_fun_subbdd_root = bdd_manager.apply('or', current_root, fun_root)
+            else:
+                log_str = 'APPLY AND. PBI ' + str(pbi_index) + '. SubBDD ' + str(fun_index) + ' of ' + str(
+                    len(fun_bdds_roots)) + '. SubBDD Root: ' + str(fun_root.var) + '.'
+                pbi_fun_subbdd_root = bdd_manager.apply('and', current_root, fun_root)
+            bdd_manager.collect_garbage()
+            print(log_str, 'Size of current BDD after apply:', pbi_fun_subbdd_root.dag_size,
+                  'Time:', round(time.time() - pbi_start_time, 2))
+            current_root = pbi_fun_subbdd_root
+            if current_root.dag_size > bdd_max_size:
+                bdd_max_size = current_root.dag_size
+            if current_root.dag_size == 1:
+                unsat_flag = True
+                print('BDD has collapsed into one vertex, while applying interval', pbi_index, 'to subbdds.')
+                print('Vertex:', bdd_manager.to_expr(current_root))
+                indices_unsat.append(fun_index + 1)
+                break
+        final_roots.append(current_root)
+        bdd_max_sizes.append(bdd_max_size)
+        times_for_intervals.append(time.time() - pbi_start_time)
+        if not unsat_flag:
+            print('Assignments for current root', pbi_index, end=':\n')
+            for index_assign, d in enumerate(bdd_manager.pick_iter(current_root)):
+                print(index_assign, d)
+                if index_assign >= 100:
+                    print('and others...')
                     break
-            final_roots.append(current_root)
-            bdd_max_sizes.append(bdd_max_size)
-            times_for_intervals.append(time.time() - pbi_start_time)
-            if not unsat_flag:
-                print('Assignments for current root', pbi_index, end=':\n')
-                for index_assign, d in enumerate(bdd_manager.pick_iter(current_root)):
-                    print(index_assign, d)
-                    if index_assign >= 100:
-                        print('and others...')
-                        break
-    else:
-        pass
-        # TODO сделать без интервалов
     print()
     print('Final. Separated BDD construction with PBI is complete.')
     print('Final. Number of PBI:', nof_intervals)
@@ -320,6 +328,7 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
     print('Final. Initial number of BDDs:', len(fun_bdds_roots))
     print('Final. Function subbdds sizes:', fun_bdds_sizes)
     print('Final. Function subbdds maximum sizes during construction:', fun_bdds_max_sizes)
+    print('Final. Sum of function subbdds sizes:', sum(fun_bdds_sizes))
     print('Final. Max sizes by intervals:', bdd_max_sizes)
     print('Final. Absolute max size:', max(bdd_max_sizes))
     print('Final. Funbdds indices causing graph elimination:', indices_unsat)

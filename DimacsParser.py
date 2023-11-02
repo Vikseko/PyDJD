@@ -1,5 +1,8 @@
 
 # Парсер DIMACS-файла
+import ast
+
+
 def DimacsParser(lines):
     min_var_num = 0
     max_var_num = 0
@@ -8,6 +11,7 @@ def DimacsParser(lines):
     order = None
     problem = []
     comments = []
+    layers = None
     varset = set()
     if len(lines) == 0:
         raise RuntimeError('DimacsParser: Empty file')
@@ -27,7 +31,9 @@ def DimacsParser(lines):
             if 'max_var_num' in line:
                 max_var_num = int(line.split()[2])
             if 'activity_order' in line:
-                order = list(reversed(list(map(int,line.split()[2:]))))
+                order = list(reversed(list(map(int, line.split()[2:]))))
+            if 'layers' in line:
+                layers = ast.literal_eval(line.split(':')[1].strip())
         else:
             if lit_count == 0 and lit_count_flag == False:
                 lit_count_flag = True
@@ -37,12 +43,12 @@ def DimacsParser(lines):
                 if -lit in clause:
                     sat_flag = True
                     break
-            if sat_flag == False:
+            if not sat_flag:
                 for lit in clause:
                     varset.add(abs(lit))
                 if len(clause) > 0:
                     problem.append(clause)
-                if lit_count_flag == True:
+                if lit_count_flag:
                     lit_count += len(clause)
     if max_var_num == 0:
         for clause in problem:
@@ -58,4 +64,4 @@ def DimacsParser(lines):
             if min_var_num == 1:
                 break
     var_count = len(varset)
-    return problem, order, comments, var_count, lit_count, min_var_num, max_var_num
+    return problem, order, comments, var_count, lit_count, min_var_num, max_var_num, layers

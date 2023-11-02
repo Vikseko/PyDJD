@@ -31,7 +31,8 @@ def createParser ():
     parser = argparse.ArgumentParser()
     parser.add_argument ('-f', '--file', nargs='?', type=str, default='Tests/GeffeLearntsClauses_1.cnf')
     parser.add_argument ('-o', '--order', nargs='?', type=str, default='frequency', help='{activity, frequency, '
-                                                                                         'revfrequency, direct} Order '
+                                                                                         'revfrequency, direct,'
+                                                                                         'layers} Order '
                                                                                          'of variables for '
                                                                                          'building diagrams')
     parser.add_argument ('-s', '--source', nargs='?', type=str, default='cnf')

@@ -4,7 +4,7 @@ from DimacsParser import *
 
 def ReadProblem(options):
     lines = open(options.path, 'r').readlines()
-    problem, order, comments, var_count, lit_count, min_var_num, max_var_num = DimacsParser(lines)
+    problem, order, comments, var_count, lit_count, min_var_num, max_var_num, layers = DimacsParser(lines)
     print('Lit count:'.ljust(30, ' '), lit_count)
     print('Variables:'.ljust(30, ' '), var_count)
     print('Lowest variable number:'.ljust(30, ' '), min_var_num)
@@ -25,6 +25,8 @@ def ReadProblem(options):
             order = [x for x in reversed(range(1, max_var_num+1))]
         else:
             raise RuntimeError('No maximum variable found, check DIMACS file.')
+    elif options.order_type == 'layers':
+        order = LayersDirectOrder(layers, min_var_num, max_var_num)
     order.insert(0, 'true')
     order.insert(0, '?')
     return var_count, problem, order, comments
@@ -38,7 +40,6 @@ def FrequencyOrder(problem, min_var_num, max_var_num):
                 counter[abs(lit)] += 1
         counter = list(enumerate(counter))
         counter.sort(key=lambda x: x[1])
-        # counter.reverse()
         order = [x[0] for x in counter if x[1] > 0]
         return order
     else:
@@ -58,6 +59,22 @@ def ReversedFrequencyOrder(problem, min_var_num, max_var_num):
         return order
     else:
         raise RuntimeError('No minimum and maximum variables found, check DIMACS file.')
+
+
+def LayersDirectOrder(layers, min_var_num, max_var_num):
+    if min_var_num != 0 and max_var_num != 0:
+        print('Layers:', layers)
+        for i in range(len(layers)):
+            layers[i].sort(key=lambda x: abs(x))
+        print('Sorted layers:', layers)
+        order = list(reversed(flatten(layers)))
+        return order
+    else:
+        raise RuntimeError('No minimum and maximum variables found, check DIMACS file.')
+
+
+def flatten(l):
+    return [item for sublist in l for item in sublist]
 
 
 def ExtractVarSet(problem, var_set):
@@ -150,15 +167,18 @@ def DivideProblem(problem, order):
     return problems
 
 
-def GetInputs(problem_comments):
-    for comment in problem_comments:
-        if 'c inputs' in comment:
-            inputs = list(map(int, comment.split(':')[1].split()))
-            break
+def GetInputs(problem_comments, nof_intervals):
+    if nof_intervals > 1:
+        for comment in problem_comments:
+            if 'c inputs' in comment:
+                inputs = list(map(int, comment.split(':')[1].split()))
+                break
+        else:
+            print('Comments:', problem_comments)
+            raise Exception('There is no inputs list in a comments.')
+        return inputs
     else:
-        print('Comments:', problem_comments)
-        raise Exception('There is no inputs list in a comments.')
-    return inputs
+        return None
 
 
 def get_max_var(problem):
@@ -192,7 +212,12 @@ def CreateLogDir(options):
     cnf_dir = os.path.join(logs_dir, options.name)
     if not os.path.isdir(cnf_dir):
         os.mkdir(cnf_dir)
-    params_dir = os.path.join(cnf_dir, str(options.order_type) + '_sc' + str(options.separate_construction) + '_np' + str(options.numprocess) + '_pbi' + str(options.pbintervals))
+    params_dir = os.path.join(cnf_dir,
+                              str(options.order_type) +
+                              '_sc' + str(options.separate_construction) +
+                              '_np' + str(options.numprocess) +
+                              '_pbi' + str(options.pbintervals) +
+                              '_ao' + str(options.applyonly))
     if not os.path.isdir(params_dir):
         os.mkdir(params_dir)
     timedir = os.path.join(params_dir, datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))

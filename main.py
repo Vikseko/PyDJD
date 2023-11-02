@@ -141,7 +141,7 @@ if __name__ == '__main__':
             else:
                 if options.pbintervals > 0:
                     from Intervals import *
-                    inputs = GetInputs(problem_comments)
+                    inputs = GetInputs(problem_comments, options.pbintervals)
                     pbi_djds = CreateIntervalsDJDs(inputs, options.pbintervals, var_count, order, ptype,
                                                    options.numprocess)
                     if pbi_djds is not None:
