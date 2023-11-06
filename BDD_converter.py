@@ -60,7 +60,7 @@ def DJDtoBDD_separated(diagrams, numproc, order):
             print('Start conjoining BDDs one by one (1 to 2, result to 3, result to 4, ...).')
             print('Number of subdiagrams:', current_nof_diagrams)
             new_diagram = None
-            for index, bdd in current_bdd_diagrams:
+            for index, bdd in enumerate(current_bdd_diagrams):
                 if index == 0:
                     continue
                 elif index == 1:
