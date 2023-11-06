@@ -460,8 +460,8 @@ def ConjoinBDDs(diagrams_pair):
         sorted_nodes2 = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram2.order_, diagram2.table_.values())
         max_vertex = len(diagram1.table_)
         current_vertex_id = max_vertex + 1
-        log_lines.append('\nCurrent. Size of diagram 1: ' + str(diagram1.VertexCount()))
-        log_lines.append('Current. Size of diagram 2: ' + str(diagram2.VertexCount()))
+        log_lines.append('\nCurrent. Size of diagram 1: ' + str(diagram1.VertexCount()) + '. Root ' + str(diagram1.main_root.Value()))
+        log_lines.append('Current. Size of diagram 2: ' + str(diagram2.VertexCount()) + '. Root ' + str(diagram2.main_root.Value()))
         # print('\nSize of diagram 1:', diagram1.VertexCount())
         # print('Size of diagram 2:', diagram2.VertexCount())
         # diagram1.PrintCurrentTable('Table 1:')
