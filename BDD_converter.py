@@ -51,24 +51,36 @@ def DJDtoBDD_separated(diagrams, numproc, order):
             diagrams_pairs = list(make_pairs(current_bdd_diagrams))
         print('\n\nCurrent iteration:', counter)
         print('Number of processes:', (min(len(diagrams_pairs), numproc)))
-        print('Number of subdiagrams:', current_nof_diagrams)
-        print('Number of tasks (pairs):', len(diagrams_pairs))
         print('Order:', order)
         print('Sorted diagrams by roots:', roots_sorted_diagrams)
         print('Sizes of diagrams:', sizes_of_diagrams)
         # print('Pairs:', diagrams_pairs)
         conjoin_times_iter = []
         if numproc == 1:
-            for pair in diagrams_pairs:
-                new_diagram, conjoin_time, log_lines = ConjoinBDDs((pair[0], pair[1]))
-                next_iter_diagrams.append(new_diagram)
-                conjoin_times_iter.append(conjoin_time)
+            print('Start conjoining BDDs one by one (1 to 2, result to 3, result to 4, ...).')
+            print('Number of subdiagrams:', current_nof_diagrams)
+            new_diagram = None
+            for index, bdd in current_bdd_diagrams:
+                if index == 0:
+                    continue
+                elif index == 1:
+                    new_diagram, conjoin_time, log_lines = ConjoinBDDs(
+                        (current_bdd_diagrams[0], current_bdd_diagrams[1]))
+                    conjoin_times_iter.append(conjoin_time)
+                else:
+                    new_diagram, conjoin_time, log_lines = ConjoinBDDs(
+                        (new_diagram, current_bdd_diagrams[index]))
                 print(*log_lines, sep='\n')
                 if new_diagram.VertexCount() == 0:
                     print('Empty diagram obtained. Initial CNF in unsatisfiable.')
+                    next_iter_diagrams = [new_diagram]
                     unsat_flag = True
                     break
+            else:
+                next_iter_diagrams = [new_diagram]
         else:
+            print('Start conjoining BDDs by pairs (1 to 2, 3 to 4, ... Results go to next iteration).')
+            print('Number of tasks (pairs):', len(diagrams_pairs))
             with multiprocessing.Pool(min(numproc, len(diagrams_pairs))) as p:
                 for result in p.map(ConjoinBDDs, [(pair[0], pair[1]) for pair in diagrams_pairs]):
                     new_diagram = result[0]
@@ -84,6 +96,7 @@ def DJDtoBDD_separated(diagrams, numproc, order):
         iter_time = time.time() - iter_start_time
         iter_times.append(iter_time)
         conjoin_times.append(conjoin_times_iter)
+        print('Time for iteration:', round(iter_time, 2))
         if not unsat_flag:
             current_bdd_diagrams = next_iter_diagrams
         else:
@@ -230,6 +243,7 @@ def gluing_sep_BDD(fun_bdds, pbi_bdds, order, logpath, alg_ver=False):
             pbi_end_time = time.time()
             times_for_fun.append(times_for_currentfun)
             times_for_pbi.append(pbi_end_time - pbi_start_time)
+            print('Time for that interval:', round(pbi_end_time - pbi_start_time, 2))
             bdd_manager.collect_garbage()
         print()
         print('Final. Separated transition to BDD with PBI is complete.')
