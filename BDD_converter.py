@@ -453,17 +453,12 @@ def ConjoinBDDs(diagrams_pair):
         log_lines = ['\n',
                      '---------------------------------------------------------------------------------------------',
                      'Current. Start conjoin two diagrams.']
-        # print('\n')
-        # print('---------------------------------------------------------------------------------------------')
-        # print('Start conjoin two diagrams.')
         # соединяем две диаграммы в одну, чтобы потом избавляться от небинарностей
         sorted_nodes2 = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram2.order_, diagram2.table_.values())
         max_vertex = len(diagram1.table_)
         current_vertex_id = max_vertex + 1
         log_lines.append('\nCurrent. Size of diagram 1: ' + str(diagram1.VertexCount()) + '. Root ' + str(diagram1.main_root.Value()))
         log_lines.append('Current. Size of diagram 2: ' + str(diagram2.VertexCount()) + '. Root ' + str(diagram2.main_root.Value()))
-        # print('\nSize of diagram 1:', diagram1.VertexCount())
-        # print('Size of diagram 2:', diagram2.VertexCount())
         # diagram1.PrintCurrentTable('Table 1:')
         # diagram2.PrintCurrentTable('Table 2:')
         for node in sorted_nodes2:
@@ -481,10 +476,7 @@ def ConjoinBDDs(diagrams_pair):
         del diagram2
         diagram1.roots_ = diagram1.GetRoots()
         new_diagram, transform_time_ = DJDtoBDD(diagram1)
-        # print('\nDiagram after remove nonbinary:', new_diagram)
         log_lines.append('Current. Size of result diagram: ' + str(new_diagram.VertexCount()))
-        # print('Size of result diagram:', new_diagram.VertexCount())
-        # new_diagram.PrintCurrentTable('New table:')
         log_lines.append('\nCurrent. Total number of actions with links to construct new diagram: ' +
                          str(new_diagram.actions_with_links_))
         log_lines.append('Current. Number of vertices in a result diagram: ' + str(new_diagram.VertexCount()))
