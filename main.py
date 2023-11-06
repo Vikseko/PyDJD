@@ -20,7 +20,7 @@ if __name__ == '__main__':
     print('Problem:'.ljust(30, ' '), options.filename)
     var_count, problem, order, problem_comments = ReadProblem(options)
     if len(order) == 0:
-        raise RuntimeError('Order is empty')
+        raise RuntimeError('Order is empty.')
     print('Order', order)
     # Журнализируем текущий порядок переменных
     with open(logpath+'order.log', 'w') as orderf:
