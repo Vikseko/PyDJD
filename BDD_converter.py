@@ -144,7 +144,10 @@ def gluing_sep_BDD(fun_bdds, pbi_bdds, order, logpath, alg_ver=False):
         vars_for_declare = ['x' + x for x in reversed(vars_names)]
         bdd_manager = BDD()
         bdd_manager.declare(*vars_for_declare)
+        print('BDD manager was created. Vars and levels:')
+        print(bdd_manager.vars)
         pbi_flag = True if pbi_bdds is not None else False
+        print('PBI flag:', pbi_flag)
         pid = os.getpid()
         times_for_pbi = []
         times_for_fun = []

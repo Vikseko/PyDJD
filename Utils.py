@@ -66,7 +66,7 @@ def LayersDirectOrder(layers, min_var_num, max_var_num):
         print('Layers:', layers)
         for i in range(len(layers)):
             layers[i].sort(key=lambda x: abs(x))
-        print('Sorted layers:', layers)
+        # print('Sorted layers:', layers)
         order = list(reversed(flatten(layers)))
         return order
     else:
@@ -174,7 +174,7 @@ def GetInputs(problem_comments, nof_intervals):
                 inputs = list(map(int, comment.split(':')[1].split()))
                 break
         else:
-            print('Comments:', problem_comments)
+            print('Comments:', *problem_comments, sep='\n')
             raise Exception('There is no inputs list in a comments.')
         return inputs
     else:
