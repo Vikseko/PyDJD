@@ -27,7 +27,7 @@ if __name__ == '__main__':
         print(*order, file=orderf)
     if options.applyonly == 1:
         from BDD_converter import *
-        DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, options.pbintervals, 'CNF')
+        DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, options.pbintervals, 'CNF', options.pbiorder)
         convert_time = time.time() - start_time
         print('Final. Conversion time:'.ljust(30, ' '), round(convert_time, 2))
     else:

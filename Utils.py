@@ -249,6 +249,7 @@ def ParseOptions(params):
     options.numprocess = params.numproc
     options.pbintervals = params.pbintervals
     options.applyonly = params.applyonly
+    options.pbiorder = params.pbiorder
     return options
 
 
@@ -275,5 +276,6 @@ def PrintOptions(options):
     print('Lock variables:', options.lock_vars)
     if options.pbintervals > 1:
         print('Number of Pseudo-Boolean Intervals:', options.pbintervals)
+        print('Order for solving PBIs:', options.pbiorder)
     print()
 

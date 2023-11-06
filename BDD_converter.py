@@ -1,5 +1,6 @@
 import multiprocessing
 import pprint
+import random
 
 from Pathfinder import *
 from Intervals import *
@@ -141,7 +142,7 @@ def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order, logpath):
             return bdd_manager, times_for_pbi
 
 
-def gluing_sep_BDD(fun_bdds, pbi_bdds, order, logpath, alg_ver=False):
+def gluing_sep_BDD(fun_bdds, pbi_bdds, order, logpath, alg_ver=False, pbiorder='direct'):
     if alg_ver:
         # Версия, использующая реализацию apply для нашего формата диаграмм
         for pbi_bdd in pbi_bdds:
@@ -178,6 +179,12 @@ def gluing_sep_BDD(fun_bdds, pbi_bdds, order, logpath, alg_ver=False):
         print('Nof dd functions\'s bdds', len(fun_bdds))
         fun_sizes = [x.dag_size for x in fun_bdds]
         final_roots = []
+        if pbiorder == 'direct':
+            pass
+        elif pbiorder == 'reversed':
+            pbi_dd_bdds.reverse()
+        elif pbiorder == 'random':
+            random.shuffle(pbi_dd_bdds)
         for pbi_index, pbi_root in enumerate(pbi_dd_bdds):
             pbi_start_time = time.time()
             times_for_currentfun = []
@@ -258,7 +265,7 @@ def gluing_sep_BDD(fun_bdds, pbi_bdds, order, logpath, alg_ver=False):
         return bdd_manager, times_for_pbi
 
 
-def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_intervals, problem_type='DNF'):
+def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_intervals, problem_type='DNF', pbiorder='direct'):
     # создаём подпроблемы, сортируем соответвенно порядку: первой идёт диаграмма, чем корень на 0 уровне
     # такая сортировка нужна чтобы склеивать их с интервалами, начиная с первой диаграммы
     start_construct_time = time.time()
@@ -284,9 +291,17 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
     # pbi_bdds_roots = Problems2BDD_dd_format(pbi_problems, bdd_manager, 'CNF')
     pbi_bdds_sizes = []
     pbi_bdds_max_sizes = []
-    for pbi_index in range(nof_intervals):
+    pbi_indexes_list = list(range(nof_intervals))
+    if pbiorder == 'direct':
+        pass
+    elif pbiorder == 'reversed':
+        pbi_indexes_list.reverse()
+    elif pbiorder == 'random':
+        random.shuffle(pbi_indexes_list)
+    for pbi_index in pbi_indexes_list:
         pbi_start_time = time.time()
         print('\nStart applying interval', pbi_index, 'to subbdds.')
+        print('')
         if pbi_flag:
             interval, pbi_problem = make_i_pbi(inputs, nof_intervals, pbi_index)
             pbi_root, pbi_bdd_max_size = Problem2BDD_dd_format(pbi_problem, bdd_manager, 'CNF')

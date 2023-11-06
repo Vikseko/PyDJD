@@ -52,6 +52,7 @@ def createParser ():
     parser.add_argument('-np', '--numproc', nargs='?', type=int, default=1)
     parser.add_argument('-pbi', '--pbintervals', nargs='?', type=int, default=1)
     parser.add_argument('-ao', '--applyonly', nargs='?', type=int, default=0)
+    parser.add_argument('-pbio', '--pbiorder', nargs='?', type=str, default='direct', help='{direct, reversed, random}')
     return parser
 
 

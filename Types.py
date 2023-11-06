@@ -390,3 +390,4 @@ class Options:
         self.numproc = 1
         self.pbintervals = 1
         self.applyonly = 0
+        self.pbiorder = 'direct'
