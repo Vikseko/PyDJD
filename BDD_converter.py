@@ -508,6 +508,7 @@ def ConjoinBDDs(diagrams_pair):
             # print('Median size of diagram:', median(new_diagram.table_sizes))
             # print('Sd of size of diagram:', round(math.sqrt(variance(new_diagram.table_sizes)), 2))
         conjoin_time = time.time() - conjoin_start_time
+        log_lines.append('Current. Time for conjoin this two BDDs (seconds):' + str(round(conjoin_time, 2)))
         return new_diagram, conjoin_time, log_lines
     except Exception as ex:
         print('ERROR ConjoinBDDs', ex)
