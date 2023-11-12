@@ -1112,6 +1112,7 @@ def AddAuxNodes(host, polarity, sorted_childs, diagram):
         # и добавляем его в родители детей
         AddNodeToParentsOfChilds(current_aux_node, diagram)
         previous_aux_node = current_aux_node
+        current_var += 1
     # Добавляем последний созданный aux узел в потомки host по полярности polarity
     if polarity == 1:
         host.high_childs = [previous_aux_node]
