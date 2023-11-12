@@ -24,20 +24,20 @@ class DiagramNode:
     destructors_ = 0
     destructor_errors_ = 0
 
-    def __init__(self, Type:DiagramNodeType, VarId:int = None, HighChilds = None, LowChilds = None, level=None):
+    def __init__(self, nodetype:DiagramNodeType, varid:int = None, highchilds=None, lowchilds=None, level=None):
         DiagramNode.constructors_ += 1
-        if type(Type) == DiagramNodeType:
-            self.node_type = Type
+        if type(nodetype) == DiagramNodeType:
+            self.node_type = nodetype
         else:
             raise Exception('Type of diagram node should be of the following: Undefined, RootNode, InternalNode, FalseNode, QuestionNode, TrueNode')
-        self.var_id = 0 if VarId is None else VarId
+        self.var_id = 0 if varid is None else varid
         self.markup_varid = 0
         self.vertex_id = DiagramNode.constructors_
         self.hash_key = 0
         self.visited = False
         self.level = 0 if level is None else level
-        self.high_childs = [] if HighChilds is None else sorted(copy.copy(HighChilds), key=lambda x: (x.var_id, x.vertex_id))
-        self.low_childs = [] if LowChilds is None else sorted(copy.copy(LowChilds), key=lambda x: (x.var_id, x.vertex_id))
+        self.high_childs = [] if highchilds is None else sorted(copy.copy(highchilds), key=lambda x: (x.var_id, x.vertex_id))
+        self.low_childs = [] if lowchilds is None else sorted(copy.copy(lowchilds), key=lambda x: (x.var_id, x.vertex_id))
         self.high_parents = []
         self.low_parents = []
         self.deleted = False
@@ -97,8 +97,8 @@ class DiagramNode:
 
     # Сравнение узлов на основе их Value() и хэшей их потомков (не рекурсивно)
     def __eq__(self, other):
-        #if self.Value() != other.Value():
-            #return False
+        # if self.Value() != other.Value():
+        #     return False
         if self.hash_key != other.hash_key:
             return False
         """if self.node_type != other.node_type:

@@ -265,7 +265,8 @@ def gluing_sep_BDD(fun_bdds, pbi_bdds, order, logpath, alg_ver=False, pbiorder='
         return bdd_manager, times_for_pbi
 
 
-def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_intervals, problem_type='DNF', pbiorder='direct'):
+def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_intervals, problem_type='DNF',
+                                       pbiorder='direct'):
     # создаём подпроблемы, сортируем соответвенно порядку: первой идёт диаграмма, чем корень на 0 уровне
     # такая сортировка нужна чтобы склеивать их с интервалами, начиная с первой диаграммы
     start_construct_time = time.time()
@@ -411,7 +412,7 @@ def Problem2BDD_dd_format(sortedproblem: list, bdd_manager, problem_type='DNF'):
 
 
 def Clause2BDD_dd_format(clause, bdd_manager, problem_type='DNF'):
-    literals = ['!x'+str(abs(x)) if x < 0 else 'x'+str(abs(x)) for x in clause]
+    literals = ['!x' + str(abs(x)) if x < 0 else 'x' + str(abs(x)) for x in clause]
     if problem_type == 'DNF':
         expr_str = r' /\ '.join(literals)
     else:
@@ -472,8 +473,10 @@ def ConjoinBDDs(diagrams_pair):
         sorted_nodes2 = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram2.order_, diagram2.table_.values())
         max_vertex = len(diagram1.table_)
         current_vertex_id = max_vertex + 1
-        log_lines.append('\nCurrent. Size of diagram 1: ' + str(diagram1.VertexCount()) + '. Root ' + str(diagram1.main_root_.Value()))
-        log_lines.append('Current. Size of diagram 2: ' + str(diagram2.VertexCount()) + '. Root ' + str(diagram2.main_root_.Value()))
+        log_lines.append('\nCurrent. Size of diagram 1: ' + str(diagram1.VertexCount()) + '. Root ' + str(
+            diagram1.main_root_.Value()))
+        log_lines.append(
+            'Current. Size of diagram 2: ' + str(diagram2.VertexCount()) + '. Root ' + str(diagram2.main_root_.Value()))
         # diagram1.PrintCurrentTable('Table 1:')
         # diagram2.PrintCurrentTable('Table 2:')
         for node in sorted_nodes2:
@@ -547,7 +550,7 @@ class BDDiagram:
     # nonbinary_queue = []
     # changed_hash_nodes = set()
     # actions_with_links_ = 0
-    def __init__(self, diagram):
+    def __init__(self, diagram, bin_mode=0):
         # print(type(diagram))
         if type(diagram) == DisjunctiveDiagram:
             self.new_nodes_ = 0
@@ -555,12 +558,14 @@ class BDDiagram:
             self.actions_with_links_ = 0
             self.max_size = diagram.VertexCount()
             self.removed_nonbinaries_total = 0
+            self.aux_nodes = []
         else:
             self.new_nodes_ = diagram.new_nodes_
             self.deleted_nodes_ = diagram.deleted_nodes_
             self.actions_with_links_ = diagram.actions_with_links_
             self.max_size = diagram.max_size
             self.removed_nonbinaries_total = diagram.removed_nonbinaries_total
+            self.aux_nodes = diagram.aux_nodes
         self.removed_nonbinaries_current = 0
         self.table_sizes = []
         self.nonbinary_queue = []
@@ -584,7 +589,7 @@ class BDDiagram:
         del diagram
         # print('BDD created with', self.actions_with_links_, 'number of actions with links')
         # self.PrintCurrentTable('Diagram before remove nonbinary')
-        BDD_convert(self)
+        BDD_convert(self, bin_mode)
         # self.PrintCurrentTable('Diagram after remove nonbinary')
         # print('Number of actions with links', self.actions_with_links_, 'after conversion')
         CleaningDiagram(self)
@@ -738,8 +743,8 @@ class BDDiagram:
             print('{', file=f)
             print('\"level_of_var\": {', end='', file=f)
             for index, pair in enumerate(sorted_vars_with_levels):
-                if index < len(sorted_vars_with_levels)-1:
-                    print('\"'+pair[0]+'\": ', pair[1], sep='', end=', ', file=f)
+                if index < len(sorted_vars_with_levels) - 1:
+                    print('\"' + pair[0] + '\": ', pair[1], sep='', end=', ', file=f)
                 else:
                     print('\"' + pair[0] + '\": ', pair[1], sep='', end='},\n', file=f)
             for index, node in enumerate(sorted_nodes):
@@ -779,19 +784,21 @@ class BDDiagram:
                             high = "T"
                         else:
                             high = -high
-                    if index < len(sorted_nodes)-1:
+                    if index < len(sorted_nodes) - 1:
                         # print('\"' + str(node.vertex_id) + '\": ', [node.level, low, high], ',', sep='', file=f)
                         print('\"' + str(node.vertex_id) + '\":', sep='', end=' ', file=f)
                         print('[', node.level, sep='', end=', ', file=f)
-                        print('\"'+low+'\"' if type(low) == str else low, sep='', end=', ', file=f)
-                        print('\"'+high+'\"' if type(high) == str else high, sep='', end='],\n', file=f)
+                        print('\"' + low + '\"' if type(low) == str else low, sep='', end=', ', file=f)
+                        print('\"' + high + '\"' if type(high) == str else high, sep='', end='],\n', file=f)
                     else:
                         # print('\"' + str(node.vertex_id) + '\": ', [node.level, low, high], ',', sep='', file=f)
                         print('\"' + str(node.vertex_id) + '\":', sep='', end=' ', file=f)
                         print('[', node.level, sep='', end=', ', file=f)
-                        print('\"'+low+'\"' if type(low) == str else low, sep='', end=', ', file=f)
-                        print('\"'+high+'\"' if type(high) == str else high, sep='', end=']\n', file=f)
-            print('\"roots\": ', [self.main_root_.vertex_id if self.main_root_.vertex_id not in negated_nodes else -self.main_root_.vertex_id], ',', sep='', file=f)
+                        print('\"' + low + '\"' if type(low) == str else low, sep='', end=', ', file=f)
+                        print('\"' + high + '\"' if type(high) == str else high, sep='', end=']\n', file=f)
+            print('\"roots\": ', [
+                self.main_root_.vertex_id if self.main_root_.vertex_id not in negated_nodes else -self.main_root_.vertex_id],
+                  ',', sep='', file=f)
             print('}', file=f)
 
     def DumpTableJSON_ddformat(self, filename):
@@ -937,7 +944,7 @@ def EnumerateBDDiagramNodes(diagram):
         node.vertex_id = vertex_id
 
 
-def BDD_convert(diagram):
+def BDD_convert(diagram, binnarization_mode):
     # print('\nInitial size of queue (should be 0)', len(diagram.nonbinary_queue))
     # if len(diagram.nonbinary_queue) > 0:
     #     for node in diagram.nonbinary_queue:
@@ -998,12 +1005,15 @@ def BDD_convert(diagram):
             # host[0].PrintNode('Current host:')
             # print('Polarity:', host[1])
             # BDDiagram.PrintCurrentQueue(diagram)
-            RemoveNonbinaryLink(host[0], host[1], diagram)
+            if binnarization_mode == 0:
+                RemoveNonbinaryLinkDescent(host[0], host[1], diagram)
+            else:
+                RemoveNonbinaryLinkNewVars(host[0], host[1], diagram)
     # diagram.PrintCurrentTable('Table after BDD transformation:')
     # print('\nEnd size of queue (should be 0)', len(diagram.nonbinary_queue))
 
 
-def RemoveNonbinaryLink(host, polarity, diagram):
+def RemoveNonbinaryLinkDescent(host, polarity, diagram):
     while (polarity == 1 and len(host.high_childs) > 1) or (polarity == 0 and len(host.low_childs) > 1):
         sorted_childs = DisjunctiveDiagramsBuilder.LitLessSortNodeswrtOrderAndVertex(diagram.order_,
                                                                                      (host.high_childs if polarity == 1
@@ -1033,6 +1043,33 @@ def RemoveNonbinaryLink(host, polarity, diagram):
         # diagram.PrintCurrentTable('RemoveNonbinaryLink 2 table:')
 
 
+def RemoveNonbinaryLinkNewVars(host, polarity, diagram):
+    # избавляемся от небинарностей через добавление новых переменных
+    # Допустим есть х1 с детьми по 1: х2 и х3 добавляем y1, которая по + идёт из x1.
+    # По + из y1 идёт в x2, по - в y2, из которой сплошная идёт в x3, а пунктирная в 0.
+    # Все вспомогательные вершины добавляем в список.
+    # TODO Когда склеиваем две диаграммы, надо в одной из них проходить по этому списку
+    # и менять номера переменных y* на новые, чтобы не было пересечений. При этом пересчитывать нужно и хэши конусов.
+    # Для получения списка вспомогательных переменных нужно будет просто пройти по списку вспомогательных вершин
+    # и взять номера их переменных.
+    # также, по идее, нужно добавлять вспомогательные переменные в порядок
+    while (polarity == 1 and len(host.high_childs) > 1) or (polarity == 0 and len(host.low_childs) > 1):
+        sorted_childs = DisjunctiveDiagramsBuilder.LitLessSortNodeswrtOrderAndVertex(diagram.order_,
+                                                                                     (host.high_childs if polarity == 1
+                                                                                      else host.low_childs))
+        host.PrintNode('\nCurrent host:')
+        for child_node in sorted_childs:
+            child_node.PrintNode('    Child:')
+        # diagram.PrintCurrentTable('RemoveNonbinaryLink 1 table:')
+        AddAuxNodes(host, polarity, sorted_childs, diagram)
+        if diagram.max_size < diagram.VertexCount():
+            diagram.max_size = diagram.VertexCount()
+        diagram.removed_nonbinaries_current += len(sorted_childs) - 1
+        diagram.removed_nonbinaries_total += len(sorted_childs) - 1
+        diagram.table_sizes.append((diagram.VertexCount()))
+        # diagram.PrintCurrentTable('RemoveNonbinaryLink 2 table:')
+
+
 def FindFirstNonbinaryNode(sorted_nodes):
     for node in sorted_nodes:
         if len(node.high_childs) > 1 and len(node.low_childs) > 1:
@@ -1047,6 +1084,41 @@ def ConnectRoots(upper, lower, diagram):
     # все корни просто соединяем последовательно двойными связями
     lower.node_type = DiagramNodeType.InternalNode
     ConnectNodesDouble(None, None, lower, upper, diagram)
+
+
+def AddAuxNodes(host, polarity, sorted_childs, diagram):
+    # удаляем host и его конус из таблицы. у них изменятся хэши
+    DeletingNodesFromTable(host, diagram, False)
+    # определяем стартовый номер для вспомогательных переменных
+    if diagram.aux_nodes:
+        current_var = max([x.Value() for x in diagram.aux_nodes]) + 1
+    else:
+        current_var = max([x for x in diagram.order_ if type(x) == int]) + 1
+    # удаляем связи между sorted_childs и host по полярности polarity
+    for child in sorted_childs:
+        RemoveLinkFromHostToLower(diagram, host, child, polarity)
+    if polarity == 1:
+        assert len(host.high_childs) == 0, 'ERROR Host still has link to nonbinary childs'
+    else:
+        assert len(host.low_childs) == 0, 'ERROR Host still has link to nonbinary childs'
+    # создаем вспомогательный узел для каждого потомка. по + из вспомогательного узла идёт в потомка,
+    # по - в следующий вспомогательный узел. из нижнего вспомогательного узла связь по - идёт в T.
+    previous_aux_node = None
+    for child in sorted_childs:
+        current_aux_node = DiagramNode(DiagramNodeType.InternalNode, current_var, child,
+                                       diagram.GetTrueLeaf() if previous_aux_node is None else previous_aux_node)
+        diagram.aux_nodes.append(current_aux_node)
+        # TODO добавляем новую переменную в порядок уже тут
+        # и добавляем его в родители детей
+        AddNodeToParentsOfChilds(current_aux_node, diagram)
+        previous_aux_node = current_aux_node
+    # Добавляем последний созданный aux узел в потомки host по полярности polarity
+    if polarity == 1:
+        host.high_childs = [previous_aux_node]
+    else:
+        host.low_childs = [previous_aux_node]
+    # возвращаем host и его конус в таблицу с проверкой на склейку
+    GluingNodes(None, None, diagram)
 
 
 def ConnectNodesDouble(host, polarity, lower, upper, diagram):
