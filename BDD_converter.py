@@ -66,11 +66,11 @@ def DJDtoBDD_separated(diagrams, numproc, order):
                     continue
                 elif index == 1:
                     new_diagram, conjoin_time, log_lines = ConjoinBDDs(
-                        (current_bdd_diagrams[0], current_bdd_diagrams[1]))
+                        (current_bdd_diagrams[0], current_bdd_diagrams[1]), 1)
                     conjoin_times_iter.append(conjoin_time)
                 else:
                     new_diagram, conjoin_time, log_lines = ConjoinBDDs(
-                        (new_diagram, current_bdd_diagrams[index]))
+                        (new_diagram, current_bdd_diagrams[index]), 1)
                 print(*log_lines, sep='\n')
                 if new_diagram.VertexCount() == 0:
                     print('Empty diagram obtained. Initial CNF in unsatisfiable.')
@@ -461,7 +461,7 @@ def make_pairs(diagrams):
         yield tuple(diagrams[i:i + 2])
 
 
-def ConjoinBDDs(diagrams_pair):
+def ConjoinBDDs(diagrams_pair, binmode=0):
     try:
         conjoin_start_time = time.time()
         diagram1 = diagrams_pair[0]
@@ -469,6 +469,8 @@ def ConjoinBDDs(diagrams_pair):
         log_lines = ['\n',
                      '---------------------------------------------------------------------------------------------',
                      'Current. Start conjoin two diagrams.']
+        print('nof Diagramm1 aux vars:', len(diagram1.aux_nodes))
+        print('nof Diagramm2 aux vars:', len(diagram2.aux_nodes))
         # соединяем две диаграммы в одну, чтобы потом избавляться от небинарностей
         sorted_nodes2 = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram2.order_, diagram2.table_.values())
         max_vertex = len(diagram1.table_)
@@ -493,7 +495,7 @@ def ConjoinBDDs(diagrams_pair):
         # print('\n\nDiagram before remove nonbinary:', diagram1)
         del diagram2
         diagram1.roots_ = diagram1.GetRoots()
-        new_diagram, transform_time_ = DJDtoBDD(diagram1)
+        new_diagram, transform_time_ = DJDtoBDD(diagram1, 1)
         log_lines.append('Current. Size of result diagram: ' + str(new_diagram.VertexCount()))
         log_lines.append('\nCurrent. Total number of actions with links to construct new diagram: ' +
                          str(new_diagram.actions_with_links_))
@@ -533,10 +535,10 @@ def ConjoinBDDs(diagrams_pair):
         raise ex
 
 
-def DJDtoBDD(djddiagram):
+def DJDtoBDD(djddiagram, binmode=0):
     try:
         start_transform_time = time.time()
-        bdd_diagram = BDDiagram(djddiagram)
+        bdd_diagram = BDDiagram(djddiagram, binmode)
         transform_time = time.time() - start_transform_time
         return [bdd_diagram, transform_time]
     except Exception as ex:
@@ -1005,6 +1007,7 @@ def BDD_convert(diagram, binnarization_mode):
             # host[0].PrintNode('Current host:')
             # print('Polarity:', host[1])
             # BDDiagram.PrintCurrentQueue(diagram)
+            print('Binarization mode:', 'Descent' if binnarization_mode == 0 else 'AuxNodes')
             if binnarization_mode == 0:
                 RemoveNonbinaryLinkDescent(host[0], host[1], diagram)
             else:
@@ -1105,10 +1108,12 @@ def AddAuxNodes(host, polarity, sorted_childs, diagram):
     # по - в следующий вспомогательный узел. из нижнего вспомогательного узла связь по - идёт в T.
     previous_aux_node = None
     for child in sorted_childs:
-        current_aux_node = DiagramNode(DiagramNodeType.InternalNode, current_var, child,
-                                       diagram.GetTrueLeaf() if previous_aux_node is None else previous_aux_node)
+        current_aux_node = DiagramNode(DiagramNodeType.InternalNode, current_var, [child],
+                                       [diagram.GetTrueLeaf()] if previous_aux_node is None else [previous_aux_node])
         diagram.aux_nodes.append(current_aux_node)
-        # TODO добавляем новую переменную в порядок уже тут
+        # добавляем новую переменную в порядок
+        child_order_idx = diagram.order_.index(child.Value())
+        diagram.order_.insert(child_order_idx, current_var)
         # и добавляем его в родители детей
         AddNodeToParentsOfChilds(current_aux_node, diagram)
         previous_aux_node = current_aux_node
