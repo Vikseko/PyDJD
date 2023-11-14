@@ -63,7 +63,7 @@ def DJDtoBDD_separated(diagrams, numproc, order, logpath, binmode=0):
             print('Number of subdiagrams:', current_nof_diagrams)
             new_diagram = None
             for index, bdd in enumerate(current_bdd_diagrams):
-                print('\n'+'='*50+str(index)+'+'*50)
+                print('\n'+'='*50+str(index)+'='*50)
                 if index == 0:
                     continue
                 elif index == 1:
