@@ -456,6 +456,9 @@ def ExistentialProjection(mybdd, mode, logpath):
                 print('Current EP time: {}.'.format(time.time()-ep_start_time))
                 print('Current size of BDD: {}.'.format(current_root.dag_size))
                 sizes.append(current_root.dag_size)
+                if current_root.dag_size > 25000000:
+                    print('Diagram is too big. Stop.')
+                    exit()
             final_bdd_root = current_root
     return final_bdd_root, [time.time() - ep_start_time, sizes]
 
