@@ -152,7 +152,7 @@ if __name__ == '__main__':
                     bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_pbi_separated(diagrams, pbi_bdds, options.numprocess,
                                                                                    order, logpath)
                 else:
-                    bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_separated(diagrams, options.numprocess, order)
+                    bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_separated(diagrams, options.numprocess, order, logpath)
                     if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:
                         print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())
                     else:
@@ -169,7 +169,7 @@ if __name__ == '__main__':
                     bdd_cnf, tmp3_ = bdd_diagram.GetCNFFromBDD()
                     bdd_cnf = CNF(from_clauses=bdd_cnf)
                     bdd_cnf.to_file(logpath + options.name + '_bdd_convertion.cnf', comments=problem_comments)
-                bdd_diagram.PrintCurrentTable('Final table:')
+                # bdd_diagram.PrintCurrentTable('Final table:')
                 if options.separate_construction:
                     print('Final. Initial number of DJDs:', nof_djds)
                     print('Final. Number of link actions to transform initial DJDs to BDDs:', nof_link_actions_djd2bdd)

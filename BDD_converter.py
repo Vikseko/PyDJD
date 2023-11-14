@@ -1,4 +1,5 @@
 import multiprocessing
+import os
 import pprint
 import random
 
@@ -14,7 +15,7 @@ from Types import DiagramNode
 import queue
 
 
-def DJDtoBDD_separated(diagrams, numproc, order):
+def DJDtoBDD_separated(diagrams, numproc, order, logpath, binmode=0):
     current_djd_diagrams = diagrams
     counter = 0
     sys.setrecursionlimit(100000)
@@ -22,7 +23,7 @@ def DJDtoBDD_separated(diagrams, numproc, order):
     conjoin_times = []
     unsat_flag = False
     # переводим каждую поддиаграмму в бдд
-    current_bdd_diagrams, subdjd_to_bdd_times = DJDstoBDDs(diagrams, numproc)
+    current_bdd_diagrams, subdjd_to_bdd_times = DJDstoBDDs(diagrams, numproc, 0)
     current_bdd_diagrams = sorted(current_bdd_diagrams, key=lambda x: order.index(abs(x.main_root_.Value())))
     for index, diagram in enumerate(current_bdd_diagrams):
         # diagram.PrintProblem()
@@ -62,6 +63,7 @@ def DJDtoBDD_separated(diagrams, numproc, order):
             print('Number of subdiagrams:', current_nof_diagrams)
             new_diagram = None
             for index, bdd in enumerate(current_bdd_diagrams):
+                print('\n'+'='*50+str(index)+'+'*50)
                 if index == 0:
                     continue
                 elif index == 1:
@@ -110,6 +112,14 @@ def DJDtoBDD_separated(diagrams, numproc, order):
     print('Sum of times for iterations:', round(sum(iter_times), 3))
     print('Times for conjoins by iteration:', [[round(y, 3) for y in x] for x in conjoin_times])
     print('Sum of times for conjoins by iteration:', round(sum([sum(x) for x in conjoin_times]), 3))
+    if final_diagram.aux_nodes:
+        final_diagram.PrintCurrentTable('Table before EP:')
+        print('Final diagram has {} auxiliary nodes.'.format(len(final_diagram.aux_nodes)))
+        final_diagram_root, projection_stats = ExistentialProjection(final_diagram, 'ddpackage', logpath)
+        print('Final. Size of BDD after EP:', final_diagram_root.dag_size)
+        print('Final. Time for EP:', projection_stats[0])
+        print('Final. Sizes of BDD during EP:', projection_stats[1])
+        print('Final. Max size of BDD during EP:', max(projection_stats[1]))
     return final_diagram, nof_link_actions_djd2bdd
 
 
@@ -422,14 +432,41 @@ def Clause2BDD_dd_format(clause, bdd_manager, problem_type='DNF'):
     return root
 
 
-def DJDstoBDDs(djds, numproc):
+def ExistentialProjection(mybdd, mode, logpath):
+    ep_start_time = time.time()
+    print('Start Existential Projection.')
+    sizes = []
+    final_bdd_root = mybdd
+    if mode == 'ddpackage':
+        if type(mybdd) == BDDiagram:
+            bdd_manager = BDD()
+            pid = os.getpid()
+            aux_vars = ['x{}'.format(x.Value()) for x in mybdd.aux_nodes]
+            print('Corresponding variables:', aux_vars)
+            vars_names = [str(x) for x in mybdd.order_ if ((x != '?') and (x != 'true'))]
+            vars_for_declare = ['x' + x for x in reversed(vars_names)]
+            bdd_manager.declare(*vars_for_declare)
+            current_root = mybdds2ddbdds([mybdd], bdd_manager, False, logpath + str(pid) + 'bdd_for_existproj')[0]
+            print('BDD converted to DD_package format. Size: {}.'.format(current_root.dag_size))
+            for index, aux_var in enumerate(aux_vars):
+                print('Current var index: {} of {}. Var name: {}.'.format(index, len(aux_vars), aux_var))
+                rootone = bdd_manager.let({aux_var: True}, current_root)
+                rootzero = bdd_manager.let({aux_var: False}, current_root)
+                current_root = bdd_manager.apply('or', rootone, rootzero)
+                print('Current EP time: {}.'.format(time.time()-ep_start_time))
+                print('Current size of BDD: {}.'.format(current_root.dag_size))
+                sizes.append(current_root.dag_size)
+            final_bdd_root = current_root
+    return final_bdd_root, [time.time() - ep_start_time, sizes]
+
+def DJDstoBDDs(djds, numproc, binmode=0):
     try:
         # переводим каждую поддиаграмму в бдд
         subdjd_to_bdd_times = []
         bdds = []
         if numproc == 1:
             for djd_diagram in djds:
-                new_bdd_diagram, transform_time = DJDtoBDD(djd_diagram)
+                new_bdd_diagram, transform_time = DJDtoBDD(djd_diagram, binmode)
                 new_bdd_diagram.EnumerateBDDiagramNodes()
                 subdjd_to_bdd_times.append(transform_time)
                 bdds.append(new_bdd_diagram)
@@ -468,17 +505,18 @@ def ConjoinBDDs(diagrams_pair, binmode=0):
         diagram2 = diagrams_pair[1]
         log_lines = ['\n',
                      '---------------------------------------------------------------------------------------------',
-                     'Current. Start conjoin two diagrams.']
-        print('nof Diagramm1 aux vars:', len(diagram1.aux_nodes))
-        print('nof Diagramm2 aux vars:', len(diagram2.aux_nodes))
+                     'Current. Start conjoin two diagrams.',
+                     'Binarization mode: Descent' if binmode == 0 else 'Binarization mode: AuxVars',
+                     'Current. Number of auxiliary vars in diagram 1: {}'.format(len(diagram1.aux_nodes))]
+        assert len(diagram2.aux_nodes) == 0, 'ERROR diagram 2 has auxiliary variables'
         # соединяем две диаграммы в одну, чтобы потом избавляться от небинарностей
         sorted_nodes2 = DisjunctiveDiagramsBuilder.LitLessSortNodes(diagram2.order_, diagram2.table_.values())
         max_vertex = len(diagram1.table_)
         current_vertex_id = max_vertex + 1
-        log_lines.append('\nCurrent. Size of diagram 1: ' + str(diagram1.VertexCount()) + '. Root ' + str(
-            diagram1.main_root_.Value()))
         log_lines.append(
-            'Current. Size of diagram 2: ' + str(diagram2.VertexCount()) + '. Root ' + str(diagram2.main_root_.Value()))
+            'Current. Size of diagram 1: {}. Root {}'.format(diagram1.VertexCount(), diagram1.main_root_.Value()))
+        log_lines.append(
+            'Current. Size of diagram 2: {}. Root {}'.format(diagram2.VertexCount(), diagram2.main_root_.Value()))
         # diagram1.PrintCurrentTable('Table 1:')
         # diagram2.PrintCurrentTable('Table 2:')
         for node in sorted_nodes2:
@@ -495,8 +533,8 @@ def ConjoinBDDs(diagrams_pair, binmode=0):
         # print('\n\nDiagram before remove nonbinary:', diagram1)
         del diagram2
         diagram1.roots_ = diagram1.GetRoots()
-        new_diagram, transform_time_ = DJDtoBDD(diagram1, 1)
-        log_lines.append('Current. Size of result diagram: ' + str(new_diagram.VertexCount()))
+        new_diagram, transform_time_ = DJDtoBDD(diagram1, binmode)
+        log_lines.append('Current. Size of result diagram: {}'.format(new_diagram.VertexCount()))
         log_lines.append('\nCurrent. Total number of actions with links to construct new diagram: ' +
                          str(new_diagram.actions_with_links_))
         log_lines.append('Current. Number of vertices in a result diagram: ' + str(new_diagram.VertexCount()))
@@ -681,6 +719,7 @@ class BDDiagram:
 
     def PrintCurrentTable(self, preambule=''):
         print('\n', preambule)
+        print(' Order:', self.order_)
         if len(self.table_) > 0:
             sorted_nodes = DisjunctiveDiagramsBuilder.LitLessSortNodes(self.order_, self.table_.values())
             for node in sorted_nodes:
@@ -1007,7 +1046,7 @@ def BDD_convert(diagram, binnarization_mode):
             # host[0].PrintNode('Current host:')
             # print('Polarity:', host[1])
             # BDDiagram.PrintCurrentQueue(diagram)
-            print('Binarization mode:', 'Descent' if binnarization_mode == 0 else 'AuxNodes')
+            # print('Binarization mode:', 'Descent' if binnarization_mode == 0 else 'AuxNodes')
             if binnarization_mode == 0:
                 RemoveNonbinaryLinkDescent(host[0], host[1], diagram)
             else:
@@ -1051,11 +1090,9 @@ def RemoveNonbinaryLinkNewVars(host, polarity, diagram):
     # Допустим есть х1 с детьми по 1: х2 и х3 добавляем y1, которая по + идёт из x1.
     # По + из y1 идёт в x2, по - в y2, из которой сплошная идёт в x3, а пунктирная в 0.
     # Все вспомогательные вершины добавляем в список.
-    # TODO Когда склеиваем две диаграммы, надо в одной из них проходить по этому списку
-    # и менять номера переменных y* на новые, чтобы не было пересечений. При этом пересчитывать нужно и хэши конусов.
     # Для получения списка вспомогательных переменных нужно будет просто пройти по списку вспомогательных вершин
     # и взять номера их переменных.
-    # также, по идее, нужно добавлять вспомогательные переменные в порядок
+    # также нужно добавлять вспомогательные переменные в порядок
     while (polarity == 1 and len(host.high_childs) > 1) or (polarity == 0 and len(host.low_childs) > 1):
         sorted_childs = DisjunctiveDiagramsBuilder.LitLessSortNodeswrtOrderAndVertex(diagram.order_,
                                                                                      (host.high_childs if polarity == 1
@@ -1107,13 +1144,27 @@ def AddAuxNodes(host, polarity, sorted_childs, diagram):
     # создаем вспомогательный узел для каждого потомка. по + из вспомогательного узла идёт в потомка,
     # по - в следующий вспомогательный узел. из нижнего вспомогательного узла связь по - идёт в T.
     previous_aux_node = None
+    prev_child_val = 0
+    add_index = 1
     for child in sorted_childs:
         current_aux_node = DiagramNode(DiagramNodeType.InternalNode, current_var, [child],
                                        [diagram.GetTrueLeaf()] if previous_aux_node is None else [previous_aux_node])
+        if prev_child_val == 0:
+            add_index = 1
+        else:
+            if prev_child_val == child.Value():
+                add_index += 1
+            else:
+                add_index = 1
+        prev_child_val = child.Value()
         diagram.aux_nodes.append(current_aux_node)
+        diagram.changed_hash_nodes.add(current_aux_node)
         # добавляем новую переменную в порядок
+        # print('order before:', diagram.order_)
         child_order_idx = diagram.order_.index(child.Value())
-        diagram.order_.insert(child_order_idx, current_var)
+        diagram.order_.insert(child_order_idx+add_index, current_var)
+        # print('add var {} before var {}'.format(current_var, child.Value()))
+        # print('order after:', diagram.order_)
         # и добавляем его в родители детей
         AddNodeToParentsOfChilds(current_aux_node, diagram)
         previous_aux_node = current_aux_node
