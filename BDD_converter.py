@@ -68,8 +68,12 @@ def DJDtoBDD_separated(diagrams, numproc, order, logpath, binmode=0):
                     continue
                 elif index == 1:
                     new_diagram, conjoin_time, log_lines = ConjoinBDDs(
-                        (current_bdd_diagrams[0], current_bdd_diagrams[1]), 1)
+                        (current_bdd_diagrams[0], current_bdd_diagrams[1]), 0)
                     conjoin_times_iter.append(conjoin_time)
+                # TODO надо поварьировать данные параметры, даст ли это чтото
+                elif index < (len(current_bdd_diagrams)/5):
+                    new_diagram, conjoin_time, log_lines = ConjoinBDDs(
+                        (new_diagram, current_bdd_diagrams[index]), 0)
                 else:
                     new_diagram, conjoin_time, log_lines = ConjoinBDDs(
                         (new_diagram, current_bdd_diagrams[index]), 1)
