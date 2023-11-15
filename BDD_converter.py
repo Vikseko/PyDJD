@@ -436,7 +436,7 @@ def ExistentialProjection(mybdd, mode, logpath):
     ep_start_time = time.time()
     print('Start Existential Projection.')
     sizes = []
-    final_bdd_root = mybdd
+    final_bdd_root_cnf = mybdd
     if mode == 'ddpackage':
         if type(mybdd) == BDDiagram:
             bdd_manager = BDD()
@@ -449,18 +449,31 @@ def ExistentialProjection(mybdd, mode, logpath):
             current_root = mybdds2ddbdds([mybdd], bdd_manager, False, logpath + str(pid) + 'bdd_for_existproj')[0]
             print('BDD converted to DD_package format. Size: {}.'.format(current_root.dag_size))
             for index, aux_var in enumerate(aux_vars):
-                print('Current var index: {} of {}. Var name: {}.'.format(index, len(aux_vars), aux_var))
+                print('\nCurrent var index: {} of {}. Var name: {}.'.format(index, len(aux_vars), aux_var))
                 rootone = bdd_manager.let({aux_var: True}, current_root)
                 rootzero = bdd_manager.let({aux_var: False}, current_root)
                 current_root = bdd_manager.apply('or', rootone, rootzero)
+                bdd_manager.collect_garbage()
                 print('Current EP time: {}.'.format(time.time()-ep_start_time))
                 print('Current size of BDD: {}.'.format(current_root.dag_size))
                 sizes.append(current_root.dag_size)
                 if current_root.dag_size > 25000000:
                     print('Diagram is too big. Stop.')
                     exit()
-            final_bdd_root = current_root
-    return final_bdd_root, [time.time() - ep_start_time, sizes]
+                elif current_root.dag_size == 1:
+                    unsat_flag = True
+                    print('BDD has collapsed into one vertex, while EP by aux var {} with name {}.'.format(index, aux_var))
+                    print('Vertex:', bdd_manager.to_expr(current_root))
+                    break
+            final_bdd_root_cnf = bdd_manager.add_expr(r'!{u}'.format(u=current_root))
+            print('Assignments for initial CNF (root {} was negated) '.format(final_bdd_root_cnf.var), end=':\n')
+            print('Number of models:', final_bdd_root_cnf.count())
+            for index_assign, d in enumerate(bdd_manager.pick_iter(final_bdd_root_cnf)):
+                print(index_assign, d)
+                if index_assign >= 10:
+                    print('and others...')
+                    break
+    return final_bdd_root_cnf, [time.time() - ep_start_time, sizes]
 
 def DJDstoBDDs(djds, numproc, binmode=0):
     try:
@@ -1151,7 +1164,7 @@ def AddAuxNodes(host, polarity, sorted_childs, diagram):
     add_index = 1
     for child in sorted_childs:
         current_aux_node = DiagramNode(DiagramNodeType.InternalNode, current_var, [child],
-                                       [diagram.GetTrueLeaf()] if previous_aux_node is None else [previous_aux_node])
+                                       [diagram.GetQuestionLeaf()] if previous_aux_node is None else [previous_aux_node])
         if prev_child_val == 0:
             add_index = 1
         else:
