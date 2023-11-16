@@ -168,7 +168,7 @@ def DivideProblem(problem, order):
 
 
 def GetInputs(problem_comments, nof_intervals):
-    if nof_intervals > 1:
+    if nof_intervals > 0:
         for comment in problem_comments:
             if 'c inputs' in comment:
                 inputs = list(map(int, comment.split(':')[1].split()))
@@ -250,6 +250,8 @@ def ParseOptions(params):
     options.pbintervals = params.pbintervals
     options.applyonly = params.applyonly
     options.pbiorder = params.pbiorder
+    options.ep_flag = params.ep_flag
+    options.ep_order = params.ep_order
     return options
 
 
@@ -274,8 +276,10 @@ def PrintOptions(options):
     print('Redirecting pathes:', options.redir_paths)
     print('DJD preprocessing:', options.djd_prep)
     print('Lock variables:', options.lock_vars)
-    if options.pbintervals > 1:
-        print('Number of Pseudo-Boolean Intervals:', options.pbintervals)
-        print('Order for solving PBIs:', options.pbiorder)
+    print('Number of Pseudo-Boolean Intervals:', options.pbintervals)
+    print('Order for solving PBIs:', options.pbiorder)
+    print('APPLY only mode:', options.applyonly)
+    print('Existential projection mode:', options.ep_flag)
+    print('Order for variables to EP:', options.ep_order)
     print()
 

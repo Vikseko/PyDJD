@@ -15,7 +15,7 @@ from Types import DiagramNode
 import queue
 
 
-def DJDtoBDD_separated(diagrams, numproc, order, logpath, binmode=0):
+def DJDtoBDD_separated(diagrams, numproc, order, logpath, nof_intervals, pbiorder, inputs, ep_order, binmode=0):
     current_djd_diagrams = diagrams
     counter = 0
     sys.setrecursionlimit(100000)
@@ -68,12 +68,12 @@ def DJDtoBDD_separated(diagrams, numproc, order, logpath, binmode=0):
                     continue
                 elif index == 1:
                     new_diagram, conjoin_time, log_lines = ConjoinBDDs(
-                        (current_bdd_diagrams[0], current_bdd_diagrams[1]), 0)
+                        (current_bdd_diagrams[0], current_bdd_diagrams[1]), 1)
                     conjoin_times_iter.append(conjoin_time)
                 # TODO надо поварьировать данные параметры, даст ли это чтото
-                elif index < (len(current_bdd_diagrams)/5):
-                    new_diagram, conjoin_time, log_lines = ConjoinBDDs(
-                        (new_diagram, current_bdd_diagrams[index]), 0)
+                # elif index < (len(current_bdd_diagrams)/5):
+                #     new_diagram, conjoin_time, log_lines = ConjoinBDDs(
+                #         (new_diagram, current_bdd_diagrams[index]), 0)
                 else:
                     new_diagram, conjoin_time, log_lines = ConjoinBDDs(
                         (new_diagram, current_bdd_diagrams[index]), 1)
@@ -119,7 +119,7 @@ def DJDtoBDD_separated(diagrams, numproc, order, logpath, binmode=0):
     if final_diagram.aux_nodes:
         final_diagram.PrintCurrentTable('Table before EP:')
         print('Final diagram has {} auxiliary nodes.'.format(len(final_diagram.aux_nodes)))
-        final_diagram_root, projection_stats = ExistentialProjection(final_diagram, 'ddpackage', logpath)
+        final_diagram_root, projection_stats = ExistentialProjection(final_diagram, 'ddpackage', logpath, nof_intervals, pbiorder, inputs, ep_order)
         print('Final. Size of BDD after EP:', final_diagram_root.dag_size)
         print('Final. Time for EP:', projection_stats[0])
         print('Final. Sizes of BDD during EP:', projection_stats[1])
@@ -436,7 +436,7 @@ def Clause2BDD_dd_format(clause, bdd_manager, problem_type='DNF'):
     return root
 
 
-def ExistentialProjection(mybdd, mode, logpath):
+def ExistentialProjection(mybdd, mode, logpath, nof_intervals, pbiorder, inputs, ep_order):
     ep_start_time = time.time()
     print('Start Existential Projection.')
     sizes = []
@@ -447,36 +447,65 @@ def ExistentialProjection(mybdd, mode, logpath):
             pid = os.getpid()
             aux_vars = ['x{}'.format(x.Value()) for x in mybdd.aux_nodes]
             print('Corresponding variables:', aux_vars)
+            print('Number of PBI:', nof_intervals)
             vars_names = [str(x) for x in mybdd.order_ if ((x != '?') and (x != 'true'))]
             vars_for_declare = ['x' + x for x in reversed(vars_names)]
             bdd_manager.declare(*vars_for_declare)
-            current_root = mybdds2ddbdds([mybdd], bdd_manager, False, logpath + str(pid) + 'bdd_for_existproj')[0]
-            print('BDD converted to DD_package format. Size: {}.'.format(current_root.dag_size))
-            for index, aux_var in enumerate(aux_vars):
-                print('\nCurrent var index: {} of {}. Var name: {}.'.format(index, len(aux_vars), aux_var))
-                rootone = bdd_manager.let({aux_var: True}, current_root)
-                rootzero = bdd_manager.let({aux_var: False}, current_root)
-                current_root = bdd_manager.apply('or', rootone, rootzero)
-                bdd_manager.collect_garbage()
-                print('Current EP time: {}.'.format(time.time()-ep_start_time))
-                print('Current size of BDD: {}.'.format(current_root.dag_size))
-                sizes.append(current_root.dag_size)
-                if current_root.dag_size > 25000000:
-                    print('Diagram is too big. Stop.')
-                    exit()
-                elif current_root.dag_size == 1:
-                    unsat_flag = True
-                    print('BDD has collapsed into one vertex, while EP by aux var {} with name {}.'.format(index, aux_var))
-                    print('Vertex:', bdd_manager.to_expr(current_root))
-                    break
-            final_bdd_root_cnf = bdd_manager.add_expr(r'!{u}'.format(u=current_root))
-            print('Assignments for initial CNF (root {} was negated) '.format(final_bdd_root_cnf.var), end=':\n')
-            print('Number of models:', final_bdd_root_cnf.count())
-            for index_assign, d in enumerate(bdd_manager.pick_iter(final_bdd_root_cnf)):
-                print(index_assign, d)
-                if index_assign >= 10:
-                    print('and others...')
-                    break
+            aux_bdd_root = mybdds2ddbdds([mybdd], bdd_manager, False, logpath + str(pid) + 'bdd_for_existproj')[0]
+            # result_test_av = test_cubes_for_aux_vars(bdd_manager, aux_bdd_root, aux_vars)
+            print('BDD converted to DD_package format. Size: {}.'.format(aux_bdd_root.dag_size))
+            pbi_indexes_list = list(range(max(1, nof_intervals)))  # на случай, если 0 интервалов передано
+            pbi_flag = False if len(pbi_indexes_list) < 2 else True
+            if pbiorder == 'direct':
+                pass
+            elif pbiorder == 'reversed':
+                pbi_indexes_list.reverse()
+            elif pbiorder == 'random':
+                random.shuffle(pbi_indexes_list)
+            for pbi_index in pbi_indexes_list:
+                if pbi_flag:
+                    interval, pbi_problem = make_i_pbi(inputs, nof_intervals, pbi_index)
+                    pbi_root, pbi_bdd_max_size = Problem2BDD_dd_format(pbi_problem, bdd_manager, 'CNF')
+                    print('\nInterval:', interval)
+                    print('PBI clauses:', pbi_problem)
+                    print('PBI BDD root:', pbi_root.var)
+                    current_root = bdd_manager.apply('and', pbi_root, aux_bdd_root)
+                    print('Size of BDD after applying interval:', current_root.dag_size)
+                else:
+                    current_root = aux_bdd_root
+                if ep_order == 'direct':
+                    pass
+                elif ep_order == 'reversed':
+                    aux_vars.reverse()
+                elif ep_order == 'random':
+                    random.shuffle(aux_vars)
+                for index, aux_var in enumerate(aux_vars):
+                    cur_ep_start_time = time.time()
+                    print('\nCurrent var index: {} of {}. Var name: {}.'.format(index, len(aux_vars), aux_var))
+                    rootone = bdd_manager.let({aux_var: True}, current_root)
+                    rootzero = bdd_manager.let({aux_var: False}, current_root)
+                    current_root = bdd_manager.apply('or', rootone, rootzero)
+                    bdd_manager.collect_garbage()
+                    print('Current EP time: {}.'.format(round(time.time() - ep_start_time, 3)))
+                    print('Time for this EP: {}.'.format(round(time.time() - cur_ep_start_time, 3)))
+                    print('Current size of BDD: {}.'.format(current_root.dag_size))
+                    sizes.append(current_root.dag_size)
+                    if current_root.dag_size > 25000000:
+                        print('Diagram is too big. Stop.')
+                        exit()
+                    elif current_root.dag_size == 1:
+                        unsat_flag = True
+                        print('BDD has collapsed into one vertex, while EP by aux var {} with name {}.'.format(index, aux_var))
+                        print('Vertex:', bdd_manager.to_expr(current_root))
+                        break
+                final_bdd_root_cnf = bdd_manager.add_expr(r'!{u}'.format(u=current_root))
+                print('Assignments for initial CNF (root {} was negated) '.format(final_bdd_root_cnf.var), end=':\n')
+                print('Number of models:', final_bdd_root_cnf.count())
+                for index_assign, d in enumerate(bdd_manager.pick_iter(final_bdd_root_cnf)):
+                    print(index_assign, d)
+                    if index_assign >= 10:
+                        print('and others...')
+                        break
     return final_bdd_root_cnf, [time.time() - ep_start_time, sizes]
 
 def DJDstoBDDs(djds, numproc, binmode=0):
@@ -1954,3 +1983,31 @@ def mybdd2ddbdd(mybdd: BDDiagram, bdd_manager, negate_flag, preambule=''):
 
 def create_and_expr(vars):
     pass
+
+
+def test_cubes_for_aux_vars(bdd_manager, aux_bdd_root, aux_vars):
+    result = []
+    for i in range(1000):
+        cube = create_random_cube(aux_vars)
+        print('\nCube with auxiliary vars:', i)
+        print('Plain root (DNF).')
+        test_root = bdd_manager.let(cube, aux_bdd_root)
+        print('Support:', bdd_manager.support(test_root))
+        print('Size of BDD with cube by aux vars:', test_root.dag_size)
+        print('Expression:', test_root.to_expr())
+        print('Number of models:', test_root.count())
+        result.append([cube, test_root.dag_size, test_root.to_expr()])
+        print('Negated root (CNF).')
+        test_root_neg = bdd_manager.add_expr(r'!{u}'.format(u=test_root))
+        print('Support:', bdd_manager.support(test_root_neg))
+        print('Size of BDD with cube by aux vars:', test_root_neg.dag_size)
+        print('Expression:', test_root_neg.to_expr())
+        print('Number of models:', test_root_neg.count())
+    exit()
+    return result
+
+def create_random_cube(vars):
+    cube_dict = dict()
+    for var in vars:
+        cube_dict[var] = False if random.randint(0, 1) == 0 else True
+    return cube_dict

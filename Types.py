@@ -391,3 +391,5 @@ class Options:
         self.pbintervals = 1
         self.applyonly = 0
         self.pbiorder = 'direct'
+        self.ep_flag = 1
+        self.ep_order = 'direct'

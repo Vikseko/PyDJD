@@ -139,7 +139,7 @@ if __name__ == '__main__':
                     print('Sd of size of diagram:', round(math.sqrt(variance(bdd_diagram.table_sizes)), 2))
                 # DrawDiagram(bdd_diagram)
             else:
-                if options.pbintervals > 0:
+                if options.pbintervals > 0 and options.ep_flag == 0:
                     from Intervals import *
                     inputs = GetInputs(problem_comments, options.pbintervals)
                     pbi_djds = CreateIntervalsDJDs(inputs, options.pbintervals, var_count, order, ptype,
@@ -149,10 +149,14 @@ if __name__ == '__main__':
                     else:
                         pbi_bdds = None
                         pbi_subdjd_to_bdd_times = None
-                    bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_pbi_separated(diagrams, pbi_bdds, options.numprocess,
+                    bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_pbi_separated(diagrams, pbi_bdds,
+                                                                                   options.numprocess,
                                                                                    order, logpath)
                 else:
-                    bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_separated(diagrams, options.numprocess, order, logpath)
+                    inputs = GetInputs(problem_comments, options.pbintervals)
+                    bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_separated(diagrams, options.numprocess, order,
+                                                                               logpath, options.pbintervals,
+                                                                               options.pbiorder, inputs, options.ep_order)
                     if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:
                         print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())
                     else:

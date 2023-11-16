@@ -50,9 +50,11 @@ def createParser ():
     parser.add_argument('-avl', '--analyze_var_limit', nargs='?', type=int, default=20)
     parser.add_argument('-avf', '--analyze_var_fraction', nargs='?', type=float, default=0.5)
     parser.add_argument('-np', '--numproc', nargs='?', type=int, default=1)
-    parser.add_argument('-pbi', '--pbintervals', nargs='?', type=int, default=0)
-    parser.add_argument('-ao', '--applyonly', nargs='?', type=int, default=0)
-    parser.add_argument('-pbio', '--pbiorder', nargs='?', type=str, default='direct', help='{direct, reversed, random}')
+    parser.add_argument('-pbi', '--pbintervals', nargs='?', type=int, default=1, help='Number of PB intervals.')
+    parser.add_argument('-ao', '--applyonly', nargs='?', type=int, default=0, help='Apply only mode')
+    parser.add_argument('-pbio', '--pbiorder', nargs='?', type=str, default='direct', help='Order of intervals to apply: {direct, reversed, random}')
+    parser.add_argument('-ep', '--ep_flag', nargs='?', type=int, default=0, help='Existential projection mode')
+    parser.add_argument('-epo', '--ep_order', nargs='?', type=str, default='direct', help='Order of vars for existential projection: {direct, reversed, random}.')
     return parser
 
 
