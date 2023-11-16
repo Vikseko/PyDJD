@@ -439,7 +439,7 @@ def Clause2BDD_dd_format(clause, bdd_manager, problem_type='DNF'):
 def ExistentialProjection(mybdd, mode, logpath, nof_intervals, pbiorder, inputs, ep_order):
     ep_start_time = time.time()
     print('Start Existential Projection.')
-    sizes = []
+    totalsizes = []
     final_bdd_root_cnf = mybdd
     if mode == 'ddpackage':
         if type(mybdd) == BDDiagram:
@@ -463,6 +463,7 @@ def ExistentialProjection(mybdd, mode, logpath, nof_intervals, pbiorder, inputs,
             elif pbiorder == 'random':
                 random.shuffle(pbi_indexes_list)
             for pbi_index in pbi_indexes_list:
+                sizes = []
                 if pbi_flag:
                     interval, pbi_problem = make_i_pbi(inputs, nof_intervals, pbi_index)
                     pbi_root, pbi_bdd_max_size = Problem2BDD_dd_format(pbi_problem, bdd_manager, 'CNF')
@@ -499,6 +500,7 @@ def ExistentialProjection(mybdd, mode, logpath, nof_intervals, pbiorder, inputs,
                         print('Vertex:', bdd_manager.to_expr(current_root))
                         break
                 final_bdd_root_cnf = bdd_manager.add_expr(r'!{u}'.format(u=current_root))
+                totalsizes.append(sizes)
                 print('Assignments for initial CNF (root {} was negated) '.format(final_bdd_root_cnf.var), end=':\n')
                 print('Number of models:', final_bdd_root_cnf.count())
                 for index_assign, d in enumerate(bdd_manager.pick_iter(final_bdd_root_cnf)):
@@ -506,7 +508,7 @@ def ExistentialProjection(mybdd, mode, logpath, nof_intervals, pbiorder, inputs,
                     if index_assign >= 10:
                         print('and others...')
                         break
-    return final_bdd_root_cnf, [time.time() - ep_start_time, sizes]
+    return final_bdd_root_cnf, [time.time() - ep_start_time, totalsizes]
 
 def DJDstoBDDs(djds, numproc, binmode=0):
     try:
