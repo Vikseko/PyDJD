@@ -123,7 +123,7 @@ def DJDtoBDD_separated(diagrams, numproc, order, logpath, nof_intervals, pbiorde
         print('Final. Size of BDD after EP:', final_diagram_root.dag_size)
         print('Final. Time for EP:', projection_stats[0])
         print('Final. Sizes of BDD during EP:', projection_stats[1])
-        print('Final. Max size of BDD during EP:', max(projection_stats[1]))
+        print('Final. Max size of BDD during EP:', max([max(x) for x in projection_stats[1]]))
     return final_diagram, nof_link_actions_djd2bdd
 
 
