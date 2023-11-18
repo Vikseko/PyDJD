@@ -39,7 +39,7 @@ def DJDtoBDD_separated(diagrams, numproc, order, logpath, nof_intervals, pbiorde
     print('\nNumber of paths to \"?\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
     print('Paths:', *question_pathes_in_biggest_bdd, sep='\n')
     print('\n'*10)
-
+    exit()
     # попарно объединяем поддиаграммы пока не останется одна финальная диаграмма
     while len(current_bdd_diagrams) > 1 and not unsat_flag:
         current_bdd_diagrams = sorted(current_bdd_diagrams, key=lambda x: order.index(abs(x.main_root_.Value())))
