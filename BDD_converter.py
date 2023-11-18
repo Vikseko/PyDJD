@@ -33,6 +33,13 @@ def DJDtoBDD_separated(diagrams, numproc, order, logpath, nof_intervals, pbiorde
             unsat_flag = True
     nof_link_actions_djd2bdd = sum(x.actions_with_links_ for x in current_bdd_diagrams)
     print('Actions with links after subdiagrams transformations:', nof_link_actions_djd2bdd)
+    print('Time to DJDs->BDDs:', round(sum(subdjd_to_bdd_times), 3))
+    biggest_bdd = max(current_bdd_diagrams, key=lambda x: x.VertexCount())
+    question_pathes_in_biggest_bdd = CountQuestionPathsInDiagram(biggest_bdd)
+    print('\nNumber of paths to \"?\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
+    print('Paths:', *question_pathes_in_biggest_bdd, sep='\n')
+    print('\n'*10)
+
     # попарно объединяем поддиаграммы пока не останется одна финальная диаграмма
     while len(current_bdd_diagrams) > 1 and not unsat_flag:
         current_bdd_diagrams = sorted(current_bdd_diagrams, key=lambda x: order.index(abs(x.main_root_.Value())))
