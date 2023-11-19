@@ -390,9 +390,13 @@ def SolvePaths(problem, all_question_pathes):
     g = MapleChrono(bootstrap_with=cnf)
     unsats = 0
     new_clauses = []
+    solve_times = []
     start_clauses_checking = time.time()
     for clause in all_question_pathes:
+        st_time_ = time.time()
         s, model = SolvePath(clause, g)
+        end_time_ = round(time.time() - st_time_, 3)
+        solve_times.append(end_time_)
         if s is False:
             # print('SAT-oracle says False. Redirect path.')
             unsats += 1
@@ -409,7 +413,9 @@ def SolvePaths(problem, all_question_pathes):
         print('UNSAT was proved for whole subfunction.')
         print('Number of paths:', len(all_question_pathes))
         print('Number of UNSAT paths:', unsats)
-    print('Paths checking time:'.ljust(30, ' '), time.time() - start_clauses_checking)
+    print('Paths solving total time:'.ljust(30, ' '), time.time() - start_clauses_checking)
+    print('Paths solving times:', solve_times)
+    print('Average solving time:', round(mean(solve_times), 3))
     cnf.extend(new_clauses)
     print('Number of new clauses:'.ljust(30, ' '), unsats)
     return cnf
