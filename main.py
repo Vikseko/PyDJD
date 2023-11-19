@@ -154,7 +154,7 @@ if __name__ == '__main__':
                                                                                    order, logpath)
                 else:
                     inputs = GetInputs(problem_comments, options.pbintervals)
-                    bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_separated(diagrams, options.numprocess, order,
+                    bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_separated(problem, diagrams, options.numprocess, order,
                                                                                logpath, options.pbintervals,
                                                                                options.pbiorder, inputs, options.ep_order)
                     if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:

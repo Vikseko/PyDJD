@@ -252,6 +252,7 @@ def ParseOptions(params):
     options.pbiorder = params.pbiorder
     options.ep_flag = params.ep_flag
     options.ep_order = params.ep_order
+    options.sep_djd_prep = params.sep_djd_prep
     return options
 
 
@@ -275,6 +276,7 @@ def PrintOptions(options):
     print('Convert to BDD:', options.bdd_convert)
     print('Redirecting pathes:', options.redir_paths)
     print('DJD preprocessing:', options.djd_prep)
+    print('Separate DJD-preprocessing:', options.sep_djd_prep)
     print('Lock variables:', options.lock_vars)
     print('Number of Pseudo-Boolean Intervals:', options.pbintervals)
     print('Order for solving PBIs:', options.pbiorder)

@@ -393,3 +393,4 @@ class Options:
         self.pbiorder = 'direct'
         self.ep_flag = 1
         self.ep_order = 'direct'
+        self.sep_djd_prep = 0

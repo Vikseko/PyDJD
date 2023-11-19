@@ -383,3 +383,49 @@ def SortClauses(clause1, clause2):
         elif clause1[i] < clause2[i]:
             return -1
     return 0
+
+
+def SolvePaths(problem, all_question_pathes):
+    cnf = CNF(from_clauses=problem)
+    g = MapleChrono(bootstrap_with=cnf)
+    unsats = 0
+    new_clauses = []
+    start_clauses_checking = time.time()
+    for clause in all_question_pathes:
+        s, model = SolvePath(clause, g)
+        if s is False:
+            # print('SAT-oracle says False. Redirect path.')
+            unsats += 1
+            new_clauses.append([-x for x in clause])
+        elif s is None:
+            # print('SAT-oracle says None. Go next path.')
+            pass
+        elif s:
+            print('Problem solved due false path checking.')
+            print('Model:', model)
+            break
+            pass
+    else:
+        print('UNSAT was proved for whole subfunction.')
+        print('Number of paths:', len(all_question_pathes))
+        print('Number of UNSAT paths:', unsats)
+    print('Paths checking time:'.ljust(30, ' '), time.time() - start_clauses_checking)
+    cnf.extend(new_clauses)
+    print('Number of new clauses:'.ljust(30, ' '), unsats)
+    return cnf
+
+
+def SolvePath(lit_path, solver):
+    # timer = Timer(0.01, interrupt, [solver])
+    # timer.start()
+    # s = solver.solve_limited(assumptions=lit_path, expect_interrupt=True)
+    # solver.clear_interrupt()
+    # timer.cancel()
+    s = solver.solve(assumptions=lit_path)
+    if s is None:
+        return s, None
+    elif s is False:
+        return s, None
+    elif s:
+        model = solver.get_model()
+        return s, model

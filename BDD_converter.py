@@ -15,7 +15,7 @@ from Types import DiagramNode
 import queue
 
 
-def DJDtoBDD_separated(diagrams, numproc, order, logpath, nof_intervals, pbiorder, inputs, ep_order, binmode=0):
+def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals, pbiorder, inputs, ep_order, sepdjdprepmode=0, binmode=0):
     current_djd_diagrams = diagrams
     counter = 0
     sys.setrecursionlimit(100000)
@@ -34,12 +34,15 @@ def DJDtoBDD_separated(diagrams, numproc, order, logpath, nof_intervals, pbiorde
     nof_link_actions_djd2bdd = sum(x.actions_with_links_ for x in current_bdd_diagrams)
     print('Actions with links after subdiagrams transformations:', nof_link_actions_djd2bdd)
     print('Time to DJDs->BDDs:', round(sum(subdjd_to_bdd_times), 3))
-    biggest_bdd = max(current_bdd_diagrams, key=lambda x: x.VertexCount())
-    question_pathes_in_biggest_bdd = CountQuestionPathsInDiagram(biggest_bdd)
-    print('\nNumber of paths to \"?\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
-    print('Paths:', *question_pathes_in_biggest_bdd, sep='\n')
-    print('\n'*10)
-    exit()
+    if sepdjdprepmode:
+        biggest_bdd = max(current_bdd_diagrams, key=lambda x: x.VertexCount())
+        question_pathes_in_biggest_bdd = CountQuestionPathsInDiagram(biggest_bdd)
+        print('\nNumber of paths to \"?\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
+        print('Paths:', *question_pathes_in_biggest_bdd, sep='\n')
+        print('\n'*10)
+        print('Start solving paths.')
+        result_problem = SolvePaths(problem, question_pathes_in_biggest_bdd)
+        exit()
     # попарно объединяем поддиаграммы пока не останется одна финальная диаграмма
     while len(current_bdd_diagrams) > 1 and not unsat_flag:
         current_bdd_diagrams = sorted(current_bdd_diagrams, key=lambda x: order.index(abs(x.main_root_.Value())))
