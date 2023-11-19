@@ -22,28 +22,33 @@ def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals
     iter_times = []
     conjoin_times = []
     unsat_flag = False
-    # переводим каждую поддиаграмму в бдд
-    current_bdd_diagrams, subdjd_to_bdd_times = DJDstoBDDs(diagrams, numproc, 0)
-    current_bdd_diagrams = sorted(current_bdd_diagrams, key=lambda x: order.index(abs(x.main_root_.Value())))
-    for index, diagram in enumerate(current_bdd_diagrams):
-        # diagram.PrintProblem()
-        diagram.PrintCurrentTable('SubBDDiagram ' + str(index + 1) + ':')
-        if diagram.VertexCount() == 0:
-            print('Empty BDD is obtained. Initial CNF in unsatisfiable.')
-            unsat_flag = True
-    nof_link_actions_djd2bdd = sum(x.actions_with_links_ for x in current_bdd_diagrams)
-    print('Actions with links after subdiagrams transformations:', nof_link_actions_djd2bdd)
-    print('Time to DJDs->BDDs:', round(sum(subdjd_to_bdd_times), 3))
-    if sepdjdprepmode:
-        biggest_bdd = max(current_bdd_diagrams, key=lambda x: x.VertexCount())
+    if sepdjdprepmode == 0:
+        # переводим каждую поддиаграмму в бдд
+        current_bdd_diagrams, subdjd_to_bdd_times = DJDstoBDDs(diagrams, numproc, 0)
+        current_bdd_diagrams = sorted(current_bdd_diagrams, key=lambda x: order.index(abs(x.main_root_.Value())))
+        for index, diagram in enumerate(current_bdd_diagrams):
+            # diagram.PrintProblem()
+            diagram.PrintCurrentTable('SubBDDiagram ' + str(index + 1) + ':')
+            if diagram.VertexCount() == 0:
+                print('Empty BDD is obtained. Initial CNF in unsatisfiable.')
+                unsat_flag = True
+        nof_link_actions_djd2bdd = sum(x.actions_with_links_ for x in current_bdd_diagrams)
+        print('Actions with links after subdiagrams transformations:', nof_link_actions_djd2bdd)
+        print('Time to DJDs->BDDs:', round(sum(subdjd_to_bdd_times), 3))
+    else:
+        # переводим самую большую поддиаграмму в бдд
+        biggest_djd = max(diagrams, key=lambda x: x.VertexCount())
+        print('Biggest DJD obtained. Root {}. Size {}.'.format(biggest_djd.GetRoots(), biggest_djd.VertexCount()))
+        biggest_bdd, transform_time = DJDtoBDD(biggest_djd, 0)
+        print('Time to DJDs->BDDs:', round(transform_time, 3))
         question_pathes_in_biggest_bdd = CountQuestionPathsInDiagram(biggest_bdd)
         print('\nNumber of paths to \"?\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
         print('Paths:', *question_pathes_in_biggest_bdd, sep='\n')
         print('\n'*10)
         print('Start solving paths.')
         result_problem = SolvePaths(problem, question_pathes_in_biggest_bdd)
-        print('Result problem:')
-        print(*result_problem, sep='\n')
+        # print('Result problem:')
+        # print(*result_problem, sep='\n')
         exit()
     # попарно объединяем поддиаграммы пока не останется одна финальная диаграмма
     while len(current_bdd_diagrams) > 1 and not unsat_flag:

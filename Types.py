@@ -279,7 +279,7 @@ class DisjunctiveDiagram:
     def VertexCount(self):
         return len(self.table_)
 
-    # Возвращает число вершин в диаграмме
+    # Возвращает число рёбер в диаграмме
     def LinksCount(self):
         return sum([len(x.low_childs) + len(x.high_childs) for x in self.table_.values()])
 
