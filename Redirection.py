@@ -32,7 +32,7 @@ def PathsRedirection(diagram, problem):
     print('Number of hard assumptions'.ljust(30,' '), len(list_hard_assumptions))
     cnf1 = CNF(from_clauses=[x[0] for x in redir_pairs]).clauses
     cnf1 = copy.deepcopy(cnf1)
-    NegateProblem(cnf1)
+    cnf1 = NegateProblem(cnf1)
     cnf1 = CNF(from_clauses=cnf1)
     cnf1.to_file('redir_lits.cnf')
     for pair in redir_pairs:

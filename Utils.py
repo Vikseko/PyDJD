@@ -152,9 +152,11 @@ def WritePathsToFile(paths, filename):
 
 # Отрицание формулы. Применяется для перехода от КНФ конфликтных баз к ДНФ.
 def NegateProblem(problem):
-    for i in range(len(problem)):
-        for j in range(len(problem[i])):
-            problem[i][j] *= -1
+    negate_problem = copy.deepcopy(problem)
+    for i in range(len(negate_problem)):
+        for j in range(len(negate_problem[i])):
+            negate_problem[i][j] *= -1
+    return negate_problem
 
 
 def DivideProblem(problem, order):

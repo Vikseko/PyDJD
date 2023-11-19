@@ -19,8 +19,8 @@ def GetCNFFromDiagram(diagram:DisjunctiveDiagram):
         node_path = []
         node_path.append(node)
         WritePaths(cnf,node_paths,node_path,clause)
-    NegateProblem(cnf)
-    return cnf,node_paths
+    cnf = NegateProblem(cnf)
+    return cnf, node_paths
 
 # Получаем ДНФ из диаграммы (все пути из корней в терминальную 'true')
 def GetDNFFromDiagram(diagram:DisjunctiveDiagram):
@@ -389,33 +389,46 @@ def SolvePaths(problem, all_question_pathes):
     cnf = CNF(from_clauses=problem)
     g = MapleChrono(bootstrap_with=cnf)
     unsats = 0
+    sats = 0
     new_clauses = []
     solve_times = []
+    first_sat_time = None
+    models = set()
     start_clauses_checking = time.time()
-    for clause in all_question_pathes:
+    for index, assumption in enumerate(all_question_pathes):
         st_time_ = time.time()
-        s, model = SolvePath(clause, g)
+        s, model = SolvePath(assumption, g)
         end_time_ = round(time.time() - st_time_, 3)
         solve_times.append(end_time_)
+        print('Path {} of {}: {} ---> {}.'.format(index+1, len(all_question_pathes), assumption, s))
         if s is False:
-            # print('SAT-oracle says False. Redirect path.')
             unsats += 1
-            new_clauses.append([-x for x in clause])
+            new_clauses.append([-x for x in assumption])
         elif s is None:
             # print('SAT-oracle says None. Go next path.')
             pass
         elif s:
+            sats += 1
+            if sats == 1:
+                first_sat_time = time.time() - start_clauses_checking
             print('Problem solved due false path checking.')
+            model.sort(key=lambda x: abs(x))
             print('Model:', model)
-            break
-            pass
+            models.add(tuple(model))
+    if models:
+        print('Number of paths:'.ljust(30, ' '), len(all_question_pathes))
+        print('Number of UNSAT paths:'.ljust(30, ' '), unsats)
+        print('Number of SAT paths:'.ljust(30, ' '), len(all_question_pathes)-unsats)
+        print('Time to first SAT:'.ljust(30, ' '), first_sat_time)
+        print('Models:')
+        print(*models, sep='\n')
     else:
         print('UNSAT was proved for whole subfunction.')
-        print('Number of paths:', len(all_question_pathes))
-        print('Number of UNSAT paths:', unsats)
+        print('Number of paths:'.ljust(30, ' '), len(all_question_pathes))
+        print('Number of UNSAT paths:'.ljust(30, ' '), unsats)
     print('Paths solving total time:'.ljust(30, ' '), time.time() - start_clauses_checking)
-    print('Paths solving times:', solve_times)
-    print('Average solving time:', round(mean(solve_times), 3))
+    print('Paths solving times:'.ljust(30, ' '), solve_times)
+    print('Average solving time:'.ljust(30, ' '), round(mean(solve_times), 3))
     cnf.extend(new_clauses)
     print('Number of new clauses:'.ljust(30, ' '), unsats)
     return cnf

@@ -33,7 +33,8 @@ if __name__ == '__main__':
     else:
         # Строим отрицание считанной формулы(КНФ= > ДНФ)
         if options.source_type == "conflicts" or options.source_type == "cnf":
-            NegateProblem(problem)
+            original_problem = problem
+            problem = NegateProblem(problem)
         start_build_time = time.time()
         ptype = GetProblemType(options.source_type)
         if options.separate_construction:
@@ -115,7 +116,7 @@ if __name__ == '__main__':
             from BDD_converter import *
             # from Test_diagram import *
             start_bdd_time = time.time()
-            print('Start transition to BDD.')
+            print('\nStart transition to BDD.')
             if not options.separate_construction:
                 initial_size_of_djd = diagram.VertexCount()
                 bdd_diagram, transform_time_ = DJDtoBDD(diagram)
