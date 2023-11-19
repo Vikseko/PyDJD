@@ -42,6 +42,8 @@ def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals
         print('\n'*10)
         print('Start solving paths.')
         result_problem = SolvePaths(problem, question_pathes_in_biggest_bdd)
+        print('Result problem:')
+        print(*result_problem, sep='\n')
         exit()
     # попарно объединяем поддиаграммы пока не останется одна финальная диаграмма
     while len(current_bdd_diagrams) > 1 and not unsat_flag:
