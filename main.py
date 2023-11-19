@@ -156,7 +156,8 @@ if __name__ == '__main__':
                     inputs = GetInputs(problem_comments, options.pbintervals)
                     bdd_diagram, nof_link_actions_djd2bdd = DJDtoBDD_separated(problem, diagrams, options.numprocess, order,
                                                                                logpath, options.pbintervals,
-                                                                               options.pbiorder, inputs, options.ep_order)
+                                                                               options.pbiorder, inputs, options.ep_order,
+                                                                               options.sep_djd_prep)
                     if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:
                         print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())
                     else:
