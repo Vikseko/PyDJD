@@ -385,7 +385,7 @@ def SortClauses(clause1, clause2):
     return 0
 
 
-def SolvePaths(problem, all_question_pathes):
+def SolvePaths(problem, all_question_pathes, order, timelimit=0):
     cnf = CNF(from_clauses=problem)
     g = MapleChrono(bootstrap_with=cnf)
     unsats = 0
@@ -395,26 +395,37 @@ def SolvePaths(problem, all_question_pathes):
     first_sat_time = None
     models = set()
     start_clauses_checking = time.time()
+    results = []
     for index, assumption in enumerate(all_question_pathes):
         st_time_ = time.time()
-        s, model = SolvePath(assumption, g)
+        assumption.sort(key=lambda x: order.index(abs(x)))
+        print('Path {} of {}: {}'.format(index + 1, len(all_question_pathes), assumption), end='')
+        if timelimit == 0:
+            s, model = SolvePath(assumption, g)
+        else:
+            s, model = SolvePathTimelimit(assumption, g, timelimit)
         end_time_ = round(time.time() - st_time_, 3)
         solve_times.append(end_time_)
-        print('Path {} of {}: {} ---> {}.'.format(index+1, len(all_question_pathes), assumption, s))
+        results.append([assumption, s, end_time_])
         if s is False:
             unsats += 1
             new_clauses.append([-x for x in assumption])
+            print(' ---> {}, {} s.'.format(s, end_time_))
         elif s is None:
             # print('SAT-oracle says None. Go next path.')
+            print(' ---> {}, {} s.'.format(s, end_time_))
             pass
         elif s:
             sats += 1
+            print(' ---> {}, {} s.'.format(s, end_time_))
             if sats == 1:
                 first_sat_time = time.time() - start_clauses_checking
             print('Problem solved due false path checking.')
-            model.sort(key=lambda x: abs(x))
+            model.sort(key=lambda x: order.index(abs(x)))
             print('Model:', model)
             models.add(tuple(model))
+    print('\nResults (sorted):')
+    print(*sorted(results, key=lambda x: (x[2], x[1], x[0])))
     if models:
         print('Number of paths:'.ljust(30, ' '), len(all_question_pathes))
         print('Number of UNSAT paths:'.ljust(30, ' '), unsats)
@@ -431,7 +442,13 @@ def SolvePaths(problem, all_question_pathes):
     print('Average solving time:'.ljust(30, ' '), round(mean(solve_times), 3))
     cnf.extend(new_clauses)
     print('Number of new clauses:'.ljust(30, ' '), unsats)
-    return cnf
+    if sats > 0:
+        solve_flag = True
+    elif unsats == len(all_question_pathes):
+        solve_flag = True
+    else:
+        solve_flag = False
+    return cnf, solve_flag
 
 
 def SolvePath(lit_path, solver):
@@ -441,6 +458,21 @@ def SolvePath(lit_path, solver):
     # solver.clear_interrupt()
     # timer.cancel()
     s = solver.solve(assumptions=lit_path)
+    if s is None:
+        return s, None
+    elif s is False:
+        return s, None
+    elif s:
+        model = solver.get_model()
+        return s, model
+
+
+def SolvePathTimelimit(lit_path, solver, timelimit):
+    timer = Timer(timelimit, interrupt, [solver])
+    timer.start()
+    s = solver.solve_limited(assumptions=lit_path, expect_interrupt=True)
+    solver.clear_interrupt()
+    timer.cancel()
     if s is None:
         return s, None
     elif s is False:
