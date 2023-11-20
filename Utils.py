@@ -63,7 +63,7 @@ def ReversedFrequencyOrder(problem, min_var_num, max_var_num):
 
 def LayersDirectOrder(layers, min_var_num, max_var_num):
     if min_var_num != 0 and max_var_num != 0:
-        print('Layers:', layers)
+        # print('Layers:', layers)
         for i in range(len(layers)):
             layers[i].sort(key=lambda x: abs(x))
         # print('Sorted layers:', layers)
@@ -255,6 +255,7 @@ def ParseOptions(params):
     options.ep_flag = params.ep_flag
     options.ep_order = params.ep_order
     options.sep_djd_prep = params.sep_djd_prep
+    options.djd_prep_time_limit = params.djd_prep_time_limit
     return options
 
 
@@ -279,6 +280,7 @@ def PrintOptions(options):
     print('Redirecting pathes:', options.redir_paths)
     print('DJD preprocessing:', options.djd_prep)
     print('Separate DJD-preprocessing:', options.sep_djd_prep)
+    print('Time limit for single path in DJD-preprocessing:', options.djd_prep_time_limit)
     print('Lock variables:', options.lock_vars)
     print('Number of Pseudo-Boolean Intervals:', options.pbintervals)
     print('Order for solving PBIs:', options.pbiorder)

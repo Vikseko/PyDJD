@@ -15,7 +15,7 @@ from Types import DiagramNode
 import queue
 
 
-def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals, pbiorder, inputs, ep_order, sepdjdprepmode=0, binmode=0):
+def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals, pbiorder, inputs, ep_order, sepdjdprepmode=0, djd_prep_time_limit=0, binmode=0):
     current_djd_diagrams = diagrams
     counter = 0
     sys.setrecursionlimit(100000)
@@ -49,7 +49,7 @@ def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals
         print()
         print('Start solving paths.')
         cnf = NegateProblem(problem)
-        result_problem, solveflag = SolvePaths(cnf, question_pathes_in_biggest_bdd, order, 60)
+        result_problem, solveflag = SolvePaths(cnf, question_pathes_in_biggest_bdd, order, djd_prep_time_limit)
         if solveflag is False:
             print('Problem was not solved. Save to file with new clauses.')
             print(logpath + 'djdprep.cnf')

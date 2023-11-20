@@ -56,6 +56,8 @@ def createParser ():
     parser.add_argument('-ep', '--ep_flag', nargs='?', type=int, default=0, help='Existential projection mode')
     parser.add_argument('-epo', '--ep_order', nargs='?', type=str, default='direct', help='Order of vars for existential projection: {direct, reversed, random}.')
     parser.add_argument('-sdjdp', '--sep_djd_prep', nargs='?', type=int, default=0, help='Separate DJD-preprocessing mode')
+    parser.add_argument('-preptl', '--djd_prep_time_limit', nargs='?', type=int, default=0,
+                        help='Time limit (in seconds) for single path in DJD-preprocessing (0 -- no time limit).')
     return parser
 
 
