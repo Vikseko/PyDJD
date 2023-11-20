@@ -396,9 +396,8 @@ def SolvePaths(problem, all_question_pathes, order, timelimit=0):
     models = set()
     start_clauses_checking = time.time()
     results = []
-    for index, assumption in enumerate(all_question_pathes):
+    for index, assumption in enumerate([sorted(list(path), key=lambda x: order.index(abs(x))) for path in all_question_pathes]):
         st_time_ = time.time()
-        assumption.sort(key=lambda x: order.index(abs(x)))
         print('Path {} of {}: {}'.format(index + 1, len(all_question_pathes), assumption), end='')
         if timelimit == 0:
             s, model = SolvePath(assumption, g)
