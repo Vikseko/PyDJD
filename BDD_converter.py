@@ -49,7 +49,7 @@ def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals
         print()
         print('Start solving paths.')
         cnf = NegateProblem(problem)
-        result_problem, solveflag = SolvePaths(cnf, question_pathes_in_biggest_bdd, order, 0)
+        result_problem, solveflag = SolvePaths(cnf, question_pathes_in_biggest_bdd, order, 60)
         if solveflag is False:
             print('Problem was not solved. Save to file with new clauses.')
             print(logpath + 'djdprep.cnf')
