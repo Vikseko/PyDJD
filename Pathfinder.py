@@ -424,7 +424,7 @@ def SolvePaths(problem, all_question_pathes, order, timelimit=0):
             print('Model:', model)
             models.add(tuple(model))
     print('\nResults (sorted):')
-    print(*sorted(results, key=lambda x: (x[2], x[1], x[0])))
+    print(*sorted(results, key=lambda x: (x[2], x[1], x[0])), sep='\n')
     if models:
         print('Number of paths:'.ljust(30, ' '), len(all_question_pathes))
         print('Number of UNSAT paths:'.ljust(30, ' '), unsats)
@@ -432,14 +432,17 @@ def SolvePaths(problem, all_question_pathes, order, timelimit=0):
         print('Time to first SAT:'.ljust(30, ' '), first_sat_time)
         print('Models:')
         print(*models, sep='\n')
-    else:
+    elif unsats == len(all_question_pathes):
         print('UNSAT was proved for whole subfunction.')
+        print('Number of paths:'.ljust(30, ' '), len(all_question_pathes))
+        print('Number of UNSAT paths:'.ljust(30, ' '), unsats)
+    else:
+        print('Part of paths was solved.')
         print('Number of paths:'.ljust(30, ' '), len(all_question_pathes))
         print('Number of UNSAT paths:'.ljust(30, ' '), unsats)
     print('Paths solving total time:'.ljust(30, ' '), time.time() - start_clauses_checking)
     print('Paths solving times:'.ljust(30, ' '), solve_times)
     print('Average solving time:'.ljust(30, ' '), round(mean(solve_times), 3))
-    cnf.extend(new_clauses)
     print('Number of new clauses:'.ljust(30, ' '), unsats)
     if sats > 0:
         solve_flag = True
@@ -447,7 +450,8 @@ def SolvePaths(problem, all_question_pathes, order, timelimit=0):
         solve_flag = True
     else:
         solve_flag = False
-    return cnf, solve_flag
+        problem.extend(new_clauses)
+    return problem, solve_flag
 
 
 def SolvePath(lit_path, solver):

@@ -219,7 +219,11 @@ def CreateLogDir(options):
                               '_sc' + str(options.separate_construction) +
                               '_np' + str(options.numprocess) +
                               '_pbi' + str(options.pbintervals) +
-                              '_ao' + str(options.applyonly))
+                              '_ao' + str(options.applyonly) +
+                              '_ep' + str(options.ep_flag) +
+                              str(options.ep_order) +
+                              '_sdjdp' + str(options.sep_djd_prep) +
+                              '_preptl' + str(options.djd_prep_time_limit))
     if not os.path.isdir(params_dir):
         os.mkdir(params_dir)
     timedir = os.path.join(params_dir, datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
