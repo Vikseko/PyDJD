@@ -1,3 +1,5 @@
+import os
+
 from Utils import *
 from Builder import DisjunctiveDiagramsBuilder
 from Redirection import *
@@ -92,21 +94,20 @@ def CountQuestionPathsInDiagram(diagram:DisjunctiveDiagram):
         clause.append(node.var_id)
         node_path = []
         node_path.append(node)
-        CountPaths(node_path,clause,paths_table)
+        CountPaths(node_path, clause, paths_table)
     for node in question_leaf.low_parents:
         clause = []
         clause.append(-node.var_id)
         node_path = []
         node_path.append(node)
-        CountPaths(node_path,clause,paths_table)
+        CountPaths(node_path, clause, paths_table)
     return paths_table
 
 
 def CountPaths(node_path,clause,paths_table):
     current_node:DiagramNode = node_path[-1]
     if current_node.IsRoot():
-        clause.reverse()
-        clause.sort()
+        clause.sort(key=abs)
         paths_table.add(tuple(clause))
     else:
         for node in current_node.high_parents:
@@ -483,3 +484,64 @@ def SolvePathTimelimit(lit_path, solver, timelimit):
     elif s:
         model = solver.get_model()
         return s, model
+
+
+def GetPathsToFalse_ddformat(logpath, bdd_root, bdd_manager):
+    question_paths = set()
+    tmp_name_ = str(os.getpid()) + '_' + str(bdd_root.var) + '_tmpbddforpaths.json'
+    bdd_manager.dump(logpath + tmp_name_, roots=[bdd_root])
+    bdd_dict = json.load(open(logpath + tmp_name_, 'r'))
+    levels_vars_dict = {v: k for k, v in bdd_dict['level_of_var'].items()}
+    root_node_id = abs(bdd_dict['roots'][0])
+    root_node = bdd_dict[str(root_node_id)]
+    multiplier = 0 if bdd_dict['roots'][0] > 0 else 1
+    init_clause = []
+    WritePaths_dd(levels_vars_dict, bdd_dict, init_clause, root_node, question_paths, multiplier)
+    # negate_root = bdd_manager.add_expr(r'!{u}'.format(u=bdd_root))
+    # bdd_manager.collect_garbage()
+    # for index_assign, d in enumerate(bdd_manager.pick_iter(negate_root)):
+    #     print(index_assign, d)
+    return question_paths
+
+
+def WritePaths_dd(levels_vars_dict, bdd_dict, clause, node, question_paths, multiplier):
+    node_level = node[0]
+    node_var = int(levels_vars_dict[node_level][1:])
+    neg_clause = clause + [-1 * node_var]
+    if node[1] == 'F':
+        if multiplier % 2 == 0:
+            neg_clause.sort(key=abs)
+            question_paths.add(tuple(neg_clause))
+            # print('Final neg clause, from F:', neg_clause)
+    elif node[1] == 'T':
+        if multiplier % 2 == 1:
+            neg_clause.sort(key=abs)
+            question_paths.add(tuple(neg_clause))
+            # print('Final neg clause, from T:', neg_clause)
+    else:
+        neg_child = bdd_dict[str(abs(node[1]))]
+        if node[1] < 0:
+            neg_multiplier = multiplier + 1
+        else:
+            neg_multiplier = multiplier
+        WritePaths_dd(levels_vars_dict, bdd_dict, neg_clause, neg_child, question_paths, neg_multiplier)
+    pos_clause = clause + [node_var]
+    if node[2] == 'F':
+        if multiplier % 2 == 0:
+            pos_clause.sort(key=abs)
+            question_paths.add(tuple(pos_clause))
+            # print('Final pos clause, from F:', pos_clause)
+    elif node[2] == 'T':
+        if multiplier % 2 == 1:
+            pos_clause.sort(key=abs)
+            question_paths.add(tuple(pos_clause))
+            # print('Final pos clause, from T:', pos_clause)
+    else:
+        pos_child = bdd_dict[str(abs(node[2]))]
+        if node[2] < 0:
+            pos_multiplier = multiplier + 1
+        else:
+            pos_multiplier = multiplier
+        WritePaths_dd(levels_vars_dict, bdd_dict, pos_clause, pos_child, question_paths, pos_multiplier)
+
+

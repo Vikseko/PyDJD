@@ -15,13 +15,20 @@ from Types import DiagramNode
 import queue
 
 
-def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals, pbiorder, inputs, ep_order, cnfname, sepdjdprepmode=0, djd_prep_time_limit=0, binmode=0):
+def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals, pbiorder, inputs, ep_order, cnfname, sepdjdprepmode=0, djd_prep_time_limit=0, prepbinmode=0, binmode=0):
     current_djd_diagrams = diagrams
     counter = 0
     sys.setrecursionlimit(100000)
     iter_times = []
     conjoin_times = []
     unsat_flag = False
+    if prepbinmode == 1:  # бинаризация через пакет DD
+        vars_names = [str(x) for x in order if ((x != '?') and (x != 'true'))]
+        vars_for_declare = ['x' + x for x in reversed(vars_names)]
+        bdd_manager = BDD()
+        bdd_manager.declare(*vars_for_declare)
+        print('BDD manager was created. Vars and levels:')
+        print(bdd_manager.vars)
     if sepdjdprepmode == 0:
         # переводим каждую поддиаграмму в бдд
         current_bdd_diagrams, subdjd_to_bdd_times = DJDstoBDDs(diagrams, numproc, 0)
@@ -40,14 +47,26 @@ def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals
         biggest_djd = max(diagrams, key=lambda x: x.VertexCount())
         # biggest_djd = [x for x in diagrams if x.GetRoots()[0].var_id == 1][0]
         print('Biggest DJD obtained. Root {}. Size {}.'.format(biggest_djd.GetRoots()[0].var_id, biggest_djd.VertexCount()))
-        biggest_bdd, transform_time = DJDtoBDD(biggest_djd, 0)
-        print('Transformation to BDD complete. Size {}.'.format(biggest_bdd.VertexCount()))
-        print('Time to DJDs->BDDs:', round(transform_time, 3))
-        question_pathes_in_biggest_bdd = CountQuestionPathsInDiagram(biggest_bdd)
-        print('\nNumber of paths to \"?\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
-        # print('Paths:', *question_pathes_in_biggest_bdd, sep='\n')
-        print()
-        print('Start solving paths.')
+        biggest_djd.PrintCurrentTable('Biggest DJD:')
+        if prepbinmode == 0:
+            biggest_bdd, transform_time = DJDtoBDD(biggest_djd, 0)
+            # biggest_bdd.DumpTableJSON_ddformat(logpath + 'tempbdd.json')
+            biggest_bdd.PrintCurrentTable('Biggest BDD:')
+            print('Transformation to BDD (Descent algorithm) is complete. Size {}.'.format(biggest_bdd.VertexCount()))
+            print('Time to DJD->BDD:', round(transform_time, 3))
+            question_pathes_in_biggest_bdd = CountQuestionPathsInDiagram(biggest_bdd)
+            print('\nNumber of paths to \"0\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
+        else:
+            problem_biggest_djd, _ = GetDNFFromDiagram(biggest_djd)
+            print(*problem_biggest_djd, sep='\n')
+            start_transform_time = time.time()
+            biggest_bdd_root, max_size = Problem2BDD_dd_format(problem_biggest_djd, bdd_manager, problem_type='DNF')
+            print('Transformation to BDD (Apply algorithm) complete. Size {}.'.format(biggest_bdd_root.dag_size))
+            print('Time to DJDs->BDDs:', round(time.time() - start_transform_time, 3))
+            question_pathes_in_biggest_bdd = GetPathsToFalse_ddformat(logpath, biggest_bdd_root, bdd_manager)
+            print('\nNumber of paths to \"0\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
+        print('Paths:', *question_pathes_in_biggest_bdd, sep='\n')
+        print('\nStart solving paths.')
         cnf = NegateProblem(problem)
         result_problem, solveflag = SolvePaths(cnf, question_pathes_in_biggest_bdd, order, djd_prep_time_limit)
         if solveflag is False:
@@ -449,6 +468,10 @@ def Problem2BDD_dd_format(sortedproblem: list, bdd_manager, problem_type='DNF'):
             # print('Current root expr:', current_problem_root.to_expr())
             if current_problem_root.dag_size > max_size:
                 max_size = current_problem_root.dag_size
+            if max_size > 30000000:
+                print('Problem2BDD_dd_format. Diagram is too big. Stop.')
+                print('Size:', max_size)
+                exit()
     bdd_manager.collect_garbage()
     return current_problem_root, max_size
 
@@ -960,7 +983,7 @@ class BDDiagram:
                         high = -node.FirstHighChild().vertex_id
                     else:
                         high = node.FirstHighChild().vertex_id
-                # print('\nBefore negated', node.vertex_id, [node.level, low, high])
+                print('\nBefore negated', node.vertex_id, [node.level, low, high])
                 if negated_node:
                     if low == "T":
                         low = "F"
@@ -975,9 +998,9 @@ class BDDiagram:
                     else:
                         high = -high
                 bdd_dict[str(node.vertex_id)] = [node.level, low, high]
-                # print('Negated flag', negated_node)
-                # print('Negated nodes', negated_nodes)
-                # print('After negated', node.vertex_id, [node.level, low, high])
+                print('Negated flag', negated_node)
+                print('Negated nodes', negated_nodes)
+                print('After negated', node.vertex_id, [node.level, low, high])
         bdd_dict["roots"] = [root] if root not in negated_nodes else [-root]
         outfile_lines = '{\n'
         outfile_lines += '"level_of_var": ' + json.dumps(bdd_dict["level_of_var"]) + ',\n'

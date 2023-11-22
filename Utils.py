@@ -260,6 +260,7 @@ def ParseOptions(params):
     options.ep_order = params.ep_order
     options.sep_djd_prep = params.sep_djd_prep
     options.djd_prep_time_limit = params.djd_prep_time_limit
+    options.prepbinmode = params.prepbinmode
     return options
 
 
@@ -284,6 +285,7 @@ def PrintOptions(options):
     print('Redirecting pathes:', options.redir_paths)
     print('DJD preprocessing:', options.djd_prep)
     print('Separate DJD-preprocessing:', options.sep_djd_prep)
+    print('Binarization mode for preprocessing:', options.prepbinmode)
     print('Time limit for single path in DJD-preprocessing:', options.djd_prep_time_limit)
     print('Lock variables:', options.lock_vars)
     print('Number of Pseudo-Boolean Intervals:', options.pbintervals)

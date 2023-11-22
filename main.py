@@ -40,6 +40,10 @@ if __name__ == '__main__':
         if options.separate_construction:
             problems = DivideProblem(problem, order)
             problems = SortProblems(problems, order)
+            # for problem in problems:
+            #     print('Problem')
+            #     print(*sorted(problem), sep='\n')
+            #     print()
             diagrams = CreateDiagrams(var_count, problems, order, ptype, options.numprocess)
             nof_djds = len(diagrams)
             print('Number of DJDs:'.ljust(30, ' '), nof_djds)
@@ -159,7 +163,8 @@ if __name__ == '__main__':
                                                                                order, logpath, options.pbintervals,
                                                                                options.pbiorder, inputs, options.ep_order,
                                                                                options.name, options.sep_djd_prep,
-                                                                               options.djd_prep_time_limit)
+                                                                               options.djd_prep_time_limit,
+                                                                               options.prepbinmode)
                     if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:
                         print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())
                     else:

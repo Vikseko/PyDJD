@@ -58,6 +58,8 @@ def createParser ():
     parser.add_argument('-sdjdp', '--sep_djd_prep', nargs='?', type=int, default=0, help='Separate DJD-preprocessing mode')
     parser.add_argument('-preptl', '--djd_prep_time_limit', nargs='?', type=int, default=0,
                         help='Time limit (in seconds) for single path in DJD-preprocessing (0 -- no time limit).')
+    parser.add_argument('-prepbm', '--prepbinmode', nargs='?', type=int, default=0,
+                        help='Binarization mode for separate preprocessing')
     return parser
 
 
