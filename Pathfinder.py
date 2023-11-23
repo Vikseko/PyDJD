@@ -393,6 +393,7 @@ def SolvePaths(problem, all_question_pathes, order, timelimit=0):
     sats = 0
     new_clauses = []
     solve_times = []
+    indet_paths = []
     first_sat_time = None
     models = set()
     start_clauses_checking = time.time()
@@ -414,7 +415,7 @@ def SolvePaths(problem, all_question_pathes, order, timelimit=0):
         elif s is None:
             # print('SAT-oracle says None. Go next path.')
             print(' ---> {}, {} s.'.format(s, end_time_))
-            pass
+            indet_paths.append(assumption)
         elif s:
             sats += 1
             print(' ---> {}, {} s.'.format(s, end_time_))
@@ -445,14 +446,14 @@ def SolvePaths(problem, all_question_pathes, order, timelimit=0):
     print('Paths solving times:'.ljust(30, ' '), solve_times)
     print('Average solving time:'.ljust(30, ' '), round(mean(solve_times), 3))
     print('Number of new clauses:'.ljust(30, ' '), unsats)
+    print('Number of indeterminate paths:', len(indet_paths))
     if sats > 0:
         solve_flag = True
     elif unsats == len(all_question_pathes):
         solve_flag = True
     else:
         solve_flag = False
-        problem.extend(new_clauses)
-    return problem, solve_flag
+    return new_clauses, indet_paths, solve_flag
 
 
 def SolvePath(lit_path, solver):
