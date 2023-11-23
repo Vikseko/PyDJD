@@ -82,7 +82,7 @@ def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals
         # print(*result_problem, sep='\n')
         exit()
     elif sepdjdprepmode == 2:
-        assert prepbinmode == 1
+        assert prepbinmode == 1, 'For second mode of preprocessing, binarization by apply is needed.'
         # сортируем диаграммы по размеру от самой большой к самой маленькой
         sorted_djds = sorted(diagrams, key=lambda x: x.VertexCount(), reverse=True)
         solve_flag = False
