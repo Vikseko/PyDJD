@@ -17,6 +17,7 @@ import queue
 
 def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals, pbiorder, inputs, ep_order, cnfname, sepdjdprepmode=0, djd_prep_time_limit=0, prepbinmode=0, binmode=0):
     current_djd_diagrams = diagrams
+    djdtobdd_sep_start_time = time.time()
     counter = 0
     sys.setrecursionlimit(100000)
     iter_times = []
@@ -83,16 +84,16 @@ def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals
         exit()
     elif sepdjdprepmode == 2:
         assert prepbinmode == 1, 'For second mode of preprocessing, binarization by apply is needed.'
-        # сортируем диаграммы по размеру от самой большой к самой маленькой
-        sorted_djds = sorted(diagrams, key=lambda x: x.VertexCount(), reverse=True)
+        # сортируем диаграммы по размеру от самой маленькой к самой большой
+        sorted_djds = sorted(diagrams, key=lambda x: x.VertexCount())
         solve_flag = False
         cnf = NegateProblem(problem)
         additional_problem = []
         counter = 0
-        while solve_flag is not False and len(sorted_djds) > 0:
+        while solve_flag is False and len(sorted_djds) > 0:
             print('Iteration', counter)
             counter += 1
-            biggest_djd = sorted_djds.pop()
+            biggest_djd = sorted_djds.pop()  # Берём последнюю диаграмму, самую большую
             print('Biggest DJD obtained. Root {}. Size {}.'.format(biggest_djd.GetRoots()[0].var_id,
                                                                    biggest_djd.VertexCount()))
             biggest_djd.PrintCurrentTable('Biggest DJD:')
@@ -107,17 +108,24 @@ def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals
                 neg_add_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=add_bdd_root))
                 biggest_bdd_root = bdd_manager.apply('or', biggest_bdd_root, neg_add_bdd_root)
             print('Time to DJDs->BDDs:', round(time.time() - start_transform_time, 3))
-            question_pathes_in_biggest_bdd = GetPathsToFalse_ddformat(logpath, biggest_bdd_root, bdd_manager)
-            print('\nNumber of paths to \"0\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
-            print('\nStart solving paths.')
-            new_clauses, indet_clauses, solve_flag = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
-                                                                djd_prep_time_limit)
-            if new_clauses:
-                cnf.extend(new_clauses)
-            if indet_clauses:
-                additional_problem = indet_clauses
+            if biggest_bdd_root.dag_size == 1:
+                print('Problem was solved while applying BDD', counter+1, 'and additional problem from iteration', counter)
+                print('Root expression:', biggest_bdd_root.to_expr())
+                neg_biggest_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=biggest_bdd_root))
+                print('Negated root expression (for original CNF):', biggest_bdd_root.to_expr())
+                solve_flag = True
             else:
-                additional_problem = []
+                question_pathes_in_biggest_bdd = GetPathsToFalse_ddformat(logpath, biggest_bdd_root, bdd_manager)
+                print('\nNumber of paths to \"0\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
+                print('\nStart solving paths.')
+                new_clauses, indet_clauses, solve_flag = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
+                                                                    djd_prep_time_limit)
+                if new_clauses:
+                    cnf.extend(new_clauses)
+                if indet_clauses:
+                    additional_problem = indet_clauses
+                else:
+                    additional_problem = []
         if solve_flag is False:
             print('Problem was not solved. Save to file with new clauses.')
             print('Size of new problem:', len(cnf))
@@ -126,7 +134,8 @@ def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals
             result_cnf.to_file(logpath + cnfname + '_djdprep_mode2.cnf')
         else:
             print('Problem was solved due paths checking. Exit.')
-
+        print('Time for preprocessing:', round(time.time()-djdtobdd_sep_start_time, 3))
+        exit()
     # попарно объединяем поддиаграммы пока не останется одна финальная диаграмма
     while len(current_bdd_diagrams) > 1 and not unsat_flag:
         current_bdd_diagrams = sorted(current_bdd_diagrams, key=lambda x: order.index(abs(x.main_root_.Value())))
