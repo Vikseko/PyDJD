@@ -91,8 +91,8 @@ def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals
         additional_problem = []
         counter = 0
         while solve_flag is False and len(sorted_djds) > 0:
-            print('Iteration', counter)
             counter += 1
+            print('Iteration', counter)
             biggest_djd = sorted_djds.pop()  # Берём последнюю диаграмму, самую большую
             print('Biggest DJD obtained. Root {}. Size {}.'.format(biggest_djd.GetRoots()[0].var_id,
                                                                    biggest_djd.VertexCount()))
@@ -109,7 +109,7 @@ def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals
                 biggest_bdd_root = bdd_manager.apply('or', biggest_bdd_root, neg_add_bdd_root)
             print('Time to DJDs->BDDs:', round(time.time() - start_transform_time, 3))
             if biggest_bdd_root.dag_size == 1:
-                print('Problem was solved while applying BDD', counter+1, 'and additional problem from iteration', counter)
+                print('Problem was solved while applying BDD', counter, 'and additional problem from iteration', counter-1)
                 print('Root expression:', biggest_bdd_root.to_expr())
                 neg_biggest_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=biggest_bdd_root))
                 print('Negated root expression (for original CNF):', neg_biggest_bdd_root.to_expr())
