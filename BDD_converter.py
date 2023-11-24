@@ -112,7 +112,7 @@ def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals
                 print('Problem was solved while applying BDD', counter+1, 'and additional problem from iteration', counter)
                 print('Root expression:', biggest_bdd_root.to_expr())
                 neg_biggest_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=biggest_bdd_root))
-                print('Negated root expression (for original CNF):', biggest_bdd_root.to_expr())
+                print('Negated root expression (for original CNF):', neg_biggest_bdd_root.to_expr())
                 solve_flag = True
             else:
                 question_pathes_in_biggest_bdd = GetPathsToFalse_ddformat(logpath, biggest_bdd_root, bdd_manager)
