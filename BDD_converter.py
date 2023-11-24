@@ -96,7 +96,7 @@ def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals
             biggest_djd = sorted_djds.pop()  # Берём последнюю диаграмму, самую большую
             print('Biggest DJD obtained. Root {}. Size {}.'.format(biggest_djd.GetRoots()[0].var_id,
                                                                    biggest_djd.VertexCount()))
-            biggest_djd.PrintCurrentTable('Biggest DJD:')
+            biggest_djd.PrintCurrentTable('Biggest DJD table:')
             problem_biggest_djd, _ = GetDNFFromDiagram(biggest_djd)
             print(*problem_biggest_djd, sep='\n')
             start_transform_time = time.time()
