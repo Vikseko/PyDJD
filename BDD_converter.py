@@ -104,7 +104,7 @@ def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals
             print('Transformation to BDD (Apply algorithm) complete. Size {}.'.format(biggest_bdd_root.dag_size))
             if additional_problem:
                 print('Size of additional problem (unsolved paths from previous BDD):', len(additional_problem))
-                add_bdd_root, add_max_size = Problem2BDD_dd_format(problem_biggest_djd, bdd_manager, problem_type='DNF')
+                add_bdd_root, add_max_size = Problem2BDD_dd_format(additional_problem, bdd_manager, problem_type='DNF')
                 neg_add_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=add_bdd_root))
                 biggest_bdd_root = bdd_manager.apply('or', biggest_bdd_root, neg_add_bdd_root)
             print('Time to DJDs->BDDs:', round(time.time() - start_transform_time, 3))
