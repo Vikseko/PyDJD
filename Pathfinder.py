@@ -443,7 +443,7 @@ def SolvePaths(problem, all_question_pathes, order, timelimit=0):
         print('Number of paths:'.ljust(30, ' '), len(all_question_pathes))
         print('Number of UNSAT paths:'.ljust(30, ' '), unsats)
     print('Paths solving total time:'.ljust(30, ' '), time.time() - start_clauses_checking)
-    print('Paths solving times:'.ljust(30, ' '), solve_times)
+    print('Paths solving times (20 longest):'.ljust(30, ' '), sorted(solve_times, reverse=True)[:min(20, len(solve_times))])
     print('Average solving time:'.ljust(30, ' '), round(mean(solve_times), 3))
     print('Number of new clauses:'.ljust(30, ' '), unsats)
     print('Number of indeterminate paths:', len(indet_paths))
