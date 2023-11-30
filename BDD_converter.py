@@ -136,6 +136,80 @@ def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals
             print('Problem was solved due paths checking. Exit.')
         print('Time for preprocessing:', round(time.time()-djdtobdd_sep_start_time, 3))
         exit()
+    elif sepdjdprepmode == 3:
+        assert prepbinmode == 1, 'For third mode of preprocessing, binarization by apply is needed.'
+        # сортируем диаграммы по размеру от самой маленькой к самой большой
+        sorted_djds = sorted(diagrams, key=lambda x: x.VertexCount())
+        solve_flag = False
+        cnf = NegateProblem(problem)
+        additional_problem = []
+        counter = 0
+        while solve_flag is False and len(sorted_djds) > 0:
+            counter += 1
+            print('\nIteration', counter)
+            solve_flag = False
+            double_solving = False
+            biggest_djd = sorted_djds.pop()  # Берём последнюю диаграмму, самую большую
+            print('Biggest DJD obtained. Root {}. Size {}.'.format(biggest_djd.GetRoots()[0].var_id,
+                                                                   biggest_djd.VertexCount()))
+            biggest_djd.PrintCurrentTable('Biggest DJD table:')
+            problem_biggest_djd, _ = GetDNFFromDiagram(biggest_djd)
+            print(*problem_biggest_djd, sep='\n')
+            start_transform_time = time.time()
+            biggest_bdd_root, max_size = Problem2BDD_dd_format(problem_biggest_djd, bdd_manager, problem_type='DNF')
+            print('Transformation to BDD (Apply algorithm) complete. Size {}.'.format(biggest_bdd_root.dag_size))
+            print('Time to DJDs->BDDs:', round(time.time() - start_transform_time, 3))
+            if biggest_bdd_root.dag_size == 1:
+                print('Problem was solved while applying BDD', counter, 'and additional problem from iteration', counter-1)
+                print('Root expression:', biggest_bdd_root.to_expr())
+                neg_biggest_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=biggest_bdd_root))
+                print('Negated root expression (for original CNF):', neg_biggest_bdd_root.to_expr())
+                solve_flag = True
+            else:
+                question_pathes_in_biggest_bdd = GetPathsToFalse_ddformat(logpath, biggest_bdd_root, bdd_manager)
+                print('\nNumber of paths to \"0\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
+                print('\nStart solving paths.')
+                new_clauses, indet_clauses, solve_flag = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
+                                                                    djd_prep_time_limit)
+                if new_clauses:
+                    cnf.extend(new_clauses)
+                if indet_clauses:
+                    if len(additional_problem) == 0:
+                        double_solving = True
+                        print('Additional problen contains paths only from current iteration, so dont need to resolve it. Go to next iteration.')
+                    additional_problem.extend(indet_clauses)
+                    print('Additional problem:', *additional_problem, sep='\n')
+            if solve_flag is False and additional_problem and double_solving is False:
+                print('Size of additional problem (unsolved paths from current BDD + previous additional problem):', len(additional_problem))
+                add_bdd_root, add_max_size = Problem2BDD_dd_format(additional_problem, bdd_manager, problem_type='DNF')
+                neg_add_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=add_bdd_root))
+                if neg_add_bdd_root.dag_size == 1:
+                    print('Additional problem was solved after solving BDD', counter, 'and construct additional problem')
+                    print('Root expression:', neg_add_bdd_root.to_expr())
+                    neg_neg_add_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=neg_add_bdd_root))
+                    print('Negated root expression (for original CNF):', neg_neg_add_bdd_root.to_expr())
+                    solve_flag = True
+                else:
+                    question_pathes_in_add_bdd = GetPathsToFalse_ddformat(logpath, neg_add_bdd_root, bdd_manager)
+                    print('\nNumber of paths to \"0\" in additional subBDD:', len(question_pathes_in_add_bdd))
+                    print('\nStart solving additional paths.')
+                    new_clauses, indet_clauses, solve_flag = SolvePaths(cnf, question_pathes_in_add_bdd, order,
+                                                                        djd_prep_time_limit)
+                    if new_clauses:
+                        cnf.extend(new_clauses)
+                    if indet_clauses:
+                        additional_problem = indet_clauses
+                print('Remain additional problem:', *additional_problem, sep='\n')
+        if solve_flag is False:
+            print('Problem was not solved. Save to file with new clauses.')
+            print('Size of new problem:', len(cnf))
+            print(logpath + 'djdprep_mode2.cnf')
+            result_cnf = CNF(from_clauses=cnf)
+            result_cnf.to_file(logpath + cnfname + '_djdprep_mode3.cnf')
+        else:
+            print('Problem was solved due paths checking. Exit.')
+        print('Time for preprocessing:', round(time.time()-djdtobdd_sep_start_time, 3))
+        exit()
     # попарно объединяем поддиаграммы пока не останется одна финальная диаграмма
     while len(current_bdd_diagrams) > 1 and not unsat_flag:
         current_bdd_diagrams = sorted(current_bdd_diagrams, key=lambda x: order.index(abs(x.main_root_.Value())))
