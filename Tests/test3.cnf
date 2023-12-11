@@ -2,6 +2,7 @@ p cnf 4 7
 c min_var_num 1
 c max_var_num 4
 c activity_order 1 2 3 4 0
+c inputs: 1 2 3 4
 -1 -2 3 4 0
 -1 2 -3 -4 0
 1 2 -4 0

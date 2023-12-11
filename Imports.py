@@ -10,6 +10,7 @@ import itertools
 from functools import cmp_to_key
 import functools
 print = functools.partial(print, flush=True)
+import random
 import multiprocessing
 from statistics import mean, median, variance
 import math
