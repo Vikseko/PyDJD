@@ -171,7 +171,7 @@ def robddsatoracle_mode1(prepbinmode, diagrams, problem, bdd_manager, order, djd
     print('Paths:', *question_pathes_in_biggest_bdd, sep='\n')
     print('\nStart solving paths.')
     cnf = NegateProblem(problem)
-    new_clauses, indet_clauses, solveflag = SolvePaths(cnf, question_pathes_in_biggest_bdd, order, djd_prep_time_limit)
+    new_clauses, indet_clauses, solveflag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd, order, djd_prep_time_limit)
     if solveflag is False:
         print('Problem was not solved. Save to file with new clauses.')
         cnf.extend(new_clauses)
@@ -224,7 +224,7 @@ def robddsatoracle_mode2(prepbinmode, diagrams, problem, bdd_manager, order, djd
             question_pathes_in_biggest_bdd = GetPathsToFalse_ddformat(logpath, biggest_bdd_root, bdd_manager)
             print('\nNumber of paths to \"0\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
             print('\nStart solving paths.')
-            new_clauses, indet_clauses, solve_flag = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
+            new_clauses, indet_clauses, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
                                                                 djd_prep_time_limit)
             if new_clauses:
                 cnf.extend(new_clauses)
@@ -279,7 +279,7 @@ def robddsatoracle_mode3(prepbinmode, diagrams, problem, bdd_manager, order, djd
             question_pathes_in_biggest_bdd = GetPathsToFalse_ddformat(logpath, biggest_bdd_root, bdd_manager)
             print('\nNumber of paths to \"0\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
             print('\nStart solving paths.')
-            new_clauses, indet_clauses, solve_flag = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
+            new_clauses, indet_clauses, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
                                                                 djd_prep_time_limit)
             if new_clauses:
                 cnf.extend(new_clauses)
@@ -305,7 +305,7 @@ def robddsatoracle_mode3(prepbinmode, diagrams, problem, bdd_manager, order, djd
                 question_pathes_in_add_bdd = GetPathsToFalse_ddformat(logpath, neg_add_bdd_root, bdd_manager)
                 print('\nNumber of paths to \"0\" in additional subBDD:', len(question_pathes_in_add_bdd))
                 print('\nStart solving additional paths.')
-                new_clauses, indet_clauses, solve_flag = SolvePaths(cnf, question_pathes_in_add_bdd, order,
+                new_clauses, indet_clauses, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_add_bdd, order,
                                                                     djd_prep_time_limit)
                 if new_clauses:
                     cnf.extend(new_clauses)
@@ -354,9 +354,15 @@ def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd
             biggest_bdd_root, max_size, problem_stop_index, remain_problem = Problem2BDD_dd_format_prepmode4(current_problem, bdd_manager, bdd_stop_size, 'DNF')
             print('Transformation to BDD (Apply algorithm) complete. Size {}.'.format(biggest_bdd_root.dag_size))
             print('Used constraints {} of {}.'.format(problem_stop_index, len(current_problem)))
-            print('Size of remain problem:', len(remain_problem))
-            print('Remain problem:', *remain_problem, sep='\n')
+            print('Size of remain problem:', size_remain_problem := len(remain_problem))
+            if size_remain_problem > 0:
+                print('Remain problem:', *remain_problem, sep='\n')
             current_problem = remain_problem
+            if additional_problem:
+                print('Size of additional problem (unsolved paths from previous BDD):', len(additional_problem))
+                add_bdd_root, add_max_size = Problem2BDD_dd_format(additional_problem, bdd_manager, 'DNF')
+                neg_add_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=add_bdd_root))
+                biggest_bdd_root = bdd_manager.apply('or', biggest_bdd_root, neg_add_bdd_root)
             print('Time to DJDs->BDDs:', round(time.time() - start_transform_time, 3))
             if biggest_bdd_root.dag_size == 1:
                 print('Problem was solved while applying BDD', counter, 'and additional problem from iteration',
@@ -369,38 +375,15 @@ def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd
                 question_pathes_in_biggest_bdd = GetPathsToFalse_ddformat(logpath, biggest_bdd_root, bdd_manager)
                 print('\nNumber of paths to \"0\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
                 print('\nStart solving paths.')
-                new_clauses, indet_clauses, solve_flag = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
+                new_clauses, hard_paths, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
                                                                     djd_prep_time_limit)
                 if new_clauses:
                     cnf.extend(new_clauses)
-                if indet_clauses:
-                    if len(additional_problem) == 0:
-                        double_solving = True
-                        print('Additional problem contains paths only from current iteration, so dont need to resolve it. Go to next iteration.')
-                    additional_problem.extend(indet_clauses)
-                    print('Additional problem:', *additional_problem, sep='\n')
-            if solve_flag is False and additional_problem and double_solving is False:
-                print('Size of additional problem (unsolved paths from current BDD + previous additional problem):',
-                      len(additional_problem))
-                add_bdd_root, add_max_size = Problem2BDD_dd_format(additional_problem, bdd_manager, 'DNF')
-                neg_add_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=add_bdd_root))
-                if neg_add_bdd_root.dag_size == 1:
-                    print('Additional problem was solved after solving BDD', counter, 'and construct additional problem')
-                    print('Root expression:', neg_add_bdd_root.to_expr())
-                    neg_neg_add_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=neg_add_bdd_root))
-                    print('Negated root expression (for original CNF):', neg_neg_add_bdd_root.to_expr())
-                    solve_flag = True
+                if hard_paths:
+                    additional_problem = hard_paths
                 else:
-                    question_pathes_in_add_bdd = GetPathsToFalse_ddformat(logpath, neg_add_bdd_root, bdd_manager)
-                    print('\nNumber of paths to \"0\" in additional subBDD:', len(question_pathes_in_add_bdd))
-                    print('\nStart solving additional paths.')
-                    new_clauses, indet_clauses, solve_flag = SolvePaths(cnf, question_pathes_in_add_bdd, order,
-                                                                        djd_prep_time_limit)
-                    if new_clauses:
-                        cnf.extend(new_clauses)
-                    if indet_clauses:
-                        additional_problem = indet_clauses
-                print('Remain additional problem:', *additional_problem, sep='\n')
+                    additional_problem = []
+                print('Hard paths:', *additional_problem, sep='\n')
         else:
             print('Iteration finished.')
             print('Current size of CNF:', len(cnf))
@@ -411,9 +394,10 @@ def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd
         print(logpath + 'djdprep_mode2.cnf')
         result_cnf = CNF(from_clauses=cnf)
         result_cnf.to_file(logpath + cnfname + '_djdprep_mode3.cnf')
+        print('Time for preprocessing:', round(time.time() - djdtobdd_sep_start_time, 3))
     else:
         print('Problem was solved due paths checking. Exit.')
-    print('Time for preprocessing:', round(time.time() - djdtobdd_sep_start_time, 3))
+        print('Time for solving:', round(time.time() - djdtobdd_sep_start_time, 3))
     exit()
 
 def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order, logpath):
