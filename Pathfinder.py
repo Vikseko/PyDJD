@@ -508,7 +508,7 @@ def FindGoodTimelimitForPaths(solver, paths, order, start_clauses_checking):
                 models.add(tuple(model))
         print('Solved:', solved)
         print('Number of remain paths:', len(paths))
-        timelimit += max(1, int((timelimit / 2)*(10-(solved/10*sample_size))))
+        timelimit += max(1, int((timelimit / 2)*((100-(solved/sample_size*100))//10)))
     return paths, new_clauses, timelimit, first_sat_time, models, sats, unsats
 
 def SolvePath(lit_path, solver):
