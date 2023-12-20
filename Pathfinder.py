@@ -400,9 +400,11 @@ def SolvePaths(problem, all_question_pathes, order, timelimit=0):
     start_clauses_checking = time.time()
     results = []
     print('Number of paths before finding timelimit:', len(paths))
-    if timelimit == -1:
-        paths, new_clauses, timelimit, first_sat_time, models, sats, unsats = FindGoodTimelimitForPaths(g, paths, order,
-                                                                                          start_clauses_checking)
+    if timelimit < 0:
+        print('Get negative value of timelimit:', timelimit)
+        inittimelimit = abs(timelimit)
+        results, paths, new_clauses, timelimit, first_sat_time, models, sats, unsats = FindGoodTimelimitForPaths(g, paths, order,
+                                                                                          start_clauses_checking, inittimelimit)
     print('\nTimelimit:', timelimit)
     for index, assumption in enumerate(paths):
         st_time_ = time.time()
@@ -432,7 +434,7 @@ def SolvePaths(problem, all_question_pathes, order, timelimit=0):
             print('Model:', model)
             models.add(tuple(model))
     print('\nResults (sorted):')
-    print(*sorted(results, key=lambda x: (x[2], x[1], x[0])), sep='\n')
+    print(*sorted(results, key=lambda x: (x[2], x[0])), sep='\n')
     if models:
         print('Number of paths:'.ljust(30, ' '), len(all_question_pathes))
         print('Number of UNSAT paths:'.ljust(30, ' '), unsats)
@@ -462,8 +464,8 @@ def SolvePaths(problem, all_question_pathes, order, timelimit=0):
     return new_clauses, indet_paths, solve_flag, timelimit
 
 
-def FindGoodTimelimitForPaths(solver, paths, order, start_clauses_checking):
-    timelimit = 1
+def FindGoodTimelimitForPaths(solver, paths, order, start_clauses_checking, inittimelimit):
+    timelimit = inittimelimit
     first_sat_time = None
     sample_size = max(len(paths)//100, 10)
     solved = 0
@@ -486,12 +488,12 @@ def FindGoodTimelimitForPaths(solver, paths, order, start_clauses_checking):
             print('Path from sample: {}'.format(assumption), end='')
             s, model = SolvePathTimelimit(assumption, solver, timelimit)
             end_time_ = round(time.time() - st_time_, 3)
-            results.append([assumption, s, end_time_])
             if s is False:
                 unsats += 1
                 solved += 1
                 new_clauses.append([-x for x in assumption])
                 print(' ---> {}, {} s.'.format(s, end_time_))
+                results.append([assumption, s, end_time_])
             elif s is None:
                 # print('SAT-oracle says None. Go next path.')
                 print(' ---> {}, {} s.'.format(s, end_time_))
@@ -506,10 +508,12 @@ def FindGoodTimelimitForPaths(solver, paths, order, start_clauses_checking):
                 model.sort(key=lambda x: order.index(abs(x)))
                 print('Model:', model)
                 models.add(tuple(model))
+                results.append([assumption, s, end_time_])
         print('Solved:', solved)
         print('Number of remain paths:', len(paths))
-        timelimit += max(1, int((timelimit / 2)*((100-(solved/sample_size*100))//10)))
-    return paths, new_clauses, timelimit, first_sat_time, models, sats, unsats
+        if solved < border:
+            timelimit += max(1, int(timelimit/5+1), int((timelimit / 2)*((100-(solved/sample_size*100))//10)))
+    return results, paths, new_clauses, timelimit, first_sat_time, models, sats, unsats
 
 def SolvePath(lit_path, solver):
     # timer = Timer(0.01, interrupt, [solver])

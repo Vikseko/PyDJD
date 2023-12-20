@@ -14,7 +14,7 @@ from Types import DiagramNode
 import queue
 
 
-def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals, pbiorder, inputs, ep_order, cnfname, sepdjdprepmode=0, djd_prep_time_limit=0, prepbinmode=0, binmode=0):
+def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals, pbiorder, inputs, ep_order, cnfname, sepdjdprepmode=0, djd_prep_time_limit=0, prepbinmode=0, binmode=0, bdd_stop_size=100000):
     current_djd_diagrams = diagrams
     djdtobdd_sep_start_time = time.time()
     counter = 0
@@ -49,7 +49,7 @@ def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals
     elif sepdjdprepmode == 3:
         robddsatoracle_mode3(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname)
     elif sepdjdprepmode == 4:
-        robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname)
+        robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size)
 
     # попарно объединяем поддиаграммы пока не останется одна финальная диаграмма
     while len(current_bdd_diagrams) > 1 and not unsat_flag:
@@ -324,11 +324,10 @@ def robddsatoracle_mode3(prepbinmode, diagrams, problem, bdd_manager, order, djd
     exit()
 
 
-def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname):
+def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size):
     # Версия, в которой пути добавляются в диаграмму пока она не слишком распухнет
     assert prepbinmode == 1, 'For third mode of preprocessing, binarization by apply is needed.'
     djdtobdd_sep_start_time = time.time()
-    bdd_stop_size = 5000000
     # сортируем диаграммы по размеру от самой маленькой к самой большой
     sorted_djds = sorted(diagrams, key=lambda x: x.VertexCount())
     solve_flag = False
@@ -349,6 +348,7 @@ def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd
         start_transform_time = time.time()
         current_problem = problem_biggest_djd
         remain_problem = [1]
+        counter_remain_problems = 0
         while len(remain_problem) > 0:
             print('\nSize of current problem:', len(current_problem))
             biggest_bdd_root, max_size, problem_stop_index, remain_problem = Problem2BDD_dd_format_prepmode4(current_problem, bdd_manager, bdd_stop_size, 'DNF')
@@ -375,15 +375,31 @@ def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd
                 question_pathes_in_biggest_bdd = GetPathsToFalse_ddformat(logpath, biggest_bdd_root, bdd_manager)
                 print('\nNumber of paths to \"0\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
                 print('\nStart solving paths.')
-                new_clauses, hard_paths, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
-                                                                    djd_prep_time_limit)
+                if counter_remain_problems > 0:
+                    new_clauses, hard_paths, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
+                                                                                abs(djd_prep_time_limit))
+                else:
+                    new_clauses, hard_paths, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd,
+                                                                                order, djd_prep_time_limit)
+                counter_remain_problems += 1
+                if djd_prep_time_limit > 0:
+                    djd_prep_time_limit = timelimit
+                else:
+                    djd_prep_time_limit = -timelimit
                 if new_clauses:
                     cnf.extend(new_clauses)
                 if hard_paths:
                     additional_problem = hard_paths
                 else:
                     additional_problem = []
-                print('Hard paths:', *additional_problem, sep='\n')
+                if 0 < len(remain_problem) < 10:
+                    print('Remain problem is too small. Mark it as additional problem and go to next iteration.')
+                    additional_problem.extend(remain_problem)
+                    print('Hard paths:', *additional_problem, sep='\n')
+                    break
+                else:
+                    print('Hard paths:', *additional_problem, sep='\n')
+                    print('Number of remain paths:', len(remain_problem))
         else:
             print('Iteration finished.')
             print('Current size of CNF:', len(cnf))

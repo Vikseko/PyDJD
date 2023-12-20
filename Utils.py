@@ -261,6 +261,7 @@ def ParseOptions(params):
     options.sep_djd_prep = params.sep_djd_prep
     options.djd_prep_time_limit = params.djd_prep_time_limit
     options.prepbinmode = params.prepbinmode
+    options.bdd_max_size = params.bdd_max_size
     return options
 
 
@@ -287,6 +288,7 @@ def PrintOptions(options):
     print('Separate DJD-preprocessing:', options.sep_djd_prep)
     print('Binarization mode for preprocessing:', options.prepbinmode)
     print('Time limit for single path in DJD-preprocessing:', options.djd_prep_time_limit)
+    print('Maximum BDD size:', options.bdd_max_size)
     print('Lock variables:', options.lock_vars)
     print('Number of Pseudo-Boolean Intervals:', options.pbintervals)
     print('Order for solving PBIs:', options.pbiorder)

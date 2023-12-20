@@ -164,7 +164,8 @@ if __name__ == '__main__':
                                                                                options.pbiorder, inputs, options.ep_order,
                                                                                options.name, options.sep_djd_prep,
                                                                                options.djd_prep_time_limit,
-                                                                               options.prepbinmode)
+                                                                               options.prepbinmode,
+                                                                               options.bdd_stop_size)
                     if BDDiagram.NonBinaryLinkCount(bdd_diagram) > 0:
                         print('ERROR. Number of nonbinary link is', bdd_diagram.NonBinaryLinkCount())
                     else:

@@ -60,6 +60,7 @@ def createParser ():
                         help='Time limit (in seconds) for single path in DJD-preprocessing (0 -- no time limit).')
     parser.add_argument('-prepbm', '--prepbinmode', nargs='?', type=int, default=0,
                         help='Binarization mode for separate preprocessing')
+    parser.add_argument('-bddms', '--bdd_max_size', nargs='?', type=int, default=100000)
     return parser
 
 
