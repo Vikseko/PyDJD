@@ -467,7 +467,7 @@ def SolvePaths(problem, all_question_pathes, order, timelimit=0):
 def FindGoodTimelimitForPaths(solver, paths, order, start_clauses_checking, inittimelimit):
     timelimit = inittimelimit
     first_sat_time = None
-    sample_size = max(len(paths)//100, 10)
+    sample_size = min(max(len(paths)//100, 10), len(paths))
     solved = 0
     results = []
     new_clauses = []

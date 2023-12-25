@@ -347,22 +347,21 @@ def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd
         print(*problem_biggest_djd, sep='\n')
         start_transform_time = time.time()
         current_problem = problem_biggest_djd
-        remain_problem = [1]
         counter_remain_problems = 0
-        while len(remain_problem) > 0:
+        while len(current_problem) > 0:
             print('\nSize of current problem:', len(current_problem))
-            biggest_bdd_root, max_size, problem_stop_index, remain_problem = Problem2BDD_dd_format_prepmode4(current_problem, bdd_manager, bdd_stop_size, 'DNF')
+            if additional_problem:
+                print('Size of additional problem (unsolved paths from previous BDD):', len(additional_problem))
+                add_bdd_root, add_max_size = Problem2BDD_dd_format(additional_problem, bdd_manager, 'DNF')
+                neg_add_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=add_bdd_root))
+                print('Size of BDD for additional problem:', neg_add_bdd_root.dag_size)
+            biggest_bdd_root, max_size, problem_stop_index, remain_problem = Problem2BDD_dd_format_prepmode4(current_problem, bdd_manager, bdd_stop_size, 'DNF', neg_add_bdd_root)
             print('Transformation to BDD (Apply algorithm) complete. Size {}.'.format(biggest_bdd_root.dag_size))
             print('Used constraints {} of {}.'.format(problem_stop_index, len(current_problem)))
             print('Size of remain problem:', size_remain_problem := len(remain_problem))
             if size_remain_problem > 0:
                 print('Remain problem:', *remain_problem, sep='\n')
             current_problem = remain_problem
-            if additional_problem:
-                print('Size of additional problem (unsolved paths from previous BDD):', len(additional_problem))
-                add_bdd_root, add_max_size = Problem2BDD_dd_format(additional_problem, bdd_manager, 'DNF')
-                neg_add_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=add_bdd_root))
-                biggest_bdd_root = bdd_manager.apply('or', biggest_bdd_root, neg_add_bdd_root)
             print('Time to DJDs->BDDs:', round(time.time() - start_transform_time, 3))
             if biggest_bdd_root.dag_size == 1:
                 print('Problem was solved while applying BDD', counter, 'and additional problem from iteration',
@@ -720,9 +719,11 @@ def Problem2BDD_dd_format(sortedproblem: list, bdd_manager, problem_type='DNF'):
 
 # Подразумевается, что исходная формула всегда КНФ. Если мы строим диаграмму по её отрицанию,
 # то в поле problem_type передаём 'DNF', иначе 'CNF'.
-def Problem2BDD_dd_format_prepmode4(sortedproblem: list, bdd_manager, bdd_max_size, problem_type='DNF'):
+def Problem2BDD_dd_format_prepmode4(sortedproblem: list, bdd_manager, bdd_max_size, problem_type='DNF', neg_add_bdd_root=None):
     first_clause = sortedproblem[0]
     current_problem_root = Clause2BDD_dd_format(first_clause, bdd_manager, problem_type)
+    if neg_add_bdd_root is not None:
+        current_problem_root = bdd_manager.apply('or', current_problem_root, neg_add_bdd_root)
     max_size = current_problem_root.dag_size
     stop_index = len(sortedproblem)
     # print('Clause:', first_clause)
