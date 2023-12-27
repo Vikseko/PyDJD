@@ -355,6 +355,8 @@ def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd
                 add_bdd_root, add_max_size = Problem2BDD_dd_format(additional_problem, bdd_manager, 'DNF')
                 neg_add_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=add_bdd_root))
                 print('Size of BDD for additional problem:', neg_add_bdd_root.dag_size)
+            else:
+                neg_add_bdd_root = None
             biggest_bdd_root, max_size, problem_stop_index, remain_problem = Problem2BDD_dd_format_prepmode4(current_problem, bdd_manager, bdd_stop_size, 'DNF', neg_add_bdd_root)
             print('Transformation to BDD (Apply algorithm) complete. Size {}.'.format(biggest_bdd_root.dag_size))
             print('Used constraints {} of {}.'.format(problem_stop_index, len(current_problem)))
