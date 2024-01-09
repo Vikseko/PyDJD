@@ -49,7 +49,7 @@ def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals
     elif sepdjdprepmode == 3:
         robddsatoracle_mode3(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname)
     elif sepdjdprepmode == 4:
-        robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size)
+        robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, numproc)
 
     # попарно объединяем поддиаграммы пока не останется одна финальная диаграмма
     while len(current_bdd_diagrams) > 1 and not unsat_flag:
@@ -324,7 +324,7 @@ def robddsatoracle_mode3(prepbinmode, diagrams, problem, bdd_manager, order, djd
     exit()
 
 
-def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size):
+def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, numproc):
     # Версия, в которой пути добавляются в диаграмму пока она не слишком распухнет
     assert prepbinmode == 1, 'For third mode of preprocessing, binarization by apply is needed.'
     djdtobdd_sep_start_time = time.time()
@@ -378,10 +378,10 @@ def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd
                 print('\nStart solving paths.')
                 if counter_remain_problems > 0:
                     new_clauses, hard_paths, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
-                                                                                abs(djd_prep_time_limit))
+                                                                                abs(djd_prep_time_limit), numproc)
                 else:
                     new_clauses, hard_paths, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd,
-                                                                                order, djd_prep_time_limit)
+                                                                                order, djd_prep_time_limit, numproc)
                 counter_remain_problems += 1
                 if djd_prep_time_limit > 0:
                     djd_prep_time_limit = timelimit
@@ -393,14 +393,15 @@ def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd
                     additional_problem = hard_paths
                 else:
                     additional_problem = []
-                if 0 < len(remain_problem) < 10:
-                    print('Remain problem is too small. Mark it as additional problem and go to next iteration.')
-                    additional_problem.extend(remain_problem)
-                    print('Hard paths:', *additional_problem, sep='\n')
-                    break
-                else:
-                    print('Hard paths:', *additional_problem, sep='\n')
-                    print('Number of remain paths:', len(remain_problem))
+                if solve_flag is False:
+                    if 0 < len(remain_problem) < 10:
+                        print('Remain problem is too small. Mark it as additional problem and go to next iteration.')
+                        additional_problem.extend(remain_problem)
+                        print('Hard paths:', *additional_problem, sep='\n')
+                        break
+                    else:
+                        print('Hard paths:', *additional_problem, sep='\n')
+                        print('Number of remain paths:', len(remain_problem))
         else:
             print('Iteration finished.')
             print('Current size of CNF:', len(cnf))

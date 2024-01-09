@@ -386,9 +386,8 @@ def SortClauses(clause1, clause2):
     return 0
 
 
-def SolvePaths(problem, all_question_pathes, order, timelimit=0):
+def SolvePaths(problem, all_question_pathes, order, timelimit=0, numproc=1):
     cnf = CNF(from_clauses=problem)
-    g = MapleChrono(bootstrap_with=cnf)
     paths = [sorted(list(path), key=lambda x: order.index(abs(x))) for path in all_question_pathes]
     unsats = 0
     sats = 0
@@ -400,39 +399,53 @@ def SolvePaths(problem, all_question_pathes, order, timelimit=0):
     start_clauses_checking = time.time()
     results = []
     print('Number of paths before finding timelimit:', len(paths))
+    g = MapleChrono(bootstrap_with=cnf)
     if timelimit < 0:
         print('Get negative value of timelimit:', timelimit)
         inittimelimit = abs(timelimit)
         results, paths, new_clauses, timelimit, first_sat_time, models, sats, unsats = FindGoodTimelimitForPaths(g, paths, order,
                                                                                           start_clauses_checking, inittimelimit)
     print('\nTimelimit:', timelimit)
-    for index, assumption in enumerate(paths):
-        st_time_ = time.time()
-        print('Path {} of {}: {}'.format(index + 1, len(paths), assumption), end='')
-        if timelimit == 0:
-            s, model = SolvePath(assumption, g)
-        else:
-            s, model = SolvePathTimelimit(assumption, g, timelimit)
-        end_time_ = round(time.time() - st_time_, 3)
-        solve_times.append(end_time_)
-        results.append([assumption, s, end_time_])
-        if s is False:
-            unsats += 1
-            new_clauses.append([-x for x in assumption])
-            print(' ---> {}, {} s.'.format(s, end_time_))
-        elif s is None:
-            # print('SAT-oracle says None. Go next path.')
-            print(' ---> {}, {} s.'.format(s, end_time_))
-            indet_paths.append(assumption)
-        elif s:
-            sats += 1
-            print(' ---> {}, {} s.'.format(s, end_time_))
-            if sats == 1 and first_sat_time is None:
-                first_sat_time = time.time() - start_clauses_checking
-            print('Problem solved due false path checking.')
-            model.sort(key=lambda x: order.index(abs(x)))
-            print('Model:', model)
-            models.add(tuple(model))
+    if numproc < 2:
+        for index, assumption in enumerate(paths):
+            st_time_ = time.time()
+            print('Path {} of {}: {}'.format(index + 1, len(paths), assumption), end='')
+            if timelimit == 0:
+                s, model = SolvePath(assumption, g)
+            else:
+                s, model = SolvePathTimelimit(assumption, g, timelimit)
+            end_time_ = round(time.time() - st_time_, 3)
+            solve_times.append(end_time_)
+            results.append([assumption, s, end_time_])
+            if s is False:
+                unsats += 1
+                new_clauses.append([-x for x in assumption])
+                print(' ---> {}, {} s.'.format(s, end_time_))
+            elif s is None:
+                # print('SAT-oracle says None. Go next path.')
+                print(' ---> {}, {} s.'.format(s, end_time_))
+                indet_paths.append(assumption)
+            elif s:
+                sats += 1
+                print(' ---> {}, {} s.'.format(s, end_time_))
+                if sats == 1 and first_sat_time is None:
+                    first_sat_time = time.time() - start_clauses_checking
+                print('Problem solved due false path checking.')
+                model.sort(key=lambda x: order.index(abs(x)))
+                print('Model:', model)
+                models.add(tuple(model))
+    else:
+        print('Number of processes', numproc)
+        enum_paths = list(enumerate(paths))
+        sats_, unsats_, results_, models_, new_clauses_, indet_paths_, solve_flag = PathsSolvingTimelimit_mp(enum_paths, numproc, cnf, timelimit)
+        sats += sats_
+        unsats += unsats_
+        results.extend(results_)
+        if models_:
+            models.update(models_)
+        new_clauses.extend(new_clauses_)
+        indet_paths.extend(indet_paths_)
+        solve_times = [x[2] for x in results]
     print('\nResults (sorted):')
     print(*sorted(results, key=lambda x: (x[2], x[0])), sep='\n')
     if models:
@@ -605,3 +618,164 @@ def WritePaths_dd(levels_vars_dict, bdd_dict, clause, node, question_paths, mult
         WritePaths_dd(levels_vars_dict, bdd_dict, pos_clause, pos_child, question_paths, pos_multiplier)
 
 
+def PathsSolvingTimelimit_mp(enum_paths, numproc, cnf, tlim):
+    new_clauses = []
+    next_iter_paths = []
+    sats = 0
+    unsats = 0
+    results = []
+    parts_q_pathes = chunks(enum_paths, round_up(len(enum_paths) / numproc))
+    nof_paths = len(enum_paths)
+    p = multiprocessing.Pool(numproc)
+    jobs = [p.apply_async(PathSolvingTimelimit_mp, (part, cnf, tlim, nof_paths)) for part in parts_q_pathes]
+    model = None
+    solved = False
+    for job in jobs:
+        result = job.get()
+        if (len(result) == 3) and (result[0] == 'True'):
+            solved = True
+            model = result[1]
+            break
+        else:
+            new_clauses.extend(result[0])
+            next_iter_paths.extend(result[1])
+            sats += result[2]
+            unsats += result[3]
+            results.extend(result[4])
+    p.close()
+    p.join()
+    return sats, unsats, results, model, new_clauses, next_iter_paths, solved
+
+
+def PathSolvingTimelimit_mp(part, cnf, timelim, nof_paths):
+    solver = MapleChrono(bootstrap_with=cnf)
+    new_clauses = []
+    indet_paths = []
+    results = []
+    sats = 0
+    unsats = 0
+    for counter, assumption in part:
+        timer = Timer(timelim, interrupt, [solver])
+        timer.start()
+        start_time = time.time()
+        s = solver.solve_limited(assumptions=assumption, expect_interrupt=True)
+        solver.clear_interrupt()
+        timer.cancel()
+        print('Path {} of {}: {} ---> {}, {} s.'.format(counter, nof_paths, assumption, s, time.time() - start_time))
+        if s is None:
+            indet_paths.append(assumption)
+            results.append([assumption, s, time.time() - start_time])
+        elif s is False:
+            unsats += 1
+            new_clauses.append([-x for x in assumption])
+            results.append([assumption, s, time.time() - start_time])
+        elif s is True:
+            sats += 1
+            model = solver.get_model()
+            results.append([assumption, s, time.time() - start_time])
+            return ['True', model, log]
+    #q.put(new_clauses)
+    return [new_clauses, indet_paths, sats, unsats, results]
+
+
+def CheckPaths_mp(diagram, all_question_pathes, numproc, timelim, rounds=1):
+    cnf, tmp_ = GetCNFFromDiagram(diagram)
+    start_clauses_checking = time.time()
+    question_paths_for_check = copy.copy(all_question_pathes)
+    solved = False
+    for i in range(rounds):
+        new_clauses = []
+        next_iter_paths = []
+        parts_q_pathes = chunks(question_paths_for_check, round_up(len(question_paths_for_check)/numproc))
+        print()
+        print('Start round', i)
+        print('Current number of paths to check:', len(question_paths_for_check))
+        p = multiprocessing.Pool(numproc)
+        jobs = [p.apply_async(PathesCheck_mp, (part, cnf, timelim)) for part in parts_q_pathes]
+        model = None
+        for job in jobs:
+            result = job.get()
+            if (len(result) == 2) and (result[0] == 'True'):
+                solved = True
+                model = result[1]
+                break
+            else:
+                new_clauses.extend(result[0])
+                next_iter_paths.extend(result[1])
+        p.close()
+        p.join()
+        print('Checking paths complete.')
+        if solved == True:
+            print('Problem was solved.')
+            print('Model:', model)
+            break
+        else:
+            cnf.extend(new_clauses)
+            print('Complete iteration:', i)
+            print('Number of new clauses:'.ljust(30,' '), len(new_clauses))
+            if len(next_iter_paths) < 2:
+                print('No more question paths to check.')
+                print('Total DJD-prep time:', time.time() - start_clauses_checking)
+                break
+            if i == rounds - 1:
+                print('Total DJD-prep time:', time.time() - start_clauses_checking)
+            else:
+                # v1
+                # chunks_paths = list(chunks(next_iter_paths, 2))
+                # if len(chunks_paths[-1]) < 2:
+                #    chunks_paths[-1] = [next_iter_paths[-2], next_iter_paths[-1]]
+                # question_paths_for_check = [sorted(list(set(flatten(pair))), key = abs) for pair in chunks_paths]
+                # v2
+                # chunks_paths = list(make_pairs(random.sample(next_iter_paths, int(len(next_iter_paths)/100)), random.sample(next_iter_paths, int(len(next_iter_paths)/100))))
+                # v3
+                question_paths_for_check = next_iter_paths
+                print('Current DJD-prep time:', time.time() - start_clauses_checking)
+    cnf = CNF(from_clauses=cnf)
+    return cnf, new_clauses
+
+
+def PathesCheck_mp(part_lit_paths, cnf, timelim):
+    cnf = CNF(from_clauses=cnf)
+    solver = MapleChrono(bootstrap_with=cnf)
+    new_clauses = []
+    indet_paths = []
+    counter = 0
+    for lit_path in part_lit_paths:
+        counter += 1
+        #print('hi', counter, lit_path)
+        timer = Timer(timelim, interrupt, [solver])
+        timer.start()
+        s = solver.solve_limited(assumptions = lit_path, expect_interrupt=True)
+        solver.clear_interrupt()
+        #timer.cancel()
+        if s == None:
+            #print('true')
+            indet_paths.append(lit_path)
+            continue
+        elif s == False:
+            #print('true')
+            new_clauses.append([-x for x in lit_path])
+        elif s == True:
+            #print('true')
+            model = solver.get_model()
+            return ['True', model]
+    #q.put(new_clauses)
+    return [new_clauses, indet_paths]
+
+
+def chunks(lst, n):
+    for i in range(0, len(lst), n):
+        yield tuple(lst[i:i + n])
+
+
+def round_up(number): return int(number) + (number % 1 > 0)
+
+
+def flatten(l):
+    return [item for sublist in l for item in sublist]
+
+
+def make_pairs(*lists):
+    for t in combinations(lists, 2):
+        for pair in product(*t):
+            yield pair
