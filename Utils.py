@@ -169,6 +169,22 @@ def DivideProblem(problem, order):
     return problems
 
 
+def DJDproblems2subproblems(DJDproblems_sorted, mode):
+    problems = copy.deepcopy(DJDproblems_sorted)
+    subproblems = []
+    while problems:
+        if mode == 'longest':
+            subproblem = [x.pop(x.index(max(x))) for x in problems]
+        elif mode == 'shortest':
+            subproblem = [x.pop(x.index(min(x))) for x in problems]
+        else:
+            raise Exception('ERROR Unknown mode for constructing subproblems.' + str(mode))
+        subproblems.append(sorted(subproblem))
+        problems = [x for x in problems if x]
+    subproblems.reverse()
+    return subproblems
+
+
 def GetInputs(problem_comments, nof_intervals):
     if nof_intervals > 0:
         for comment in problem_comments:
