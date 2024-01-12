@@ -179,7 +179,7 @@ def DJDproblems2subproblems(DJDproblems_sorted, mode):
             subproblem = [x.pop(x.index(min(x))) for x in problems]
         else:
             raise Exception('ERROR Unknown mode for constructing subproblems.' + str(mode))
-        subproblems.append(sorted(subproblem))
+        subproblems.append(sorted(subproblem, key=len, reverse=True))
         problems = [x for x in problems if x]
     subproblems.reverse()
     return subproblems
