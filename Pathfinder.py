@@ -495,7 +495,10 @@ def FindGoodTimelimitForPaths(solver, paths, order, start_clauses_checking, init
     while solved < border:
         print('\nCurrent timelimit:', timelimit)
         solved = 0
-        sample = [paths.pop(random.randrange(len(paths))) for _ in range(sample_size)]
+        if len(paths) > sample_size:
+            sample = [paths.pop(random.randrange(len(paths))) for _ in range(sample_size)]
+        else:
+            sample = paths
         for assumption in sample:
             st_time_ = time.time()
             print('Path from sample: {}'.format(assumption), end='')
