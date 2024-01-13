@@ -499,6 +499,7 @@ def FindGoodTimelimitForPaths(solver, paths, order, start_clauses_checking, init
             sample = [paths.pop(random.randrange(len(paths))) for _ in range(sample_size)]
         else:
             sample = paths
+            paths = []
         for assumption in sample:
             st_time_ = time.time()
             print('Path from sample: {}'.format(assumption), end='')
