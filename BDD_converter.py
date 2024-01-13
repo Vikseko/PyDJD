@@ -52,6 +52,8 @@ def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals
         robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, numproc)
     elif sepdjdprepmode == 5:
         robddsatoracle_mode5(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, numproc)
+    elif sepdjdprepmode == 6:
+        robddsatoracle_mode6(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, numproc)
 
     # попарно объединяем поддиаграммы пока не останется одна финальная диаграмма
     while len(current_bdd_diagrams) > 1 and not unsat_flag:
