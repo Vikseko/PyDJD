@@ -581,6 +581,45 @@ def GetPathsToFalse_ddformat(logpath, bdd_root, bdd_manager):
     return question_paths
 
 
+def GetPathsToFalse_ddformat_traversal(logpath, bdd_root, bdd_manager, order):
+    false_paths = set()
+
+    def dfs(node, path, negate_flag):
+        if str(node) == '@-1' or str(node) == '@1':
+            if (negate_flag and str(node) == '@1') or (not negate_flag and str(node) == '@-1'):
+                false_paths.add(tuple(path))
+            return
+        if '-' in str(node):
+            negate_flag = bool_reverse(negate_flag)
+        level, low, high = bdd_manager.succ(node)
+        variable = int(bdd_manager.var_at_level(level)[1:])
+        dfs(low, path + [-variable], negate_flag)
+        dfs(high, path + [variable], negate_flag)
+
+    dfs(bdd_root, [], False)
+    return false_paths
+
+
+def CountPathsInBDD(logpath, bdd_root, bdd_manager):
+    paths_counter = [0, 0]
+
+    def dfs(node, negate_flag):
+        if str(node) == '@-1' or str(node) == '@1':
+            if (negate_flag and str(node) == '@1') or (not negate_flag and str(node) == '@-1'):
+                paths_counter[0] += 1
+            else:
+                paths_counter[1] += 1
+            return
+        if '-' in str(node):
+            negate_flag = bool_reverse(negate_flag)
+        level, low, high = bdd_manager.succ(node)
+        dfs(low, negate_flag)
+        dfs(high, negate_flag)
+
+    dfs(bdd_root, False)
+    return paths_counter
+
+
 def WritePaths_dd(levels_vars_dict, bdd_dict, clause, node, question_paths, multiplier):
     node_level = node[0]
     node_var = int(levels_vars_dict[node_level][1:])

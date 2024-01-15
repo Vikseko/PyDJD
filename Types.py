@@ -394,3 +394,5 @@ class Options:
         self.ep_flag = 1
         self.ep_order = 'direct'
         self.sep_djd_prep = 0
+        self.bdd_max_size = 1000000
+        self.bdd_max_paths = 10000

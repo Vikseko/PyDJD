@@ -14,8 +14,17 @@ from Types import DiagramNode
 import queue
 
 
-def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals, pbiorder, inputs, ep_order, cnfname, sepdjdprepmode=0, djd_prep_time_limit=0, prepbinmode=0, binmode=0, bdd_stop_size=100000):
-    current_djd_diagrams = diagrams
+def DJDtoBDD_separated(problem, diagrams, order, logpath, inputs, options):
+    numproc = options.numprocess
+    nof_intervals = options.pbintervals
+    pbiorder = options.pbiorder
+    ep_order = options.ep_order
+    cnfname = options.name
+    sepdjdprepmode = options.sep_djd_prep
+    djd_prep_time_limit = options.djd_prep_time_limit
+    prepbinmode = options.prepbinmode
+    bdd_stop_size = options.bdd_max_size
+    bdd_max_paths = options.bdd_max_paths
     djdtobdd_sep_start_time = time.time()
     counter = 0
     sys.setrecursionlimit(100000)
@@ -49,11 +58,11 @@ def DJDtoBDD_separated(problem, diagrams, numproc, order, logpath, nof_intervals
     elif sepdjdprepmode == 3:
         robddsatoracle_mode3(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname)
     elif sepdjdprepmode == 4:
-        robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, numproc)
+        robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, bdd_max_paths, numproc)
     elif sepdjdprepmode == 5:
-        robddsatoracle_mode5(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, numproc)
+        robddsatoracle_mode5(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, bdd_max_paths, numproc)
     elif sepdjdprepmode == 6:
-        robddsatoracle_mode6(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, numproc)
+        robddsatoracle_mode6(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, bdd_max_paths, numproc)
 
     # попарно объединяем поддиаграммы пока не останется одна финальная диаграмма
     while len(current_bdd_diagrams) > 1 and not unsat_flag:
@@ -328,7 +337,7 @@ def robddsatoracle_mode3(prepbinmode, diagrams, problem, bdd_manager, order, djd
     exit()
 
 
-def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, numproc):
+def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, bdd_max_paths, numproc):
     # Версия, в которой пути добавляются в диаграмму пока она не слишком распухнет
     assert prepbinmode == 1, 'For mode 4 of preprocessing, binarization by apply is needed.'
     djdtobdd_sep_start_time = time.time()
@@ -361,7 +370,7 @@ def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd
                 print('Size of BDD for additional problem:', neg_add_bdd_root.dag_size)
             else:
                 neg_add_bdd_root = None
-            biggest_bdd_root, max_size, problem_stop_index, remain_problem = Problem2BDD_dd_format_prepmode4(current_problem, bdd_manager, bdd_stop_size, 'DNF', neg_add_bdd_root)
+            biggest_bdd_root, max_size, problem_stop_index, remain_problem = Problem2BDD_dd_format_prepmode4(current_problem, bdd_manager, bdd_stop_size, bdd_max_paths, 'DNF', neg_add_bdd_root)
             print('Transformation to BDD (Apply algorithm) complete. Size {}.'.format(biggest_bdd_root.dag_size))
             print('Used constraints {} of {}.'.format(problem_stop_index, len(current_problem)))
             print('Size of remain problem:', size_remain_problem := len(remain_problem))
@@ -377,8 +386,8 @@ def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd
                 print('Negated root expression (for original CNF):', neg_biggest_bdd_root.to_expr())
                 solve_flag = True
             else:
-                question_pathes_in_biggest_bdd = GetPathsToFalse_ddformat(logpath, biggest_bdd_root, bdd_manager)
-                print('\nNumber of paths to \"0\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
+                question_pathes_in_biggest_bdd = GetPathsToFalse_ddformat_traversal(logpath, biggest_bdd_root, bdd_manager, order)
+                print('\nNumber of paths in subBDD traversal: to False is {}, to True is {}.'.format(*CountPathsInBDD(logpath, biggest_bdd_root, bdd_manager)))
                 print('\nStart solving paths.')
                 if counter_remain_problems > 0:
                     new_clauses, hard_paths, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
@@ -422,7 +431,8 @@ def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd
         print('Time for solving:', round(time.time() - djdtobdd_sep_start_time, 3))
     exit()
 
-def robddsatoracle_mode5(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, numproc):
+
+def robddsatoracle_mode5(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, bdd_max_paths, numproc):
     # Версия, в которой пути добавляются в диаграмму пока она не слишком распухнет
     assert prepbinmode == 1, 'For mode 5 of preprocessing, binarization by apply is needed.'
     djdtobdd_sep_start_time = time.time()
@@ -456,7 +466,7 @@ def robddsatoracle_mode5(prepbinmode, diagrams, problem, bdd_manager, order, djd
                 print('Size of BDD for additional problem:', neg_add_bdd_root.dag_size)
             else:
                 neg_add_bdd_root = None
-            biggest_bdd_root, max_size, problem_stop_index, remain_problem = Problem2BDD_dd_format_prepmode4(current_problem, bdd_manager, bdd_stop_size, 'DNF', neg_add_bdd_root)
+            biggest_bdd_root, max_size, problem_stop_index, remain_problem = Problem2BDD_dd_format_prepmode4(current_problem, bdd_manager, bdd_stop_size, bdd_max_paths, 'DNF', neg_add_bdd_root)
             print('Transformation to BDD (Apply algorithm) complete. Size {}.'.format(biggest_bdd_root.dag_size))
             print('Used constraints {} of {}.'.format(problem_stop_index, len(current_problem)))
             print('Size of remain problem:', size_remain_problem := len(remain_problem))
@@ -472,8 +482,10 @@ def robddsatoracle_mode5(prepbinmode, diagrams, problem, bdd_manager, order, djd
                 print('Negated root expression (for original CNF):', neg_biggest_bdd_root.to_expr())
                 solve_flag = True
             else:
-                question_pathes_in_biggest_bdd = GetPathsToFalse_ddformat(logpath, biggest_bdd_root, bdd_manager)
-                print('\nNumber of paths to \"0\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
+                question_pathes_in_biggest_bdd = GetPathsToFalse_ddformat_traversal(logpath, biggest_bdd_root,
+                                                                                    bdd_manager, order)
+                print('\nNumber of paths in subBDD traversal: to False is {}, to True is {}.'.format(
+                    *CountPathsInBDD(logpath, biggest_bdd_root, bdd_manager)))
                 print('\nStart solving paths.')
                 if counter_remain_problems > 0:
                     new_clauses, hard_paths, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
@@ -518,7 +530,7 @@ def robddsatoracle_mode5(prepbinmode, diagrams, problem, bdd_manager, order, djd
     exit()
 
 
-def robddsatoracle_mode6(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, numproc):
+def robddsatoracle_mode6(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, bdd_max_paths, numproc):
     # Версия, в которой пути добавляются в диаграмму пока она не слишком распухнет
     assert prepbinmode == 1, 'For mode 6 of preprocessing, binarization by apply is needed.'
     djdtobdd_sep_start_time = time.time()
@@ -552,7 +564,7 @@ def robddsatoracle_mode6(prepbinmode, diagrams, problem, bdd_manager, order, djd
                 print('Size of BDD for additional problem:', neg_add_bdd_root.dag_size)
             else:
                 neg_add_bdd_root = None
-            biggest_bdd_root, max_size, problem_stop_index, remain_problem = Problem2BDD_dd_format_prepmode4(current_problem, bdd_manager, bdd_stop_size, 'DNF', neg_add_bdd_root)
+            biggest_bdd_root, max_size, problem_stop_index, remain_problem = Problem2BDD_dd_format_prepmode4(current_problem, bdd_manager, bdd_stop_size, bdd_max_paths, 'DNF', neg_add_bdd_root)
             print('Transformation to BDD (Apply algorithm) complete. Size {}.'.format(biggest_bdd_root.dag_size))
             print('Used constraints {} of {}.'.format(problem_stop_index, len(current_problem)))
             print('Size of remain problem:', size_remain_problem := len(remain_problem))
@@ -568,8 +580,10 @@ def robddsatoracle_mode6(prepbinmode, diagrams, problem, bdd_manager, order, djd
                 print('Negated root expression (for original CNF):', neg_biggest_bdd_root.to_expr())
                 solve_flag = True
             else:
-                question_pathes_in_biggest_bdd = GetPathsToFalse_ddformat(logpath, biggest_bdd_root, bdd_manager)
-                print('\nNumber of paths to \"0\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
+                question_pathes_in_biggest_bdd = GetPathsToFalse_ddformat_traversal(logpath, biggest_bdd_root,
+                                                                                    bdd_manager, order)
+                print('\nNumber of paths in subBDD traversal: to False is {}, to True is {}.'.format(
+                    *CountPathsInBDD(logpath, biggest_bdd_root, bdd_manager)))
                 print('\nStart solving paths.')
                 if counter_remain_problems > 0:
                     new_clauses, hard_paths, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
@@ -848,7 +862,7 @@ def DJDtoBDD_separated_dd_package_only(problem, order, problem_comments, nof_int
                 print('Vertex:', bdd_manager.to_expr(current_root))
                 indices_unsat.append(fun_index + 1)
                 break
-            if bdd_max_size > 50000000:
+            if bdd_max_size > 25000000:
                 print('STOP. BDD is too big. PBI index:', pbi_index)
                 exit()
         final_roots.append(current_root)
@@ -918,7 +932,7 @@ def Problem2BDD_dd_format(sortedproblem: list, bdd_manager, problem_type='DNF'):
 
 # Подразумевается, что исходная формула всегда КНФ. Если мы строим диаграмму по её отрицанию,
 # то в поле problem_type передаём 'DNF', иначе 'CNF'.
-def Problem2BDD_dd_format_prepmode4(sortedproblem: list, bdd_manager, bdd_max_size, problem_type='DNF', neg_add_bdd_root=None):
+def Problem2BDD_dd_format_prepmode4(sortedproblem: list, bdd_manager, bdd_max_size, bdd_max_paths, problem_type='DNF', neg_add_bdd_root=None):
     first_clause = sortedproblem[0]
     current_problem_root = Clause2BDD_dd_format(first_clause, bdd_manager, problem_type)
     if neg_add_bdd_root is not None:
@@ -941,6 +955,10 @@ def Problem2BDD_dd_format_prepmode4(sortedproblem: list, bdd_manager, bdd_max_si
                 max_size = current_problem_root.dag_size
 
             if max_size > bdd_max_size:
+                final_root = previous_root
+                stop_index = index
+                break
+            elif CountPathsInBDD(None, current_problem_root, bdd_manager)[0] > bdd_max_paths:
                 final_root = previous_root
                 stop_index = index
                 break

@@ -222,6 +222,11 @@ def SortProblem(problem, order):
     return problem
 
 
+def bool_reverse(boolean):
+    assert type(boolean) == bool
+    return False if boolean is True else True
+
+
 def CreateLogDir(options):
     current_dir = os.getcwd()
     logs_dir = os.path.join(current_dir, 'Logs')
@@ -278,6 +283,7 @@ def ParseOptions(params):
     options.djd_prep_time_limit = params.djd_prep_time_limit
     options.prepbinmode = params.prepbinmode
     options.bdd_max_size = params.bdd_max_size
+    options.bdd_max_paths = params.bdd_max_paths
     return options
 
 
@@ -305,6 +311,7 @@ def PrintOptions(options):
     print('Binarization mode for preprocessing:', options.prepbinmode)
     print('Time limit for single path in DJD-preprocessing:', options.djd_prep_time_limit)
     print('Maximum BDD size:', options.bdd_max_size)
+    print('Maximum number of False paths in subBDD:', options.bdd_max_paths)
     print('Lock variables:', options.lock_vars)
     print('Number of Pseudo-Boolean Intervals:', options.pbintervals)
     print('Order for solving PBIs:', options.pbiorder)
