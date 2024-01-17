@@ -704,7 +704,7 @@ def PathSolvingTimelimit_mp(part, cnf, timelim, nof_paths):
         s = solver.solve_limited(assumptions=assumption, expect_interrupt=True)
         solver.clear_interrupt()
         timer.cancel()
-        print('Path {} of {}: {} ---> {}, {} s.'.format(counter, nof_paths, assumption, s, time.time() - start_time))
+        print('Path {} of {}: {} ---> {}, {} s.'.format(counter, nof_paths, assumption, s, round(time.time() - start_time, 3)))
         if s is None:
             indet_paths.append(assumption)
             results.append([assumption, s, time.time() - start_time])

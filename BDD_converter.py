@@ -361,7 +361,7 @@ def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd
         start_transform_time = time.time()
         current_problem = problem_biggest_djd
         counter_remain_problems = 0
-        while len(current_problem) > 0:
+        while solve_flag is False and len(current_problem) > 0:
             print('\nSize of current problem:', len(current_problem))
             if additional_problem:
                 print('Size of additional problem (unsolved paths from previous BDD):', len(additional_problem))
@@ -457,7 +457,7 @@ def robddsatoracle_mode5(prepbinmode, diagrams, problem, bdd_manager, order, djd
         start_transform_time = time.time()
         current_problem = current_subproblem
         counter_remain_problems = 0
-        while len(current_problem) > 0:
+        while solve_flag is False and len(current_problem) > 0:
             print('\nSize of current problem:', len(current_problem))
             if additional_problem:
                 print('Size of additional problem (unsolved paths from previous BDD):', len(additional_problem))
@@ -555,7 +555,7 @@ def robddsatoracle_mode6(prepbinmode, diagrams, problem, bdd_manager, order, djd
         start_transform_time = time.time()
         current_problem = current_subproblem
         counter_remain_problems = 0
-        while len(current_problem) > 0:
+        while solve_flag is False and len(current_problem) > 0:
             print('\nSize of current problem:', len(current_problem))
             if additional_problem:
                 print('Size of additional problem (unsolved paths from previous BDD):', len(additional_problem))
