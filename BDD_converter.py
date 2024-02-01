@@ -184,7 +184,7 @@ def robddsatoracle_mode1(prepbinmode, diagrams, problem, bdd_manager, order, djd
     print('Paths:', *question_pathes_in_biggest_bdd, sep='\n')
     print('\nStart solving paths.')
     cnf = NegateProblem(problem)
-    new_clauses, indet_clauses, solveflag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd, order, djd_prep_time_limit)
+    new_clauses, indet_clauses, solveflag, timelimit, seq_time = SolvePaths(cnf, question_pathes_in_biggest_bdd, order, djd_prep_time_limit)
     if solveflag is False:
         print('Problem was not solved. Save to file with new clauses.')
         cnf.extend(new_clauses)
@@ -202,6 +202,7 @@ def robddsatoracle_mode1(prepbinmode, diagrams, problem, bdd_manager, order, djd
 def robddsatoracle_mode2(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname):
     assert prepbinmode == 1, 'For second mode of preprocessing, binarization by apply is needed.'
     djdtobdd_sep_start_time = time.time()
+    seq_times = []
     # сортируем диаграммы по размеру от самой маленькой к самой большой
     sorted_djds = sorted(diagrams, key=lambda x: x.VertexCount())
     solve_flag = False
@@ -237,8 +238,9 @@ def robddsatoracle_mode2(prepbinmode, diagrams, problem, bdd_manager, order, djd
             question_pathes_in_biggest_bdd = GetPathsToFalse_ddformat(logpath, biggest_bdd_root, bdd_manager)
             print('\nNumber of paths to \"0\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
             print('\nStart solving paths.')
-            new_clauses, indet_clauses, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
+            new_clauses, indet_clauses, solve_flag, timelimit, seq_time = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
                                                                 djd_prep_time_limit)
+            seq_times.append(seq_time)
             if new_clauses:
                 cnf.extend(new_clauses)
             if indet_clauses:
@@ -253,6 +255,7 @@ def robddsatoracle_mode2(prepbinmode, diagrams, problem, bdd_manager, order, djd
         result_cnf.to_file(logpath + cnfname + '_djdprep_mode2.cnf')
     else:
         print('Problem was solved due paths checking. Exit.')
+    print('Sequential time for solving paths:', round(sum(seq_times), 3))
     print('Time for preprocessing:', round(time.time() - djdtobdd_sep_start_time, 3))
     exit()
 
@@ -260,6 +263,7 @@ def robddsatoracle_mode2(prepbinmode, diagrams, problem, bdd_manager, order, djd
 def robddsatoracle_mode3(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname):
     assert prepbinmode == 1, 'For third mode of preprocessing, binarization by apply is needed.'
     djdtobdd_sep_start_time = time.time()
+    seq_times = []
     # сортируем диаграммы по размеру от самой маленькой к самой большой
     sorted_djds = sorted(diagrams, key=lambda x: x.VertexCount())
     solve_flag = False
@@ -292,8 +296,9 @@ def robddsatoracle_mode3(prepbinmode, diagrams, problem, bdd_manager, order, djd
             question_pathes_in_biggest_bdd = GetPathsToFalse_ddformat(logpath, biggest_bdd_root, bdd_manager)
             print('\nNumber of paths to \"0\" in biggest subBDD:', len(question_pathes_in_biggest_bdd))
             print('\nStart solving paths.')
-            new_clauses, indet_clauses, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
+            new_clauses, indet_clauses, solve_flag, timelimit, seq_time = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
                                                                 djd_prep_time_limit)
+            seq_times.append(seq_time)
             if new_clauses:
                 cnf.extend(new_clauses)
             if indet_clauses:
@@ -318,8 +323,9 @@ def robddsatoracle_mode3(prepbinmode, diagrams, problem, bdd_manager, order, djd
                 question_pathes_in_add_bdd = GetPathsToFalse_ddformat(logpath, neg_add_bdd_root, bdd_manager)
                 print('\nNumber of paths to \"0\" in additional subBDD:', len(question_pathes_in_add_bdd))
                 print('\nStart solving additional paths.')
-                new_clauses, indet_clauses, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_add_bdd, order,
+                new_clauses, indet_clauses, solve_flag, timelimit, seq_time = SolvePaths(cnf, question_pathes_in_add_bdd, order,
                                                                     djd_prep_time_limit)
+                seq_times.append(seq_time)
                 if new_clauses:
                     cnf.extend(new_clauses)
                 if indet_clauses:
@@ -333,6 +339,7 @@ def robddsatoracle_mode3(prepbinmode, diagrams, problem, bdd_manager, order, djd
         result_cnf.to_file(logpath + cnfname + '_djdprep_mode3.cnf')
     else:
         print('Problem was solved due paths checking. Exit.')
+    print('Sequential time for solving paths:', round(sum(seq_times), 3))
     print('Time for preprocessing:', round(time.time() - djdtobdd_sep_start_time, 3))
     exit()
 
@@ -341,6 +348,7 @@ def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd
     # Версия, в которой пути добавляются в диаграмму пока она не слишком распухнет
     assert prepbinmode == 1, 'For mode 4 of preprocessing, binarization by apply is needed.'
     djdtobdd_sep_start_time = time.time()
+    seq_times = []
     # сортируем диаграммы по размеру от самой маленькой к самой большой
     sorted_djds = sorted(diagrams, key=lambda x: x.VertexCount())
     solve_flag = False
@@ -390,11 +398,13 @@ def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd
                 print('\nNumber of paths in subBDD traversal: to False is {}, to True is {}.'.format(*CountPathsInBDD(logpath, biggest_bdd_root, bdd_manager)))
                 print('\nStart solving paths.')
                 if counter_remain_problems > 0:
-                    new_clauses, hard_paths, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
+                    new_clauses, hard_paths, solve_flag, timelimit, seq_time = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
                                                                                 abs(djd_prep_time_limit), numproc)
                 else:
-                    new_clauses, hard_paths, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd,
+                    new_clauses, hard_paths, solve_flag, timelimit, seq_time = SolvePaths(cnf, question_pathes_in_biggest_bdd,
                                                                                 order, djd_prep_time_limit, numproc)
+                seq_times.append(seq_time)
+                print('Seq times', seq_times)
                 counter_remain_problems += 1
                 if djd_prep_time_limit > 0:
                     djd_prep_time_limit = timelimit
@@ -425,9 +435,11 @@ def robddsatoracle_mode4(prepbinmode, diagrams, problem, bdd_manager, order, djd
         print(logpath + 'djdprep_mode2.cnf')
         result_cnf = CNF(from_clauses=cnf)
         result_cnf.to_file(logpath + cnfname + '_djdprep_mode3.cnf')
+        print('Sequential time for solving paths:', round(sum(seq_times), 3))
         print('Time for preprocessing:', round(time.time() - djdtobdd_sep_start_time, 3))
     else:
         print('Problem was solved due paths checking. Exit.')
+        print('Sequential time for solving paths:', round(sum(seq_times), 3))
         print('Time for solving:', round(time.time() - djdtobdd_sep_start_time, 3))
     exit()
 
@@ -436,6 +448,7 @@ def robddsatoracle_mode5(prepbinmode, diagrams, problem, bdd_manager, order, djd
     # Версия, в которой пути добавляются в диаграмму пока она не слишком распухнет
     assert prepbinmode == 1, 'For mode 5 of preprocessing, binarization by apply is needed.'
     djdtobdd_sep_start_time = time.time()
+    seq_times = []
     # сортируем диаграммы по размеру от самой маленькой к самой большой
     sorted_djds = sorted(diagrams, key=lambda x: x.VertexCount())
     solve_flag = False
@@ -488,11 +501,12 @@ def robddsatoracle_mode5(prepbinmode, diagrams, problem, bdd_manager, order, djd
                     *CountPathsInBDD(logpath, biggest_bdd_root, bdd_manager)))
                 print('\nStart solving paths.')
                 if counter_remain_problems > 0:
-                    new_clauses, hard_paths, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
+                    new_clauses, hard_paths, solve_flag, timelimit, seq_time = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
                                                                                 abs(djd_prep_time_limit), numproc)
                 else:
-                    new_clauses, hard_paths, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd,
+                    new_clauses, hard_paths, solve_flag, timelimit, seq_time = SolvePaths(cnf, question_pathes_in_biggest_bdd,
                                                                                 order, djd_prep_time_limit, numproc)
+                seq_times.append(seq_time)
                 counter_remain_problems += 1
                 if djd_prep_time_limit > 0:
                     djd_prep_time_limit = timelimit
@@ -523,9 +537,11 @@ def robddsatoracle_mode5(prepbinmode, diagrams, problem, bdd_manager, order, djd
         print(logpath + 'djdprep_mode2.cnf')
         result_cnf = CNF(from_clauses=cnf)
         result_cnf.to_file(logpath + cnfname + '_djdprep_mode3.cnf')
+        print('Sequential time for solving paths:', round(sum(seq_times), 3))
         print('Time for preprocessing:', round(time.time() - djdtobdd_sep_start_time, 3))
     else:
         print('Problem was solved due paths checking. Exit.')
+        print('Sequential time for solving paths:', round(sum(seq_times), 3))
         print('Time for solving:', round(time.time() - djdtobdd_sep_start_time, 3))
     exit()
 
@@ -534,6 +550,7 @@ def robddsatoracle_mode6(prepbinmode, diagrams, problem, bdd_manager, order, djd
     # Версия, в которой пути добавляются в диаграмму пока она не слишком распухнет
     assert prepbinmode == 1, 'For mode 6 of preprocessing, binarization by apply is needed.'
     djdtobdd_sep_start_time = time.time()
+    seq_times = []
     # сортируем диаграммы по размеру от самой маленькой к самой большой
     sorted_djds = sorted(diagrams, key=lambda x: x.VertexCount())
     solve_flag = False
@@ -586,11 +603,12 @@ def robddsatoracle_mode6(prepbinmode, diagrams, problem, bdd_manager, order, djd
                     *CountPathsInBDD(logpath, biggest_bdd_root, bdd_manager)))
                 print('\nStart solving paths.')
                 if counter_remain_problems > 0:
-                    new_clauses, hard_paths, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
+                    new_clauses, hard_paths, solve_flag, timelimit, seq_time = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
                                                                                 abs(djd_prep_time_limit), numproc)
                 else:
-                    new_clauses, hard_paths, solve_flag, timelimit = SolvePaths(cnf, question_pathes_in_biggest_bdd,
+                    new_clauses, hard_paths, solve_flag, timelimit, seq_time = SolvePaths(cnf, question_pathes_in_biggest_bdd,
                                                                                 order, djd_prep_time_limit, numproc)
+                seq_times.append(seq_time)
                 counter_remain_problems += 1
                 if djd_prep_time_limit > 0:
                     djd_prep_time_limit = timelimit
@@ -621,9 +639,11 @@ def robddsatoracle_mode6(prepbinmode, diagrams, problem, bdd_manager, order, djd
         print(logpath + 'djdprep_mode2.cnf')
         result_cnf = CNF(from_clauses=cnf)
         result_cnf.to_file(logpath + cnfname + '_djdprep_mode3.cnf')
+        print('Sequential time for solving paths:', round(sum(seq_times), 3))
         print('Time for preprocessing:', round(time.time() - djdtobdd_sep_start_time, 3))
     else:
         print('Problem was solved due paths checking. Exit.')
+        print('Sequential time for solving paths:', round(sum(seq_times), 3))
         print('Time for solving:', round(time.time() - djdtobdd_sep_start_time, 3))
     exit()
 
@@ -933,10 +953,17 @@ def Problem2BDD_dd_format(sortedproblem: list, bdd_manager, problem_type='DNF'):
 # Подразумевается, что исходная формула всегда КНФ. Если мы строим диаграмму по её отрицанию,
 # то в поле problem_type передаём 'DNF', иначе 'CNF'.
 def Problem2BDD_dd_format_prepmode4(sortedproblem: list, bdd_manager, bdd_max_size, bdd_max_paths, problem_type='DNF', neg_add_bdd_root=None):
+    print('\nStart constructing BDD by subproblem.')
+    print('Problem size:', len(sortedproblem))
+    print('BDD maximum size:', bdd_max_size)
+    print('BDD maximum paths to 0:', bdd_max_paths)
     first_clause = sortedproblem[0]
     current_problem_root = Clause2BDD_dd_format(first_clause, bdd_manager, problem_type)
+    print('Initial clause was encoded, current BDD size:', current_problem_root.dag_size)
     if neg_add_bdd_root is not None:
         current_problem_root = bdd_manager.apply('or', current_problem_root, neg_add_bdd_root)
+        print('Got BDD from additional problem, its size:', neg_add_bdd_root.dag_size)
+        print('Combined size:', current_problem_root.dag_size)
     max_size = current_problem_root.dag_size
     stop_index = len(sortedproblem)
     # print('Clause:', first_clause)
@@ -951,16 +978,23 @@ def Problem2BDD_dd_format_prepmode4(sortedproblem: list, bdd_manager, bdd_max_si
             else:
                 current_problem_root = bdd_manager.apply('and', previous_root, current_clause_root)
             # print('Current root expr:', current_problem_root.to_expr())
+            bdd_manager.collect_garbage()
             if current_problem_root.dag_size > max_size:
                 max_size = current_problem_root.dag_size
 
             if max_size > bdd_max_size:
                 final_root = previous_root
                 stop_index = index
+                print('Current root size:', previous_root.dag_size, end=', ')
+                print('next root size:', current_problem_root.dag_size, end=', ')
+                print('stop.\n')
                 break
             elif CountPathsInBDD(None, current_problem_root, bdd_manager)[0] > bdd_max_paths:
                 final_root = previous_root
                 stop_index = index
+                print('Current number of paths to 0:', CountPathsInBDD(None, previous_root, bdd_manager)[0], end=', ')
+                print('next root number of paths to 0:', CountPathsInBDD(None, current_problem_root, bdd_manager)[0], end=', ')
+                print('stop.\n')
                 break
             else:
                 previous_root = current_problem_root

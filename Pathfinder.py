@@ -389,6 +389,7 @@ def SortClauses(clause1, clause2):
 def SolvePaths(problem, all_question_pathes, order, timelimit=0, numproc=1):
     cnf = CNF(from_clauses=problem)
     paths = [sorted(list(path), key=lambda x: order.index(abs(x))) for path in all_question_pathes]
+    seq_time = []
     unsats = 0
     sats = 0
     new_clauses = []
@@ -405,7 +406,8 @@ def SolvePaths(problem, all_question_pathes, order, timelimit=0, numproc=1):
         inittimelimit = abs(timelimit)
         results, paths, new_clauses, timelimit, first_sat_time, models, sats, unsats = FindGoodTimelimitForPaths(g, paths, order,
                                                                                           start_clauses_checking, inittimelimit)
-    print('\nTimelimit:', timelimit)
+    find_tl_time = time.time() - start_clauses_checking
+    print('\nGood timelimit:', timelimit)
     if numproc < 2:
         for index, assumption in enumerate(paths):
             st_time_ = time.time()
@@ -414,7 +416,7 @@ def SolvePaths(problem, all_question_pathes, order, timelimit=0, numproc=1):
                 s, model = SolvePath(assumption, g)
             else:
                 s, model = SolvePathTimelimit(assumption, g, timelimit)
-            end_time_ = round(time.time() - st_time_, 3)
+            end_time_ = time.time() - st_time_
             solve_times.append(end_time_)
             results.append([assumption, s, end_time_])
             if s is False:
@@ -446,6 +448,7 @@ def SolvePaths(problem, all_question_pathes, order, timelimit=0, numproc=1):
         new_clauses.extend(new_clauses_)
         indet_paths.extend(indet_paths_)
         solve_times = [x[2] for x in results]
+    seq_time = find_tl_time + sum(solve_times)
     print('\nResults (sorted):')
     print(*sorted(results, key=lambda x: (x[2], x[0])), sep='\n')
     if models:
@@ -463,9 +466,11 @@ def SolvePaths(problem, all_question_pathes, order, timelimit=0, numproc=1):
         print('Part of paths was solved.')
         print('Number of paths:'.ljust(30, ' '), len(all_question_pathes))
         print('Number of UNSAT paths:'.ljust(30, ' '), unsats)
-    print('Paths solving total time:'.ljust(30, ' '), time.time() - start_clauses_checking)
+    print('Finding timelimit time:'.ljust(30, ' '), find_tl_time)
     print('Paths solving times (20 longest):'.ljust(30, ' '), sorted(solve_times, reverse=True)[:min(20, len(solve_times))])
     print('Average solving time:'.ljust(30, ' '), round(mean(solve_times), 3))
+    print('Paths solving sequential time:', seq_time)
+    print('Paths solving total time:'.ljust(30, ' '), time.time() - start_clauses_checking)
     print('Number of new clauses:'.ljust(30, ' '), unsats)
     print('Number of indeterminate paths:', len(indet_paths))
     if sats > 0:
@@ -474,7 +479,7 @@ def SolvePaths(problem, all_question_pathes, order, timelimit=0, numproc=1):
         solve_flag = True
     else:
         solve_flag = False
-    return new_clauses, indet_paths, solve_flag, timelimit
+    return new_clauses, indet_paths, solve_flag, timelimit, seq_time
 
 
 def FindGoodTimelimitForPaths(solver, paths, order, start_clauses_checking, inittimelimit):
@@ -704,7 +709,7 @@ def PathSolvingTimelimit_mp(part, cnf, timelim, nof_paths):
         s = solver.solve_limited(assumptions=assumption, expect_interrupt=True)
         solver.clear_interrupt()
         timer.cancel()
-        print('Path {} of {}: {} ---> {}, {} s.'.format(counter, nof_paths, assumption, s, round(time.time() - start_time, 3)))
+        print('Path {} of {}: {} ---> {}, {} s.'.format(counter, nof_paths, assumption, s, time.time() - start_time))
         if s is None:
             indet_paths.append(assumption)
             results.append([assumption, s, time.time() - start_time])
@@ -716,7 +721,7 @@ def PathSolvingTimelimit_mp(part, cnf, timelim, nof_paths):
             sats += 1
             model = solver.get_model()
             results.append([assumption, s, time.time() - start_time])
-            return ['True', model, log]
+            return ['True', model, results]
     #q.put(new_clauses)
     return [new_clauses, indet_paths, sats, unsats, results]
 

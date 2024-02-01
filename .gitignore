@@ -1,3 +1,4 @@
+/venv
 /Logs/*
 run_on_tests.sh
 /Tests_tmp
