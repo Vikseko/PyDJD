@@ -1,16 +1,23 @@
 from Utils import *
 
 
+# def CreateDiagrams(var_count, problems, order, ptype, numproc):
+#     diagrams = []
+#     if numproc > 1:
+#         with multiprocessing.Pool(min(len(problems), numproc)) as p:
+#             params = [(var_count, problem, order, ptype) for problem in problems]
+#             for result in p.map(CreateDiagram, params):
+#                 diagrams.append(result)
+#     else:
+#         for problem in problems:
+#             diagrams.append(CreateDiagram((var_count, problem, order, ptype)))
+#     return diagrams
+
+
 def CreateDiagrams(var_count, problems, order, ptype, numproc):
     diagrams = []
-    if numproc > 1:
-        with multiprocessing.Pool(min(len(problems), numproc)) as p:
-            params = [(var_count, problem, order, ptype) for problem in problems]
-            for result in p.map(CreateDiagram, params):
-                diagrams.append(result)
-    else:
-        for problem in problems:
-            diagrams.append(CreateDiagram((var_count, problem, order, ptype)))
+    for problem in problems:
+        diagrams.append(CreateDiagram((var_count, problem, order, ptype)))
     return diagrams
 
 
