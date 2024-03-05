@@ -63,6 +63,10 @@ def DJDtoBDD_separated(problem, diagrams, order, logpath, inputs, options):
         robddsatoracle_mode5(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, bdd_max_paths, numproc)
     elif sepdjdprepmode == 6:
         robddsatoracle_mode6(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, bdd_max_paths, numproc)
+    elif sepdjdprepmode == 7:
+        # строим доп БДД из хардтасок от ро-бэкдоров, склеиваем её с другими.
+        robddsatoracle_mode7(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname,
+                             bdd_stop_size, bdd_max_paths, numproc, options.hardtasksfilename)
 
     # попарно объединяем поддиаграммы пока не останется одна финальная диаграмма
     while len(current_bdd_diagrams) > 1 and not unsat_flag:
@@ -648,6 +652,123 @@ def robddsatoracle_mode6(prepbinmode, diagrams, problem, bdd_manager, order, djd
     exit()
 
 
+def robddsatoracle_mode7(prepbinmode, diagrams, problem, bdd_manager, order, djd_prep_time_limit, logpath, cnfname, bdd_stop_size, bdd_max_paths, numproc, hardtasksfilename):
+    # Версия, в которой пути добавляются в диаграмму пока она не слишком распухнет
+    # при этом используется множество хардтасок от ро-бэкдоров (нужен отдельный файл)
+    assert prepbinmode == 1, 'For mode 7 of preprocessing, binarization by apply is needed.'
+    djdtobdd_sep_start_time = time.time()
+    seq_times = []
+
+    # создаем бдд по хардтаскам
+    ht_bdd_construct_start_time = time.time()
+    ht_problems = GetHardTasks(hardtasksfilename, 0) # получили словарь хардтасок для каждого бэкдора
+    print('Ht-problems:', ht_problems, sep='\n')
+    ht_bdd_root, ht_bdd_maxsize = HardTasksDict2BDD_dd_format(ht_problems, bdd_manager, bdd_stop_size, 'DNF')
+    print('Size of ht-bdd:', ht_bdd_root.dag_size)
+    # neg_ht_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=ht_bdd_root))
+    # print('Size of neg-ht-bdd:', neg_ht_bdd_root.dag_size)
+    ht_bdd_construct_time = time.time() - ht_bdd_construct_start_time
+    print('Time for construct ht-bdd:', ht_bdd_construct_time)
+    ht_bdd_traversal_start_time = time.time()
+    print('Number of paths to [False, True] in ht-bdd:', CountPathsInBDD(None, ht_bdd_root, bdd_manager))
+    ht_bdd_traversal_time = time.time() - ht_bdd_traversal_start_time
+    print('Time for construct ht-bdd:', ht_bdd_traversal_time)
+    exit()
+    # сортируем диаграммы по размеру от самой маленькой к самой большой
+    sorted_djds = sorted(diagrams, key=lambda x: x.VertexCount())
+    solve_flag = False
+    cnf = NegateProblem(problem)
+    additional_problem = []
+    counter = 0
+    while solve_flag is False and len(sorted_djds) > 0:
+        counter += 1
+        print('\n\nIteration', counter)
+        solve_flag = False
+        double_solving = False
+        biggest_djd = sorted_djds.pop()  # Берём последнюю диаграмму, самую большую
+        print('Biggest DJD obtained. Root {}. Size {}.'.format(biggest_djd.GetRoots()[0].var_id,
+                                                               biggest_djd.VertexCount()))
+        biggest_djd.PrintCurrentTable('Biggest DJD table:')
+        problem_biggest_djd, _ = GetDNFFromDiagram(biggest_djd)
+        print(*problem_biggest_djd, sep='\n')
+        start_transform_time = time.time()
+        current_problem = problem_biggest_djd
+        counter_remain_problems = 0
+        while solve_flag is False and len(current_problem) > 0:
+            print('\nSize of current problem:', len(current_problem))
+            if additional_problem:
+                print('Size of additional problem (unsolved paths from previous BDD):', len(additional_problem))
+                add_bdd_root, add_max_size = Problem2BDD_dd_format(additional_problem, bdd_manager, 'DNF')
+                neg_add_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=add_bdd_root))
+                print('Size of BDD for additional problem:', neg_add_bdd_root.dag_size)
+            else:
+                neg_add_bdd_root = None
+            biggest_bdd_root, max_size, problem_stop_index, remain_problem = Problem2BDD_dd_format_prepmode4(current_problem, bdd_manager, bdd_stop_size, bdd_max_paths, 'DNF', neg_add_bdd_root)
+            print('Transformation to BDD (Apply algorithm) complete. Size {}.'.format(biggest_bdd_root.dag_size))
+            print('Used constraints {} of {}.'.format(problem_stop_index, len(current_problem)))
+            print('Size of remain problem:', size_remain_problem := len(remain_problem))
+            if size_remain_problem > 0:
+                print('Remain problem:', *remain_problem, sep='\n')
+            current_problem = remain_problem
+            print('Time to DJDs->BDDs:', round(time.time() - start_transform_time, 3))
+            if biggest_bdd_root.dag_size == 1:
+                print('Problem was solved while applying BDD', counter, 'and additional problem from iteration',
+                      counter - 1)
+                print('Root expression:', biggest_bdd_root.to_expr())
+                neg_biggest_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=biggest_bdd_root))
+                print('Negated root expression (for original CNF):', neg_biggest_bdd_root.to_expr())
+                solve_flag = True
+            else:
+                question_pathes_in_biggest_bdd = GetPathsToFalse_ddformat_traversal(logpath, biggest_bdd_root, bdd_manager, order)
+                print('\nNumber of paths in subBDD traversal: to False is {}, to True is {}.'.format(*CountPathsInBDD(logpath, biggest_bdd_root, bdd_manager)))
+                print('\nStart solving paths.')
+                if counter_remain_problems > 0:
+                    new_clauses, hard_paths, solve_flag, timelimit, seq_time = SolvePaths(cnf, question_pathes_in_biggest_bdd, order,
+                                                                                abs(djd_prep_time_limit), numproc)
+                else:
+                    new_clauses, hard_paths, solve_flag, timelimit, seq_time = SolvePaths(cnf, question_pathes_in_biggest_bdd,
+                                                                                order, djd_prep_time_limit, numproc)
+                seq_times.append(seq_time)
+                print('Seq times', seq_times)
+                counter_remain_problems += 1
+                if djd_prep_time_limit > 0:
+                    djd_prep_time_limit = timelimit
+                else:
+                    djd_prep_time_limit = -timelimit
+                if new_clauses:
+                    cnf.extend(new_clauses)
+                if hard_paths:
+                    additional_problem = hard_paths
+                else:
+                    additional_problem = []
+                if solve_flag is False:
+                    if 0 < len(remain_problem) < 10:
+                        print('Remain problem is too small. Mark it as additional problem and go to next iteration.')
+                        additional_problem.extend(remain_problem)
+                        print('Hard paths:', *additional_problem, sep='\n')
+                        break
+                    else:
+                        print('Hard paths:', *additional_problem, sep='\n')
+                        print('Number of remain paths:', len(remain_problem))
+        else:
+            print('Iteration finished.')
+            print('Current size of CNF:', len(cnf))
+            print('Size of Hard Path\'s problem:', len(additional_problem))
+    if solve_flag is False:
+        print('Problem was not solved. Save to file with new clauses.')
+        print('Size of new problem:', len(cnf))
+        print(logpath + 'djdprep_mode2.cnf')
+        result_cnf = CNF(from_clauses=cnf)
+        result_cnf.to_file(logpath + cnfname + '_djdprep_mode3.cnf')
+        print('Sequential time for solving paths:', round(sum(seq_times), 3))
+        print('Time for preprocessing:', round(time.time() - djdtobdd_sep_start_time, 3))
+    else:
+        print('Problem was solved due paths checking. Exit.')
+        print('Sequential time for solving paths:', round(sum(seq_times), 3))
+        print('Time for solving:', round(time.time() - djdtobdd_sep_start_time, 3))
+    exit()
+
+
 def DJDtoBDD_pbi_separated(djds, pbi_bdds, numproc, order, logpath):
     counter = 0
     sys.setrecursionlimit(100000)
@@ -946,6 +1067,32 @@ def Problem2BDD_dd_format(sortedproblem: list, bdd_manager, problem_type='DNF'):
                 print('Problem2BDD_dd_format. Diagram is too big. Stop.')
                 print('Size:', max_size)
                 exit()
+    bdd_manager.collect_garbage()
+    return current_problem_root, max_size
+
+
+def HardTasksDict2BDD_dd_format(ht_problems: dict, bdd_manager, bdd_stop_size, problem_type='DNF'):
+    keys = list(ht_problems.keys())
+    first_problem = ht_problems[keys[0]]
+    print('First problem:', *first_problem, sep='\n')
+    # так как в рамках одного бэкдора могут работать только часть хардтасок, то бдд с разных хардтасок соединяем через OR (как ДНФ)
+    current_problem_root, max_size = Problem2BDD_dd_format(first_problem, bdd_manager, problem_type)
+    print(f'Hardtasks from first backdoor was encoded to BDD. Size {max_size}.')
+    for index, problem in enumerate(keys):
+        if index > 0:
+            new_bd_problem = ht_problems[keys[index]]
+            print('New problem:', *new_bd_problem, sep='\n')
+            new_bd_bdd_root, new_bd_bdd_maxsize = Problem2BDD_dd_format(new_bd_problem, bdd_manager, problem_type)
+            # так как с разных бэкдоров хардтаски должны работать одновременно, то бдд с разных бэкдоров соединяем через AND
+            next_problem_root = bdd_manager.apply('and', current_problem_root, new_bd_bdd_root)
+            if next_problem_root.dag_size > max_size:
+                max_size = next_problem_root.dag_size
+            if max_size > bdd_stop_size:
+                print(f'HardTasksDict2BDD_dd_format. Diagram is too big (size={max_size}). Encoded hardtasks from {index} backdoors.')
+                print(f'Set previous root (size={current_problem_root.dag_size}) as final and stop.')
+                break
+            else:
+                current_problem_root = next_problem_root
     bdd_manager.collect_garbage()
     return current_problem_root, max_size
 

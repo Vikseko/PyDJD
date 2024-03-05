@@ -39,7 +39,7 @@ def createParser ():
     parser.add_argument('-rt', '--runtests', nargs='?', type=bool, default=False)
     parser.add_argument('-ss', '--show_stats', nargs='?', type=bool, default=False)
     parser.add_argument('-sv', '--show_ver', nargs='?', type=bool, default=False)
-    parser.add_argument ('-so', '--show_options', nargs='?', type=str, default='False')
+    parser.add_argument ('-so', '--show_options', nargs='?', type=str, default='True')
     parser.add_argument('-bdd', '--bdd_convert', nargs='?', type=str, default='False')
     parser.add_argument('-tbdd', '--test_bdd_convert', nargs='?', type=str, default='False')
     parser.add_argument('-sc', '--separate_construction', nargs='?', type=str, default='False')
@@ -62,6 +62,8 @@ def createParser ():
                         help='Binarization mode for separate preprocessing')
     parser.add_argument('-bddms', '--bdd_max_size', nargs='?', type=int, default=1000000)
     parser.add_argument('-bddmp', '--bdd_max_paths', nargs='?', type=int, default=10000)
+    parser.add_argument('-htfn', '--hardtasksfilename', nargs='?', type=str, default='res_UCfinder_bs10_withcorrshortlearnts_kissat_500s_lec_mult_CvK_12x12_bds10_iter0.log')
+
     return parser
 
 

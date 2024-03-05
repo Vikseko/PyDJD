@@ -607,8 +607,10 @@ def GetPathsToFalse_ddformat_traversal(logpath, bdd_root, bdd_manager, order):
 
 def CountPathsInBDD(logpath, bdd_root, bdd_manager):
     paths_counter = [0, 0]
+    nodes = []
 
     def dfs(node, negate_flag):
+        nodes.append(str(node).replace('-', ''))
         if str(node) == '@-1' or str(node) == '@1':
             if (negate_flag and str(node) == '@1') or (not negate_flag and str(node) == '@-1'):
                 paths_counter[0] += 1
@@ -622,6 +624,7 @@ def CountPathsInBDD(logpath, bdd_root, bdd_manager):
         dfs(high, negate_flag)
 
     dfs(bdd_root, False)
+    print(f'Nodes: {bdd_root.dag_size}. Visited nodes: {len(nodes)}. Unique visited nodes: {len(set(nodes))}.')
     return paths_counter
 
 

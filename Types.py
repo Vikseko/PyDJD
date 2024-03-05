@@ -396,3 +396,4 @@ class Options:
         self.sep_djd_prep = 0
         self.bdd_max_size = 1000000
         self.bdd_max_paths = 10000
+        self.hardtasksfilename = ''

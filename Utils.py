@@ -253,6 +253,20 @@ def CreateLogDir(options):
     return timedir + '/'
 
 
+def GetHardTasks(hardtasksfname, make_sdnf_flag):
+    ht_lines = [x for x in open(hardtasksfname, 'r').readlines() if 'Hardtask from backdoor' in x]
+    ht_problems = dict()
+    for line in ht_lines:
+        nof_backdoor = line.split('Hardtask from backdoor')[1].split(':')[0]
+        ht_clause = ast.literal_eval(line.split(': ')[1])
+        if nof_backdoor in ht_problems.keys():
+            ht_problems[nof_backdoor].append(ht_clause)
+        else:
+            ht_problems[nof_backdoor] = [ht_clause]
+    return ht_problems
+
+
+
 def ParseOptions(params):
     options = Options()
     options.path = params.file
@@ -284,6 +298,7 @@ def ParseOptions(params):
     options.prepbinmode = params.prepbinmode
     options.bdd_max_size = params.bdd_max_size
     options.bdd_max_paths = params.bdd_max_paths
+    options.hardtasksfilename = params.hardtasksfilename
     return options
 
 
@@ -312,6 +327,7 @@ def PrintOptions(options):
     print('Time limit for single path in DJD-preprocessing:', options.djd_prep_time_limit)
     print('Maximum BDD size:', options.bdd_max_size)
     print('Maximum number of False paths in subBDD:', options.bdd_max_paths)
+    print('File with list of hardtasks, obtained from rho-backdoors:', options.hardtasksfilename)
     print('Lock variables:', options.lock_vars)
     print('Number of Pseudo-Boolean Intervals:', options.pbintervals)
     print('Order for solving PBIs:', options.pbiorder)
