@@ -253,7 +253,7 @@ def CreateLogDir(options):
     return timedir + '/'
 
 
-def GetHardTasks(hardtasksfname, make_sdnf_flag):
+def GetHardTasks(hardtasksfname):
     ht_lines = [x for x in open(hardtasksfname, 'r').readlines() if 'Hardtask from backdoor' in x]
     ht_problems = dict()
     for line in ht_lines:
@@ -264,6 +264,18 @@ def GetHardTasks(hardtasksfname, make_sdnf_flag):
         else:
             ht_problems[nof_backdoor] = [ht_clause]
     return ht_problems
+
+
+def GetCartesianProductOfHardTasksDict(ht_problems, nof_used_backdoors):
+    problems = []
+    # print(ht_problems.keys())
+    for i in range(nof_used_backdoors):
+        problems.append(ht_problems[f' {i}'])
+    product = [sorted(list(set(flatten(x))), key=abs) for x in itertools.product(*problems)]
+    print(f'Size of product before eliminating natural UNSATs: {len(product)}')
+    product = [x for x in product if len(set([abs(y) for y in x])) == len(x)]
+    print(f'Size of product after eliminating natural UNSATs: {len(product)}')
+    return product
 
 
 

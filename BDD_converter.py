@@ -658,12 +658,18 @@ def robddsatoracle_mode7(prepbinmode, diagrams, problem, bdd_manager, order, djd
     assert prepbinmode == 1, 'For mode 7 of preprocessing, binarization by apply is needed.'
     djdtobdd_sep_start_time = time.time()
     seq_times = []
+    ht_cart_product_flag = False
 
     # создаем бдд по хардтаскам
     ht_bdd_construct_start_time = time.time()
-    ht_problems = GetHardTasks(hardtasksfilename, 0) # получили словарь хардтасок для каждого бэкдора
-    print('Ht-problems:', ht_problems, sep='\n')
-    ht_bdd_root, ht_bdd_maxsize = HardTasksDict2BDD_dd_format(ht_problems, bdd_manager, bdd_stop_size, 'DNF')
+    ht_problems = GetHardTasks(hardtasksfilename)  # получили словарь хардтасок для каждого бэкдора
+    if ht_cart_product_flag:
+        ht_problems_product = GetCartesianProductOfHardTasksDict(ht_problems, 10)
+        print('Ht-problem (cartesian product of ht-problems):', *ht_problems_product, sep='\n')
+        ht_bdd_root, ht_bdd_maxsize = Problem2BDD_dd_format(ht_problems_product, bdd_manager, 'DNF')
+    else:
+        print('Ht-problems (dict):', *ht_problems.items(), sep='\n')
+        ht_bdd_root, ht_bdd_maxsize = HardTasksDict2BDD_dd_format(ht_problems, bdd_manager, bdd_stop_size, 'DNF', 10)
     print('Size of ht-bdd:', ht_bdd_root.dag_size)
     # neg_ht_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=ht_bdd_root))
     # print('Size of neg-ht-bdd:', neg_ht_bdd_root.dag_size)
@@ -672,7 +678,7 @@ def robddsatoracle_mode7(prepbinmode, diagrams, problem, bdd_manager, order, djd
     ht_bdd_traversal_start_time = time.time()
     print('Number of paths to [False, True] in ht-bdd:', CountPathsInBDD(None, ht_bdd_root, bdd_manager))
     ht_bdd_traversal_time = time.time() - ht_bdd_traversal_start_time
-    print('Time for construct ht-bdd:', ht_bdd_traversal_time)
+    print('Time for traversal ht-bdd:', ht_bdd_traversal_time)
     exit()
     # сортируем диаграммы по размеру от самой маленькой к самой большой
     sorted_djds = sorted(diagrams, key=lambda x: x.VertexCount())
@@ -1071,15 +1077,17 @@ def Problem2BDD_dd_format(sortedproblem: list, bdd_manager, problem_type='DNF'):
     return current_problem_root, max_size
 
 
-def HardTasksDict2BDD_dd_format(ht_problems: dict, bdd_manager, bdd_stop_size, problem_type='DNF'):
+def HardTasksDict2BDD_dd_format(ht_problems: dict, bdd_manager, bdd_stop_size, problem_type='DNF', nof_used_backdoors=None):
     keys = list(ht_problems.keys())
     first_problem = ht_problems[keys[0]]
     print('First problem:', *first_problem, sep='\n')
     # так как в рамках одного бэкдора могут работать только часть хардтасок, то бдд с разных хардтасок соединяем через OR (как ДНФ)
     current_problem_root, max_size = Problem2BDD_dd_format(first_problem, bdd_manager, problem_type)
     print(f'Hardtasks from first backdoor was encoded to BDD. Size {max_size}.')
+    if nof_used_backdoors is None:
+        nof_used_backdoors = len(keys)
     for index, problem in enumerate(keys):
-        if index > 0:
+        if 0 < index < nof_used_backdoors:
             new_bd_problem = ht_problems[keys[index]]
             print('New problem:', *new_bd_problem, sep='\n')
             new_bd_bdd_root, new_bd_bdd_maxsize = Problem2BDD_dd_format(new_bd_problem, bdd_manager, problem_type)
@@ -1089,7 +1097,7 @@ def HardTasksDict2BDD_dd_format(ht_problems: dict, bdd_manager, bdd_stop_size, p
                 max_size = next_problem_root.dag_size
             if max_size > bdd_stop_size:
                 print(f'HardTasksDict2BDD_dd_format. Diagram is too big (size={max_size}). Encoded hardtasks from {index} backdoors.')
-                print(f'Set previous root (size={current_problem_root.dag_size}) as final and stop.')
+                print(f'Set previous root (size={current_problem_root.dag_size}) as final and stop.\n')
                 break
             else:
                 current_problem_root = next_problem_root
