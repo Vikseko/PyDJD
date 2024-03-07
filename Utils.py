@@ -271,11 +271,14 @@ def GetCartesianProductOfHardTasksDict(ht_problems, nof_used_backdoors):
     # print(ht_problems.keys())
     for i in range(nof_used_backdoors):
         problems.append(ht_problems[f' {i}'])
-    product = [sorted(list(set(flatten(x))), key=abs) for x in itertools.product(*problems)]
-    print(f'Size of product before eliminating natural UNSATs: {len(product)}')
-    product = [x for x in product if len(set([abs(y) for y in x])) == len(x)]
-    print(f'Size of product after eliminating natural UNSATs: {len(product)}')
-    return product
+    current_problem = problems.pop(0)
+    while problems:
+        new_problem = problems.pop(0)
+        current_problem = [sorted(list(set(flatten(x))), key=abs) for x in itertools.product(current_problem, new_problem)]
+        print(f'Size of product before eliminating natural UNSATs: {len(current_problem)}')
+        current_problem = [x for x in current_problem if len(set([abs(y) for y in x])) == len(x)]
+        print(f'Size of product after eliminating natural UNSATs: {len(current_problem)}')
+    return current_problem
 
 
 
