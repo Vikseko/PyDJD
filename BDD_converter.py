@@ -667,14 +667,18 @@ def robddsatoracle_mode7(prepbinmode, diagrams, problem, bdd_manager, order, djd
     ht_bdd_construct_start_time = time.time()
     ht_problems = GetHardTasks(hardtasksfilename)  # получили словарь хардтасок для каждого бэкдора
     print('Ht-problems (dict):', *ht_problems.items(), sep='\n')
-    ht_bdd_root, ht_bdd_maxsize = HardTasksDict2BDD_dd_format(ht_problems, bdd_manager, bdd_stop_size, 'DNF', 20)
+    ht_bdd_root, ht_bdd_maxsize = HardTasksDict2BDD_dd_format(ht_problems, bdd_manager, bdd_stop_size, 'DNF', 85)
     print('Size of ht-bdd:', ht_bdd_root.dag_size)
+    print('Number of vars in ht-bdd:', len(ht_bdd_root.support))
     # neg_ht_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=ht_bdd_root))
     # print('Size of neg-ht-bdd:', neg_ht_bdd_root.dag_size)
     ht_bdd_construct_time = time.time() - ht_bdd_construct_start_time
-    print('Time for construct ht-bdd:', ht_bdd_construct_time)
+    print('Time for construct ht-bdd:', ht_bdd_construct_time, time.time())
     ht_bdd_traversal_start_time = time.time()
-    print('Number of paths to [False, True] in ht-bdd:', CountPathsInBDD(None, ht_bdd_root, bdd_manager))
+    ht_bdd_root_neg = bdd_manager.add_expr(r'!{u}'.format(u=ht_bdd_root))
+    print('Count to 1:', bdd_manager.count(ht_bdd_root), (t1 := time.time()) - ht_bdd_traversal_start_time)
+    print('Count to 0:', bdd_manager.count(ht_bdd_root_neg), (t2 := time.time()) - t1)
+    print('Number of paths to [False, True] in ht-bdd:', CountPathsInBDD(None, ht_bdd_root, bdd_manager), time.time() - t2)
     ht_bdd_traversal_time = time.time() - ht_bdd_traversal_start_time
     print('Time for traversal ht-bdd:', ht_bdd_traversal_time)
     exit()
@@ -790,6 +794,7 @@ def robddsatoracle_mode8(prepbinmode, diagrams, problem, bdd_manager, order, djd
     ht_bdd_root, ht_bdd_maxsize = Problem2BDD_dd_format(ht_problems_product, bdd_manager, 'DNF')
     print('Time for construct cartesian product of hard tasks:', ht_cart_prod_time)
     print('Size of ht-bdd:', ht_bdd_root.dag_size)
+    print('Number of vars in ht-bdd:', len(ht_bdd_root.support))
     # neg_ht_bdd_root = bdd_manager.add_expr(r'!{u}'.format(u=ht_bdd_root))
     # print('Size of neg-ht-bdd:', neg_ht_bdd_root.dag_size)
     ht_bdd_construct_time = time.time() - ht_bdd_construct_start_time
